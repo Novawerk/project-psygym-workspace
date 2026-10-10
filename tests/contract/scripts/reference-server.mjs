@@ -48,7 +48,7 @@ const CASES = [
   },
 ];
 
-const hits = new Map();
+const hits = { chat: new Map(), feedback: new Map() };
 
 function json(res, status, body, headers = {}) {
   res.writeHead(status, { "content-type": "application/json; charset=utf-8", ...headers });
@@ -68,6 +68,14 @@ function valid(b, path) {
   return path !== "/chat" || m[m.length - 1].role === "counselor";
 }
 
+// POST /feedback: only these fields; the conversation is never one of them.
+function validFeedback(b) {
+  if (!b || typeof b !== "object" || Array.isArray(b)) return false;
+  if (Object.keys(b).some((k) => !["caseId", "locale", "rating", "comment"].includes(k))) return false;
+  if (typeof b.caseId !== "string" || !["zh", "en"].includes(b.locale) || !["up", "down"].includes(b.rating)) return false;
+  return b.comment === undefined || (typeof b.comment === "string" && [...b.comment].length <= 500);
+}
+
 createServer(async (req, res) => {
   const url = new URL(req.url, "http://x");
   if (req.method === "GET" && url.pathname === "/health") return json(res, 200, { ok: true });
@@ -76,15 +84,17 @@ createServer(async (req, res) => {
 
   if (req.method === "GET" && url.pathname === "/cases") return json(res, 200, { cases: CASES });
 
-  if (req.method !== "POST" || !["/chat", "/supervision"].includes(url.pathname)) return fail(res, 404, "not_found");
+  if (req.method !== "POST" || !["/chat", "/supervision", "/feedback"].includes(url.pathname)) return fail(res, 404, "not_found");
 
   if (RATE_LIMIT) {
+    // /feedback has its own bucket; /chat and /supervision share one.
+    const bucket = hits[url.pathname === "/feedback" ? "feedback" : "chat"];
     const ip = req.socket.remoteAddress;
     const now = Date.now();
-    const recent = (hits.get(ip) ?? []).filter((t) => now - t < 60_000);
+    const recent = (bucket.get(ip) ?? []).filter((t) => now - t < 60_000);
     if (recent.length >= RATE_LIMIT) return fail(res, 429, "rate_limited", { "retry-after": "60" });
     recent.push(now);
-    hits.set(ip, recent);
+    bucket.set(ip, recent);
   }
 
   let size = 0;
@@ -102,6 +112,12 @@ createServer(async (req, res) => {
     body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
   } catch {
     return fail(res, 400, "invalid_request");
+  }
+  if (url.pathname === "/feedback") {
+    if (!validFeedback(body)) return fail(res, 400, "invalid_request");
+    if (!CASES.some((c) => c.id === body.caseId)) return fail(res, 404, "case_not_found");
+    res.writeHead(204);
+    return res.end();
   }
   if (!valid(body, url.pathname)) return fail(res, 400, "invalid_request");
   if (!CASES.some((c) => c.id === body.caseId)) return fail(res, 404, "case_not_found");

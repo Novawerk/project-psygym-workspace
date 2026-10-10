@@ -12,7 +12,7 @@ From the repo root:
 BASE_URL=http://localhost:8787 pnpm test:contract
 ```
 
-Never point this at production. The suite sends real `/chat` and `/supervision`
+Never point this at production, and never at a server with `FEEDBACK_SLACK_WEBHOOK_URL` set: the `/feedback` tests would post to the team's Slack channel. The suite sends real `/chat` and `/supervision`
 requests; with a real model they cost tokens. Prefer a server running `LLM_PROVIDER=mock`.
 
 | Variable | Default | What |
@@ -49,6 +49,10 @@ limiter slows the suite down instead of failing it.
   JSON, and for a body of about 1 MB.
 - `404 case_not_found`, `401 invite_required` (missing and wrong code),
   `503 model_unavailable`, `429 rate_limited` with `Retry-After` (seconds or HTTP date).
+- `POST /feedback`: `204` with no body for up/down, with or without a comment up to 500
+  characters; `400` for a bad rating, a 501-character comment, and any extra field
+  (`messages` above all); `404` for an unknown case; `401` without a valid code; its own
+  rate-limit bucket (rate-limit run only).
 - Every pre-stream error is JSON `{ "error": { "code", "message" } }`.
 
 Not checked, because we cannot trigger it from outside: an `error` frame mid-stream, and
