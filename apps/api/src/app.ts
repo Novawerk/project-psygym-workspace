@@ -5,6 +5,7 @@
 //   POST /chat         → text/event-stream, the AI client's reply
 //   POST /supervision  → text/event-stream, one supervision report in Markdown
 //   POST /feedback     → 204, a rating of the report, forwarded to Slack (or dropped)
+//   POST /report       → 204, one reported AI passage, forwarded to Slack (or dropped)
 //
 // Stateless. We store no transcript, and the log never carries message text.
 import { Hono, type Context } from "hono";
@@ -18,6 +19,7 @@ import { createProvider, type ModelProvider } from "./llm/index.js";
 import type { ModelRequest } from "./llm/types.js";
 import { FeedbackBody, postToSlack, slackMessage, type FetchLike } from "./feedback.js";
 import { FixedWindowLimiter, clientIp } from "./rate-limit.js";
+import { ReportBody, reportSlackMessage } from "./report.js";
 import { ChatBody, SupervisionBody, type ErrorCode, type Locale, type StreamEvent } from "./schema.js";
 import { FAREWELL, clientRequest, endsSession, supervisorRequest } from "./session.js";
 
@@ -120,6 +122,7 @@ export function createApp(deps: AppDeps) {
   const limiter = new FixedWindowLimiter(config.rateLimit.max, config.rateLimit.windowMs, deps.now);
   // Feedback has its own bucket: rating a report never eats into chat turns.
   const feedbackLimiter = new FixedWindowLimiter(config.rateLimit.max, config.rateLimit.windowMs, deps.now);
+  const reportLimiter = new FixedWindowLimiter(config.rateLimit.max, config.rateLimit.windowMs, deps.now);
 
   const providers = new Map<Role, ModelProvider>();
   function providerFor(role: Role): ModelProvider | string {
@@ -295,28 +298,56 @@ export function createApp(deps: AppDeps) {
     });
   }
 
-  // POST /feedback → 204. Delivery to Slack is best effort: the app never waits on Slack's mood.
-  // The log carries case id, language, rating and comment length, never the comment.
+  /**
+   * Forwards to the team's Slack channel and answers 204 either way: delivery is best effort and
+   * the app never waits on Slack's mood. `log` carries only ids, enums and lengths, never text.
+   */
+  async function forwardToSlack(c: Context, kind: "feedback" | "report", log: Record<string, unknown>, message: unknown) {
+    if (!config.feedbackWebhookUrl) {
+      logger.info({ ...log, msg: `${kind} dropped: not configured` });
+      return c.body(null, 204);
+    }
+    try {
+      const status = await postToSlack(deps.fetch ?? fetch, config.feedbackWebhookUrl, message, deps.slackTimeoutMs);
+      if (status >= 200 && status < 300) logger.info(log);
+      else logger.error({ ...log, msg: `${kind} dropped: slack error`, status });
+    } catch (err) {
+      logger.error({ ...log, msg: `${kind} dropped: slack error`, ...describe(err) });
+    }
+    return c.body(null, 204);
+  }
+
+  const now = () => new Date(deps.now?.() ?? Date.now());
+  const chars = (s: string | undefined) => [...(s ?? "")].length;
+
+  // POST /feedback → 204: a rating of a report. Never conversation text.
   app.post("/feedback", async (c) => {
     const limited = rateLimited(c, feedbackLimiter);
     if (limited) return limited;
     const body = await readJson(c, FeedbackBody);
     if (body instanceof Response) return body;
     if (!cases.has(body.caseId)) return fail(c, 404, "case_not_found");
+    const log = { msg: "feedback", caseId: body.caseId, locale: body.locale, rating: body.rating, commentChars: chars(body.comment) };
+    return forwardToSlack(c, "feedback", log, slackMessage(body, now()));
+  });
 
-    const log = { msg: "feedback", caseId: body.caseId, locale: body.locale, rating: body.rating, commentChars: [...(body.comment ?? "")].length };
-    if (!config.feedbackWebhookUrl) {
-      logger.info({ ...log, msg: "feedback dropped: not configured" });
-      return c.body(null, 204);
-    }
-    try {
-      const status = await postToSlack(deps.fetch ?? fetch, config.feedbackWebhookUrl, slackMessage(body, new Date(deps.now?.() ?? Date.now())), deps.slackTimeoutMs);
-      if (status >= 200 && status < 300) logger.info(log);
-      else logger.error({ ...log, msg: "feedback dropped: slack error", status });
-    } catch (err) {
-      logger.error({ ...log, msg: "feedback dropped: slack error", ...describe(err) });
-    }
-    return c.body(null, 204);
+  // POST /report → 204: one reported passage, the only conversation text we pass on (to Slack).
+  app.post("/report", async (c) => {
+    const limited = rateLimited(c, reportLimiter);
+    if (limited) return limited;
+    const body = await readJson(c, ReportBody);
+    if (body instanceof Response) return body;
+    if (!cases.has(body.caseId)) return fail(c, 404, "case_not_found");
+    const log = {
+      msg: "report",
+      caseId: body.caseId,
+      locale: body.locale,
+      source: body.source,
+      reason: body.reason,
+      reportedChars: chars(body.reportedText),
+      commentChars: chars(body.comment),
+    };
+    return forwardToSlack(c, "report", log, reportSlackMessage(body, now()));
   });
 
   streamingRoute("/chat", "client", ChatBody, clientRequest);

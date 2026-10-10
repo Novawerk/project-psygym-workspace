@@ -22,7 +22,7 @@ export const FeedbackBody = z.strictObject({
 export type Feedback = z.infer<typeof FeedbackBody>;
 
 /** Slack reads &, < and > as markup (<!channel>, links); escape them so a comment stays text. */
-const escapeSlack = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+export const escapeSlack = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 /**
  * The Slack message: case id, language, rating, comment, time. Nothing else.
