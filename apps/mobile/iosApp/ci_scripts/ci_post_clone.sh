@@ -23,7 +23,9 @@ if [ ! -f "$CONFIG_FILE" ]; then
   TOML="$MOBILE_ROOT/gradle/libs.versions.toml"
   VERSION_CODE=$(grep '^app-versionCode' "$TOML" | head -n1 | sed 's/.*= *"\([^"]*\)".*/\1/')
   VERSION_NAME=$(grep '^app-versionName' "$TOML" | head -n1 | sed 's/.*= *"\([^"]*\)".*/\1/')
-  [ -n "$VERSION_CODE" ] && sed -i '' "s|^CURRENT_PROJECT_VERSION=.*|CURRENT_PROJECT_VERSION=$VERSION_CODE|" "$CONFIG_FILE"
+  # Build number: Xcode Cloud's own counter, which only goes up. Locally, the catalog's.
+  BUILD_NUMBER="${CI_BUILD_NUMBER:-$VERSION_CODE}"
+  [ -n "$BUILD_NUMBER" ] && sed -i '' "s|^CURRENT_PROJECT_VERSION=.*|CURRENT_PROJECT_VERSION=$BUILD_NUMBER|" "$CONFIG_FILE"
   [ -n "$VERSION_NAME" ] && sed -i '' "s|^MARKETING_VERSION=.*|MARKETING_VERSION=$VERSION_NAME|" "$CONFIG_FILE"
   [ -n "${TEAM_ID:-}" ] && sed -i '' "s|^TEAM_ID=.*|TEAM_ID=$TEAM_ID|" "$CONFIG_FILE"
   cat "$CONFIG_FILE"

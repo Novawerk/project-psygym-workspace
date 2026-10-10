@@ -48,6 +48,30 @@ the shared code with:
 ./gradlew :composeApp:compileKotlinIosSimulatorArm64
 ```
 
+## Release
+
+**Android (Play internal testing).** `./gradlew :composeApp:bundleRelease` →
+`composeApp/build/outputs/bundle/release/composeApp-release.aab`. It is signed with the
+Play *upload* key when these four are set in `~/.gradle/gradle.properties` or the
+environment, and left unsigned otherwise (so anyone can still build):
+
+```
+PSYGYM_UPLOAD_STORE_FILE=/path/outside/the/repo/psygym-upload.jks
+PSYGYM_UPLOAD_STORE_PASSWORD=…
+PSYGYM_UPLOAD_KEY_ALIAS=upload
+PSYGYM_UPLOAD_KEY_PASSWORD=…
+```
+
+Play App Signing holds the real app key. The upload key and its passwords never go in git.
+Each upload needs a higher versionCode: bump `app-versionCode` in
+`gradle/libs.versions.toml`, or pass `VERSION_CODE=…` for one build.
+
+**iOS (TestFlight via Xcode Cloud).** Team `9VLTG4HRL9`, automatic signing, bundle id
+`io.novawerk.psygym`. `ci_scripts/ci_post_clone.sh` writes `Config.xcconfig` from the
+template with `CURRENT_PROJECT_VERSION = CI_BUILD_NUMBER`, so build numbers always go up.
+`MARKETING_VERSION` follows `app-versionName`. The Release configuration uses
+`Info-Release.plist` and talks to production only.
+
 ## Tests
 
 ```bash
