@@ -129,6 +129,7 @@ key 沿用 App 现有命名（`home_*`、`cases_*`、`practice_*`、`supervision
 | help_call | 拨打 %1$s | Call %1$s |
 | help_line_format | %1$s · %2$s | %1$s · %2$s |
 | help_body | 这是一个练习工具，不能在危机中提供帮助。如果你或身边的人有危险，请马上联系当地急救电话或心理援助热线。 | This is a practice tool. It can't help in a crisis. If you or someone near you is in danger, call your local emergency number or a crisis line now. |
+| help_hard_time | 如果你自己正在经历困难，请联系身边的专业人员，或拨打当地的心理援助热线。 | If you're going through a hard time yourself, please reach out to a professional near you or call a local crisis line. |
 | help_practice_note | 如果是练习让你感到不舒服，可以停下来，和你的督导或信任的人聊聊。 | If practising has upset you, take a break and talk to your supervisor or someone you trust. |
 
 ### 设置、关于、隐私
