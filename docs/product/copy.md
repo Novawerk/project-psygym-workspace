@@ -131,6 +131,28 @@ key 沿用 App 现有命名（`home_*`、`cases_*`、`practice_*`、`supervision
 | supervision_feedback_failed | 新 | 没发出去 | Didn't send |
 | supervision_leave_writing | 新 | 报告还没写完，离开就看不到了。 | The report isn't finished. If you leave, you won't see it. |
 
+### 举报（🔵 第 2 批，待决策 D8）
+
+| key | 中文 | English |
+|-----|------|---------|
+| report_menu_client | 举报这条回复 | Report this reply |
+| report_menu_report | 举报这段 | Report this part |
+| report_title | 举报这条回复 | Report this reply |
+| report_text_label | 这段文字会发给我们 | This text will be sent to us |
+| report_reason_title | 原因 | Reason |
+| report_reason_harmful | 冒犯或伤害性的内容 | Offensive or harmful |
+| report_reason_out_of_role | 跳出了来访者的角色 | Broke character |
+| report_reason_unsafe_advice | 给了危险或不当的建议 | Unsafe or inappropriate advice |
+| report_reason_other | 其他 | Other |
+| report_note_hint | 想补充什么吗？（可选，最多 500 字） | Anything to add? (optional, up to 500 characters) |
+| report_privacy_note | 我们会收到这段文字、原因和你写的话，转到我们内部的 Slack 频道，不进数据库。不会发送整场对话。 | We receive this text, the reason and your note in our internal Slack channel, not a database. The rest of the session is not sent. |
+| report_send | 发送举报 | Send report |
+| report_cancel | 取消 | Cancel |
+| report_thanks | 谢谢，我们收到了。 | Thanks, we got it. |
+| report_failed | 没发出去 | Didn't send |
+| privacy_q_report | 举报一条回复时，你们收到什么？ | What do you receive when I report a reply? |
+| privacy_a_report | 被举报的那一段文字、你选的原因和你写的话，转到我们内部的 Slack 频道，不进数据库。不会发送整场对话。 | The reported text, the reason you chose and your note, sent to our internal Slack channel, not a database. The rest of the session is not sent. |
+
 ### 需要帮助？
 
 | key | 中文 | English |
