@@ -76,7 +76,7 @@ key 沿用 App 现有命名（`home_*`、`cases_*`、`practice_*`、`supervision
 | brief_focus | 新 | 这次练什么 | What to practise |
 | brief_setup | 新 | 会谈设置 | Session |
 | brief_setup_body | 新 | 建议 15–30 轮 · 约 15 分钟 · 你随时可以结束。 | 15–30 turns suggested · about 15 min · end any time. |
-| brief_content_note | 新 | 这场会谈可能涉及抑郁、焦虑和消极念头。来访者是虚构的。对话会交给第三方 AI 模型处理，我们不保存。 | This session may touch on depression, anxiety and dark thoughts. The client is fictional. A third-party AI model processes the conversation; we don't store it. |
+| brief_content_note | 新 | 这场会谈可能涉及抑郁、焦虑和消极念头。来访者是虚构的。对话会交给第三方 AI 模型处理，我们的服务器不保存。 | This session may touch on depression, anxiety and dark thoughts. The client is fictional. A third-party AI model processes the conversation; our servers don't store it. |
 | brief_start | 新 | 开始会谈 | Start session |
 
 ### 会谈
@@ -93,8 +93,8 @@ key 沿用 App 现有命名（`home_*`、`cases_*`、`practice_*`、`supervision
 | practice_end_body_short | 新 | 对话很短，督导能给的反馈有限。 | The session is short, so the feedback will be limited. |
 | practice_end_confirm | 新 | 结束并查看督导 | End and see supervision |
 | practice_end_cancel | 新 | 继续会谈 | Keep going |
-| practice_end_note | 新 | 我们不保存这次对话。结束后可以看报告，离开报告页就没有了。 | We don't store this session. You can read the report; once you leave it, it's gone. |
-| practice_end_note_saved | 新（🟠 D3，替代上一条） | 对话和报告会存在这台手机上。可以在设置里关掉。 | The session and report are saved on this phone. You can turn this off in Settings. |
+| practice_end_note | 新 | 对话和报告会存在这台手机上。可以在「我的」里关掉。 | The session and report are saved on this phone. You can turn this off under Me. |
+| practice_end_note_off | 新（保存开关关掉时） | 这次对话不会保存。离开报告页就没有了。 | This session won't be saved. Once you leave the report, it's gone. |
 | practice_leave_title | 不变 | 离开这次练习？ | Leave this practice? |
 | practice_leave_confirm | 不变 | 离开 | Leave |
 | practice_leave_cancel | 不变 | 留下 | Stay |
@@ -124,7 +124,8 @@ key 沿用 App 现有命名（`home_*`、`cases_*`、`practice_*`、`supervision
 | supervision_feedback_down_cd | 新（读屏） | 没帮助 | Not helpful |
 | supervision_feedback_hint | 新 | 想说一句吗？（可选） | Anything to add? (optional) |
 | supervision_feedback_send | 新 | 发送 | Send |
-| supervision_feedback_note | 新 | 我们只收你的评价和这一句话，不收对话内容。 | We only receive your rating and this one line, not the conversation. |
+| supervision_feedback_note | 新 | 评价和这句话会转到我们内部的 Slack 频道，不收对话内容。 | Your rating and this line go to our internal Slack channel. Never the conversation. |
+| supervision_feedback_limit | 新 | 最多 500 字 | Up to 500 characters |
 | supervision_feedback_thanks | 新 | 谢谢，我们收到了。 | Thanks, we got it. |
 | supervision_feedback_failed | 新 | 没发出去 | Didn't send |
 | supervision_leave_writing | 新 | 报告还没写完，离开就看不到了。 | The report isn't finished. If you leave, you won't see it. |
@@ -145,6 +146,24 @@ key 沿用 App 现有命名（`home_*`、`cases_*`、`practice_*`、`supervision
 
 | key | 中文 | English |
 |-----|------|---------|
+| tab_practice | 练习 | Practise |
+| tab_history | 记录 | History |
+| tab_me | 我的 | Me |
+| me_title | 我的 | Me |
+| me_settings_section | 设置 | Settings |
+| me_about_you_section | 关于你 | About you |
+| history_title | 练习记录 | Practice history |
+| history_local_note | 记录只存在这台手机上。 | Records stay on this phone. |
+| history_group_week | 本周 | This week |
+| history_group_earlier | 更早 | Earlier |
+| history_next | 下次练：%1$s | Next: %1$s |
+| history_report_unfinished | 报告未完成 | Report unfinished |
+| history_empty | 还没有练习记录。练完一场，它会出现在这里。 | No practice yet. Finish a session and it shows up here. |
+| history_empty_action | 开始练习 | Start practising |
+| history_detail_report | 报告 | Report |
+| history_detail_chat | 对话 | Conversation |
+| history_delete_one | 删除这场 | Delete this session |
+| history_delete_one_confirm | 删除这场练习？删除后不能恢复。 | Delete this session? This can't be undone. |
 | settings_history_section | 练习记录 | Practice history |
 | settings_history_toggle | 在本机保存练习记录 | Save practice history on this phone |
 | settings_history_toggle_desc | 关掉后不再保存新的练习，已有的保留。 | When off, new sessions aren't saved. Saved ones stay. |
@@ -170,10 +189,9 @@ key 沿用 App 现有命名（`home_*`、`cases_*`、`practice_*`、`supervision
 | privacy_q_vendor | AI 模型服务存吗？ | Does the AI model service store it? |
 | privacy_a_vendor | 按它们自己的政策处理。 | It follows its own policy. |
 | privacy_q_device | 手机上存吗？ | Is it stored on my phone? |
-| privacy_a_device | 现在不存。离开报告页，这场对话和报告就没有了。 | Not now. Once you leave the report, the session and report are gone. |
-| privacy_a_device_saved | （🟠 D3，替代上一条）存。每场练习的对话和报告存在这台手机上 App 自己的空间里，不上传、不进云备份。可以在设置里关掉，也可以删除一场或全部。卸载 App 就全部删除。 | Yes. Each session and its report are saved in the app's own space on this phone. Nothing is uploaded or backed up to the cloud. Turn it off or delete one or all sessions in Settings. Uninstalling the app deletes everything. |
+| privacy_a_device | 存。每场练习的对话和报告存在这台手机上 App 自己的空间里，不上传、不进云备份。记录未加密，保存在 App 自己的存储空间里。可以在「我的」里关掉保存或全部删除，也可以在练习记录里删除单场。卸载 App 就全部删除。 | Yes. Each session and its report are saved in the app's own space on this phone. Nothing is uploaded or backed up to the cloud. Records are stored unencrypted in the app's private storage. Turn saving off or delete everything under Me; delete a single session from your practice history. Uninstalling the app deletes everything. |
 | privacy_q_feedback | 你们收到我的评价吗？ | Do you receive my ratings? |
-| privacy_a_feedback | 只有你在报告页点了 👍 / 👎 时，我们收到这个评价和你写的一句话（如果写了）。不收对话内容。 | Only when you tap 👍 / 👎 on a report. We receive that rating and the one line you write, if any. Never the conversation. |
+| privacy_a_feedback | 只有你在报告页点了 👍 / 👎 时才发。评价和你写的那句话会转到我们内部的 Slack 频道（第三方服务），不进数据库；还会带上病例编号和界面语言。那句话最多 500 字。不收对话内容。 | Only when you tap 👍 / 👎 on a report. Your rating and the line you write go to our internal Slack channel (a third-party service), not a database, together with the case id and interface language. The line is up to 500 characters. We never receive the conversation. |
 | privacy_q_collect | 你们收集什么？ | What do you collect? |
 | privacy_a_collect | 邀请码（用来连服务器）和你选的语言，只存在这台手机上。没有账号，不收集姓名、手机号、位置。 | Your invite code (to reach our server) and your language, kept on this phone only. No account. We don't collect your name, phone number or location. |
 | privacy_q_real | 我能输入真实来访者的信息吗？ | Can I enter real client information? |
