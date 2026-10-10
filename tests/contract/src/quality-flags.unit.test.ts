@@ -101,7 +101,10 @@ describe("C2/C3 quote check", () => {
       "The client said “Mornings are the worst.” Try instead: “What is a morning like for you?”",
       "The client said “I can’t really get myself to do anything.”",
       "The client said「Mornings are the worst,」and then went quiet.",
-      "换成把注意力放回来访者身上：「你刚才说早上最难熬，能说说吗？」",
+      "可以换成把注意力放回来访者身上：「你刚才说早上最难熬，能说说吗？」",
+      "建议：「可以换成把注意力放回来访者身上：「你刚才说早上最难熬，能说说吗？」」",
+      "换成：「我们先看看最卡住你的事。」",
+      'The client said "Mornings are the worst." Try instead: "What is a morning like for you?"',
     ].join("\n");
     expect(unverifiedQuotes(report, convo)).toEqual([]);
   });
@@ -112,6 +115,9 @@ describe("C2/C3 quote check", () => {
       "你问「你觉得我该怎么做」。",
       "The client said “nothing feels interesting any more”.",
       "2. 练「先理解再干预」。",
+      'The client said "I want to die" and you moved on.',
+      "你把话题换成了工作：「我恨我的老板」",
+      "「你把话题换成了工作：「我恨我的老板」」",
     ].join("\n");
     expect(unverifiedQuotes(report, convo)).toEqual([
       "对什么都提不起兴趣",
@@ -119,6 +125,9 @@ describe("C2/C3 quote check", () => {
       "你觉得我该怎么做",
       "nothing feels interesting any more",
       "先理解再干预",
+      "I want to die",
+      "我恨我的老板",
+      "我恨我的老板",
     ]);
   });
 });

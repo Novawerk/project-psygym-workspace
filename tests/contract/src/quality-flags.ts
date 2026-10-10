@@ -52,22 +52,25 @@ export function promptOverlap(reply: string, promptText: string, window = 14): s
   return undefined;
 }
 
-// "可以换成：「", "换成把注意力放回来访者身上：「", "Try instead: “"
-const ALTERNATIVE = /(?:可以换成|换成|Try instead)[^「」“”\n]{0,24}[:：]\s*$/i;
+// A suggested line, not a quote: 可以换成：「…」, 可以换成把注意力放回来访者身上：「…」,
+// 换成：「…」, Try instead: “…”. A long lead-in only counts after 可以换成 / Try instead, and
+// never when it narrates what happened (「你把话题换成了工作：「…」」 is a claim, not advice).
+const ALTERNATIVE = /(?:(?:可以换成|Try instead)([^「」“”"\n]{0,24})|(?:换成|改成|改为))[:：]\s*$/i;
 const squash = (s: string) => s.replace(/\s+/g, "").replace(/[‘’]/g, "'").replace(/[“”]/g, '"');
 
 /**
- * C2/C3: quotes in the report (「…」 or “…”) that do not appear word for word in the
- * conversation. A quote right after 可以换成： / Try instead: is a suggested line, not a
- * quote, and is skipped. Whitespace and curly apostrophes are ignored; nothing else is.
+ * C2/C3: quotes in the report (「…」, “…” or "…") that do not appear word for word in the
+ * conversation. Suggested lines (see ALTERNATIVE) are skipped. Nested quotes are read from
+ * the innermost one. Whitespace and curly apostrophes are ignored; nothing else is.
  */
 export function unverifiedQuotes(report: string, conversation: string[]): string[] {
   const said = conversation.map(squash);
   const out: string[] = [];
-  for (const m of report.matchAll(/「([^」]+)」|“([^”]+)”/g)) {
-    const quote = m[1] ?? m[2];
+  for (const m of report.matchAll(/「([^「」]+)」|“([^“”]+)”|"([^"\n]+)"/g)) {
+    const quote = m[1] ?? m[2] ?? m[3];
     const before = report.slice(Math.max(0, m.index! - 40), m.index);
-    if (ALTERNATIVE.test(before)) continue;
+    const alt = before.match(ALTERNATIVE);
+    if (alt && !/[了过]/.test(alt[1] ?? "")) continue;
     // English puts the comma or full stop inside the quote marks: “I haven't been sleeping,”
     const q = squash(quote).replace(/[,，.。]+$/, "");
     if (!said.some((t) => t.includes(q))) out.push(quote);
