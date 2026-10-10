@@ -25,7 +25,7 @@
 | 副标题 | 给新手咨询师的练习工具。 | A practice tool for new counselors. |
 | 步骤 1 | **选一个病例。** 每位来访者都是虚构的。 | **Pick a case.** Every client is fictional. |
 | 步骤 2 | **开始会谈。** AI 扮演来访者，像真人一样回应你。 | **Hold a session.** An AI plays the client and responds like a real person. |
-| 步骤 3 | **看督导反馈。** 引用你的原话，告诉你哪里好、哪里可以改。 | **Read the supervision.** It quotes your words: what went well, what to change. |
+| 步骤 3 | **看督导反馈。** 引用你的原话，告诉你哪里好、哪里可以改。 | **Get feedback.** It quotes your words: what went well, what to change. |
 | 主按钮 | 继续 | Continue |
 | 次按钮 | 跳过 | Skip |
 
@@ -69,9 +69,9 @@
 | 标题 | 准备开始 | Almost ready |
 | 语言块标题 | 界面语言 | Language |
 | 语言选项 | 跟随系统 / 中文 / English | System / 中文 / English |
-| 语言说明 | 病例暂时只有中文。界面是英文时，来访者和督导报告都用英文。 | Cases are written in Chinese for now. With the English interface, the client speaks English. |
+| 语言说明 | 病例暂时只有中文。界面是英文时，来访者和督导报告都用英文。 | Cases are written in Chinese for now. With the English interface, the client and the report are in English. |
 | 邀请码块标题 | 邀请码 | Invite code |
-| 邀请码说明 | 测试期间需要邀请码。没有的话可以先跳过，用演示病例看看。 | We need an invite code during testing. No code? Skip for now. |
+| 邀请码说明 | 测试期间需要邀请码。没有的话可以先跳过。 | We need an invite code during testing. No code? Skip for now. |
 | 输入框占位 | 输入邀请码 | Enter invite code |
 | 主按钮 | 开始练习 | Start practising |
 | 次按钮 | 先跳过 | Skip for now |
