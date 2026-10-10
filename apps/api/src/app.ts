@@ -12,7 +12,7 @@ import { streamSSE } from "hono/streaming";
 import type { z } from "zod";
 
 import type { AppConfig, Role } from "./config.js";
-import type { Case, Prompts } from "./content.js";
+import { publicSummary, type Case, type Prompts } from "./content.js";
 import { createProvider, type ModelProvider } from "./llm/index.js";
 import type { ModelRequest } from "./llm/types.js";
 import { FixedWindowLimiter, clientIp } from "./rate-limit.js";
@@ -153,7 +153,7 @@ export function createApp(deps: AppDeps) {
   });
 
   app.get("/cases", (c) =>
-    c.json({ cases: [...cases.values()].map(({ id, school, title, summary }) => ({ id, school, title, summary })) }),
+    c.json({ cases: [...cases.values()].map(publicSummary) }),
   );
 
   function streamingRoute(path: string, role: Role, schema: typeof ChatBody | typeof SupervisionBody, build: typeof clientRequest) {

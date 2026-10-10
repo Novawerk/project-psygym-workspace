@@ -22,31 +22,87 @@ export const contentDir = () =>
 export const promptsDir = () =>
   process.env.PROMPTS_DIR ?? firstDir([path.join(here, "prompts"), path.resolve(here, "../prompts")]);
 
-const Localized = z.object({ zh: z.string().min(1), en: z.string().min(1) });
-const Frontmatter = z.object({
+/**
+ * Case authors may write Chinese first. `zh` is required; an empty or missing `en` falls back to
+ * `zh`, so the app always gets both.
+ */
+const Localized = z
+  .object({ zh: z.string().trim().min(1), en: z.string().trim().nullish() })
+  .transform(({ zh, en }) => ({ zh, en: en || zh }));
+export type LocalizedText = z.infer<typeof Localized>;
+
+/** Required: a case without these doesn't load. */
+const Required = z.object({
   id: z.string().regex(/^[a-z0-9-]+$/),
   school: z.literal("cbt"),
   title: Localized,
   summary: Localized,
 });
 
-export type CaseSummary = z.infer<typeof Frontmatter>;
+/** The template lets 聆镜 write difficulty in Chinese. */
+const DIFFICULTY: Record<string, "intro" | "medium" | "hard"> = { 入门: "intro", 中等: "medium", 较难: "hard" };
+
+/**
+ * Optional, public (GET /cases only, never sent to a model as the supervisor's input).
+ * Each one is checked on its own: a bad value drops that field with a warning, and the case
+ * still loads. A missing field is simply left out of the response.
+ */
+const Optional = {
+  tags: z.array(Localized).min(1),
+  difficulty: z.preprocess((v) => (typeof v === "string" ? (DIFFICULTY[v.trim()] ?? v.trim()) : v), z.enum(["intro", "medium", "hard"])),
+  estimatedMinutes: z.coerce.number().int().min(1).max(180),
+  clientIntro: Localized,
+  practiceFocus: z.array(Localized).min(1).max(3),
+  contentNotes: Localized,
+} as const;
+type OptionalKey = keyof typeof Optional;
+/** More tags than this: we keep the first ones and log a warning. */
+export const MAX_TAGS = 3;
+export const OPTIONAL_FIELDS = Object.keys(Optional) as OptionalKey[];
+
+export type CaseSummary = z.infer<typeof Required> & { [K in OptionalKey]?: z.infer<(typeof Optional)[K]> };
 export interface Case extends CaseSummary {
   /** The AI's role brief. Stays on the server. */
   brief: string;
 }
 
-const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/;
-
-export function parseCase(file: string, raw: string): Case {
-  const m = FRONTMATTER.exec(raw);
-  if (!m) throw new Error(`${file}: missing frontmatter`);
-  const meta = Frontmatter.safeParse(parseYaml(m[1]!));
-  if (!meta.success) throw new Error(`${file}: bad frontmatter\n${z.prettifyError(meta.error)}`);
-  return { ...meta.data, brief: m[2]!.trim() };
+/** Only the public fields, in a fixed order; missing optional ones are left out. */
+export function publicSummary(c: Case): CaseSummary {
+  const out: CaseSummary = { id: c.id, school: c.school, title: c.title, summary: c.summary };
+  for (const key of OPTIONAL_FIELDS) if (c[key] !== undefined) Object.assign(out, { [key]: c[key] });
+  return out;
 }
 
-export function loadCases(dir = path.join(contentDir(), "cases")): Map<string, Case> {
+const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/;
+
+export type Warn = (message: string) => void;
+const consoleWarn: Warn = (m) => console.warn(JSON.stringify({ msg: "case warning", warning: m }));
+
+export function parseCase(file: string, raw: string, warn: Warn = consoleWarn): Case {
+  const m = FRONTMATTER.exec(raw);
+  if (!m) throw new Error(`${file}: missing frontmatter`);
+  const yaml: unknown = parseYaml(m[1]!);
+  const meta = Required.safeParse(yaml);
+  if (!meta.success) throw new Error(`${file}: bad frontmatter\n${z.prettifyError(meta.error)}`);
+  const c: Case = { ...meta.data, brief: m[2]!.trim() };
+  const fields = (yaml ?? {}) as Record<string, unknown>;
+  for (const key of OPTIONAL_FIELDS) {
+    if (fields[key] === undefined || fields[key] === null) continue;
+    const parsed = Optional[key].safeParse(fields[key]);
+    if (parsed.success) {
+      let value: unknown = parsed.data;
+      if (key === "tags" && Array.isArray(value) && value.length > MAX_TAGS) {
+        warn(`${file}: tags has ${value.length} entries; keeping the first ${MAX_TAGS}`);
+        value = value.slice(0, MAX_TAGS);
+      }
+      Object.assign(c, { [key]: value });
+    }
+    else warn(`${file}: ${key} is invalid and left out (${parsed.error.issues[0]?.message ?? "invalid"})`);
+  }
+  return c;
+}
+
+export function loadCases(dir = path.join(contentDir(), "cases"), warn: Warn = consoleWarn): Map<string, Case> {
   const cases = new Map<string, Case>();
   // Sorted by id, so "x" comes before "x-more" (plain filename order puts "-" before ".md").
   const names = fs
@@ -56,7 +112,7 @@ export function loadCases(dir = path.join(contentDir(), "cases")): Map<string, C
     .sort()
     .map((n) => `${n}.md`);
   for (const name of names) {
-    const c = parseCase(name, fs.readFileSync(path.join(dir, name), "utf8"));
+    const c = parseCase(name, fs.readFileSync(path.join(dir, name), "utf8"), warn);
     if (cases.has(c.id)) throw new Error(`${name}: duplicate case id ${c.id}`);
     cases.set(c.id, c);
   }

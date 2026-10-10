@@ -104,7 +104,10 @@ you set `CLIENT_LLM_MODEL` / `SUPERVISOR_LLM_MODEL` (and `_BASE_URL`).
   Temperature 0.3 where the model accepts it (DeepSeek yes; current Claude models reject
   sampling parameters, so we leave it out there).
 - Cases: `content/cases/<id>.md`. Frontmatter `id`, `school`, `title.zh/en`, `summary.zh/en`
-  is what `GET /cases` returns; the body is the role brief and stays on the server. See
+  (required) and `tags`, `difficulty`, `estimatedMinutes`, `clientIntro`, `practiceFocus`,
+  `contentNotes` (optional) are what `GET /cases` returns; the body is the role brief and stays on
+  the server. A bad optional field is left out with a `case warning` log line; the case still
+  loads. A bad required field stops the server from starting, so the tests catch it first. See
   [`content/README.md`](../../content/README.md) for the template.
 
 The cases and the rubric in this PR are placeholders, marked as such. Our psychologists'

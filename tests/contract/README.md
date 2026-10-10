@@ -37,7 +37,8 @@ limiter slows the suite down instead of failing it.
 
 - `GET /health` → `200 {"ok":true}`.
 - `GET /cases` → `{"cases": CaseSummary[]}`, non-empty, unique ids, `school: "cbt"`,
-  `zh` and `en` text present, and **no extra fields** (the role brief stays on the server).
+  `zh` and `en` text present, only the contract's public fields (the role brief stays on the
+  server), and each optional field well-formed when present.
 - `POST /chat`, `POST /supervision`, in `zh` and `en`: `200`, `text/event-stream`, frames
   `turn_start → text_delta* → turn_end | error` and nothing after, data-only, every
   `data:` is JSON, known `type`s only, `usage` numbers when present, non-empty text.

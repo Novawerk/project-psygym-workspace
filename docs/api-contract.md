@@ -22,8 +22,18 @@ type Locale = "zh" | "en";
 type Role = "counselor" | "client";          // counselor = the trainee, client = the AI
 type Message = { role: Role; text: string };  // text ≤ 2000 chars, ≤ 80 messages
 // Either role may come first.
-type LocalizedText = { zh: string; en: string };
-type CaseSummary = { id: string; school: "cbt"; title: LocalizedText; summary: LocalizedText };
+type LocalizedText = { zh: string; en: string };  // both always non-empty; en falls back to zh
+type CaseSummary = {
+  id: string; school: "cbt"; title: LocalizedText; summary: LocalizedText;
+  // Optional. Left out when the case doesn't have it; apps must cope with any of them missing.
+  // Authors may write Chinese only: then en carries the zh text. More than 3 tags: we keep the first 3.
+  tags?: LocalizedText[];                       // 1–3, e.g. depression, anxiety
+  difficulty?: "intro" | "medium" | "hard";
+  estimatedMinutes?: number;                    // whole minutes, 1–180
+  clientIntro?: LocalizedText;                  // pseudonym, age, role, why they came; no spoilers
+  practiceFocus?: LocalizedText[];              // 1–3 things to practise
+  contentNotes?: LocalizedText;                 // content note; the app has a generic fallback
+};
 ```
 
 ## Endpoints
@@ -34,7 +44,8 @@ Never checks the invite code.
 
 ### `GET /cases` → `200 {"cases": CaseSummary[]}`
 
-Only what the picker shows. The full case (the AI's role brief) stays on the server.
+Only what the picker and the case intro show. The full case (the AI's role brief) stays on the
+server. None of these fields is sent to the AI supervisor.
 
 ### `POST /chat` → `text/event-stream`
 
@@ -84,5 +95,7 @@ JSON `{ "error": { "code": string, "message": string } }` with:
 | 404 | `case_not_found` | unknown `caseId` |
 | 429 | `rate_limited` | too many requests; `Retry-After` header set |
 | 503 | `model_unavailable` | no model configured or vendor down |
+
+In a stream, `error` with `model_unavailable` also covers a model that returned an empty reply.
 
 The app shows a friendly message for each code, in the current language.
