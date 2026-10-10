@@ -22,11 +22,12 @@ type Locale = "zh" | "en";
 type Role = "counselor" | "client";          // counselor = the trainee, client = the AI
 type Message = { role: Role; text: string };  // text ≤ 2000 chars, ≤ 80 messages
 // Either role may come first.
-type LocalizedText = { zh: string; en: string };
+type LocalizedText = { zh: string; en: string };  // both always non-empty; en falls back to zh
 type CaseSummary = {
   id: string; school: "cbt"; title: LocalizedText; summary: LocalizedText;
   // Optional. Left out when the case doesn't have it; apps must cope with any of them missing.
-  tags?: LocalizedText[];                       // 1–6, e.g. depression, anxiety
+  // Authors may write Chinese only: then en carries the zh text. More than 3 tags: we keep the first 3.
+  tags?: LocalizedText[];                       // 1–3, e.g. depression, anxiety
   difficulty?: "intro" | "medium" | "hard";
   estimatedMinutes?: number;                    // whole minutes, 1–180
   clientIntro?: LocalizedText;                  // pseudonym, age, role, why they came; no spoilers

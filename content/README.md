@@ -27,22 +27,7 @@ title:
 summary:
   zh: <一两句话，选病例前看到。不剧透核心信念。>
   en: <One or two sentences.>
-# ── 以下都可选。不填就不显示，App 用通用文案或整块不显示。都是公开的：学员在 App 里能看到，
-# ── 所以不剧透核心信念、不写「很难说出口」的内容。AI 督导看不到这些字段。
-tags:                            # 主题标签，1–6 个
-  - zh: <例：抑郁>
-    en: <Depression>
-difficulty: <入门 / 中等 / 较难>   # 也可以写 intro / medium / hard
-estimatedMinutes: <15>           # 预计分钟数，整数
-clientIntro:                     # 来访者的公开简介：化名、年龄、身份、来访理由。不剧透。
-  zh: <例：小林，23 岁，去年毕业，正在找工作。自己预约的第一次咨询。>
-  en: <…>
-practiceFocus:                   # 这次练什么，1–3 条
-  - zh: <例：建立关系>
-    en: <Building rapport>
-contentNotes:                    # 内容提示。不填时 App 用通用的提示。
-  zh: <例：涉及抑郁情绪和消极念头。>
-  en: <…>
+difficulty: <入门 / 中等 / 较难>   # 可选。API 暂不使用，App 不显示。
 ---
 
 ## 来访者基本情况
@@ -94,7 +79,7 @@ contentNotes:                    # 内容提示。不填时 App 用通用的提�
 
 **写完自查：**
 
-- [ ] frontmatter 四项必填都填了（id、school、title.zh/en、summary.zh/en）。可选的公开字段，填了的都有 zh 和 en。
+- [ ] frontmatter 四项必填都填了（id、school、title.zh/en、summary.zh/en）。
 - [ ] 主诉、自动思维、示范台词用的是来访者的口吻。
 - [ ] 「会透露 / 不会轻易透露」分了层。
 - [ ] 风险等级和被问到自杀时的回答写清楚了。

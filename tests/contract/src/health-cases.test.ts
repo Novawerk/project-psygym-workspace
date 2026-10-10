@@ -40,7 +40,7 @@ describe("GET /cases", () => {
       for (const field of ["title", "summary"]) localized(c[field], `${c.id}.${field}`);
       // Optional fields: when present, well-formed.
       if ("tags" in c) {
-        expect(Array.isArray(c.tags) && c.tags.length >= 1 && c.tags.length <= 6, `${c.id}.tags`).toBe(true);
+        expect(Array.isArray(c.tags) && c.tags.length >= 1 && c.tags.length <= 3, `${c.id}.tags`).toBe(true);
         c.tags.forEach((t: unknown, i: number) => localized(t, `${c.id}.tags[${i}]`));
       }
       if ("difficulty" in c) expect(["intro", "medium", "hard"], `${c.id}.difficulty`).toContain(c.difficulty);

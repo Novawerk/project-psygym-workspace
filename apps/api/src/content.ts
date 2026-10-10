@@ -22,7 +22,13 @@ export const contentDir = () =>
 export const promptsDir = () =>
   process.env.PROMPTS_DIR ?? firstDir([path.join(here, "prompts"), path.resolve(here, "../prompts")]);
 
-const Localized = z.object({ zh: z.string().trim().min(1), en: z.string().trim().min(1) });
+/**
+ * Case authors may write Chinese first. `zh` is required; an empty or missing `en` falls back to
+ * `zh`, so the app always gets both.
+ */
+const Localized = z
+  .object({ zh: z.string().trim().min(1), en: z.string().trim().nullish() })
+  .transform(({ zh, en }) => ({ zh, en: en || zh }));
 export type LocalizedText = z.infer<typeof Localized>;
 
 /** Required: a case without these doesn't load. */
@@ -42,7 +48,7 @@ const DIFFICULTY: Record<string, "intro" | "medium" | "hard"> = { 入门: "intro
  * still loads. A missing field is simply left out of the response.
  */
 const Optional = {
-  tags: z.array(Localized).min(1).max(6),
+  tags: z.array(Localized).min(1),
   difficulty: z.preprocess((v) => (typeof v === "string" ? (DIFFICULTY[v.trim()] ?? v.trim()) : v), z.enum(["intro", "medium", "hard"])),
   estimatedMinutes: z.coerce.number().int().min(1).max(180),
   clientIntro: Localized,
@@ -50,6 +56,8 @@ const Optional = {
   contentNotes: Localized,
 } as const;
 type OptionalKey = keyof typeof Optional;
+/** More tags than this: we keep the first ones and log a warning. */
+export const MAX_TAGS = 3;
 export const OPTIONAL_FIELDS = Object.keys(Optional) as OptionalKey[];
 
 export type CaseSummary = z.infer<typeof Required> & { [K in OptionalKey]?: z.infer<(typeof Optional)[K]> };
@@ -81,7 +89,14 @@ export function parseCase(file: string, raw: string, warn: Warn = consoleWarn): 
   for (const key of OPTIONAL_FIELDS) {
     if (fields[key] === undefined || fields[key] === null) continue;
     const parsed = Optional[key].safeParse(fields[key]);
-    if (parsed.success) Object.assign(c, { [key]: parsed.data });
+    if (parsed.success) {
+      let value: unknown = parsed.data;
+      if (key === "tags" && Array.isArray(value) && value.length > MAX_TAGS) {
+        warn(`${file}: tags has ${value.length} entries; keeping the first ${MAX_TAGS}`);
+        value = value.slice(0, MAX_TAGS);
+      }
+      Object.assign(c, { [key]: value });
+    }
     else warn(`${file}: ${key} is invalid and left out (${parsed.error.issues[0]?.message ?? "invalid"})`);
   }
   return c;

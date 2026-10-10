@@ -256,7 +256,7 @@ describe("public case fields", () => {
     const { c, warnings } = parse(
       "difficulty: 很难\nestimatedMinutes: 0\npracticeFocus:\n" +
         "  - {zh: 一, en: a}\n  - {zh: 二, en: b}\n  - {zh: 三, en: c}\n  - {zh: 四, en: d}\n" +
-        "clientIntro: {zh: 只有中文}\ntags:\n  - {zh: 抑郁, en: Depression}\n",
+        "clientIntro: {en: English only}\ntags:\n  - {zh: 抑郁, en: Depression}\n",
     );
     expect(c.difficulty).toBeUndefined();
     expect(c.estimatedMinutes).toBeUndefined();
@@ -266,8 +266,31 @@ describe("public case fields", () => {
     expect(warnings.map((w) => w.split(":")[1]!.trim().split(" ")[0])).toEqual(["difficulty", "estimatedMinutes", "clientIntro", "practiceFocus"]);
   });
 
-  it("a bad required field still stops the case from loading", () => {
-    expect(() => parseCase("x.md", "---\nid: x\nschool: cbt\ntitle: {zh: 标题}\nsummary: {zh: a, en: b}\n---\n正文")).toThrow(/bad frontmatter/);
+  it("a bad required field still stops the case from loading (zh is required)", () => {
+    expect(() => parseCase("x.md", "---\nid: x\nschool: cbt\ntitle: {en: Title}\nsummary: {zh: a, en: b}\n---\n正文")).toThrow(/bad frontmatter/);
+    expect(() => parseCase("x.md", "---\nid: x\nschool: cbt\ntitle: {zh: '', en: Title}\nsummary: {zh: a, en: b}\n---\n正文")).toThrow(/bad frontmatter/);
+  });
+
+  it("Chinese only: an empty or missing en falls back to zh, everywhere", () => {
+    const warnings: string[] = [];
+    const c = parseCase(
+      "x.md",
+      "---\nid: x\nschool: cbt\ntitle: {zh: 标题}\nsummary: {zh: 简介, en: ''}\n" +
+        "clientIntro:\n  zh: 小林，23 岁\n  en:\npracticeFocus:\n  - {zh: 建立关系}\ntags:\n  - {zh: 抑郁, en: '  '}\n---\n正文",
+      (w) => warnings.push(w),
+    );
+    expect(c.title).toEqual({ zh: "标题", en: "标题" });
+    expect(c.summary).toEqual({ zh: "简介", en: "简介" });
+    expect(c.clientIntro).toEqual({ zh: "小林，23 岁", en: "小林，23 岁" });
+    expect(c.practiceFocus).toEqual([{ zh: "建立关系", en: "建立关系" }]);
+    expect(c.tags).toEqual([{ zh: "抑郁", en: "抑郁" }]);
+    expect(warnings).toEqual([]);
+  });
+
+  it("more than 3 tags: the first 3 stay, with a warning", () => {
+    const { c, warnings } = parse("tags:\n  - {zh: 一}\n  - {zh: 二}\n  - {zh: 三}\n  - {zh: 四}\n");
+    expect(c.tags?.map((t) => t.zh)).toEqual(["一", "二", "三"]);
+    expect(warnings).toEqual(["x.md: tags has 4 entries; keeping the first 3"]);
   });
 });
 
