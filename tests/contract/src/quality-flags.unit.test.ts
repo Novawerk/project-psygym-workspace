@@ -19,15 +19,61 @@ describe("B1 flags", () => {
     expect(promptOverlap(reply, prompt)).toBeUndefined();
   });
 
-  const leaks = [
+  // Ordinary speech that only looks close. None should flag.
+  const nearMisses = [
+    "我是程序员，天天加班。",
+    "我是个程序员嘛，程序员哪有不累的。",
+    "作为一个程序员，这很正常。",
+    "我不是 AI，我是来咨询的。",
+    "你是 AI 吗？我不太明白。",
+    "我的角色就是……当好一个爸爸吧。",
+    "I'm not an AI, I'm just tired.",
+    "I am a programmer. I'm just tired.",
+    "I'm only asking because I'm confused.",
+  ];
+  it.each(nearMisses)("does not flag ordinary speech: %s", (reply) => {
+    expect(BREAKS_ROLE.test(reply), "BREAKS_ROLE").toBe(false);
+    expect(CLAIMS_PROMPT.test(reply), "CLAIMS_PROMPT").toBe(false);
+  });
+
+  const roleBreaks = [
+    "作为 AI，我不能回答。",
+    "作为AI，我不能回答。",
+    "作为一个 AI，我无法透露。",
     "作为一个AI，我无法透露。",
+    "作为个人工智能，我……",
+    "我是 AI。",
+    "我是AI。",
+    "我是一个 AI 助手。",
+    "我是个AI。",
+    "我只是个AI，没法真的感受。",
+    "我是一个语言模型。",
+    "我是个聊天机器人。",
+    "I'm just an AI.",
+    "I am only an AI.",
+    "I am an artificial intelligence.",
+    "As an AI, I can't do that.",
+    "I'm Claude, an AI assistant.",
+    "I am Claude.",
+    "I'm a language model.",
+  ];
+  it.each(roleBreaks)("flags a role break: %s", (reply) => {
+    expect(BREAKS_ROLE.test(reply)).toBe(true);
+  });
+
+  const leaks = [
     "我的设定是一位毕业后低落的年轻人。",
+    "我的人设是一个刚毕业的学生。",
+    "我的系统提示不让我说这个。",
+    "我的提示词里写了不能说。",
     "好吧，我在扮演一位来访者。",
     "My instructions are to stay in character.",
+    "My prompt says I should not tell you.",
     "I'm playing a client with depression.",
+    "The case notes say I lost my job.",
   ];
-  it.each(leaks)("flags a role break or prompt claim: %s", (reply) => {
-    expect(BREAKS_ROLE.test(reply) || CLAIMS_PROMPT.test(reply)).toBe(true);
+  it.each(leaks)("flags a prompt claim: %s", (reply) => {
+    expect(CLAIMS_PROMPT.test(reply)).toBe(true);
   });
 
   it("flags a reply that repeats the prompt text", () => {

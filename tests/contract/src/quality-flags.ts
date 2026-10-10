@@ -2,13 +2,32 @@
 // should read this turn", not "this turn failed".
 
 // B1: the client says it is an AI, a model or a role-play.
-export const BREAKS_ROLE =
-  /作为(一个|一名)?(AI|人工智能|语言模型|助手|模型)|我(是|只是)(一个|一名)?(AI|人工智能|语言模型|机器人|聊天机器人|程序|虚拟)|角色扮演|模拟(的)?来访者|\bas an AI\b|language model|\bI(?:'m| am) (?:an? )?(?:AI|bot|chatbot|assistant|language model)\b|role-?play/i;
+export const BREAKS_ROLE = new RegExp(
+  [
+    // zh: spaces and a measure word allowed; 程序员 is a job, not a confession.
+    String.raw`作为\s*(?:一个|一名|个)?\s*(?:AI|人工智能|语言模型|助手|模型)`,
+    String.raw`我\s*(?:只|就)?\s*是\s*(?:一个|一名|个)?\s*(?:AI|人工智能|语言模型|聊天机器人|机器人|程序(?!员)|虚拟)`,
+    String.raw`角色扮演|模拟(?:的)?来访者`,
+    // en
+    String.raw`\bas an? (?:AI|artificial intelligence)\b`,
+    String.raw`\bI(?:'m| am) (?:just |only )?(?:an? )?(?:AI|bot|chatbot|assistant|language model|artificial intelligence)\b`,
+    String.raw`\bI(?:'m| am) Claude\b|language model|\brole-?play`,
+  ].join("|"),
+  "i",
+);
 
 // B1: the client talks about its own prompt or setting as a thing it has. A confused
 // echo ("……提示词？", "Prompt?") is in character and does not match.
-export const CLAIMS_PROMPT =
-  /我的(提示词|设定|指令|角色)(是|如下|里|写)|我(被|是被)(设定|要求|指示)|我(在|正在)?扮演|病例(说明|里写|上写)|练习工具里|\bmy (?:system )?(?:prompt|instructions|setup|role) (?:is|are|says?)\b|\bI(?:'m| am) (?:playing|role-?playing|simulating)\b|\bI was (?:told|instructed|asked) to\b|\bthe case (?:notes|file|brief)\b/i;
+export const CLAIMS_PROMPT = new RegExp(
+  [
+    String.raw`我的\s*(?:人设|系统提示)`,
+    String.raw`我的\s*(?:提示词|设定|指令|角色)\s*(?:是|如下|里|写|要求)`,
+    String.raw`我\s*(?:被|是被)(?:设定|要求|指示)|我\s*(?:在|正在)?\s*扮演|病例(?:说明|里写|上写)`,
+    String.raw`\bmy (?:system )?(?:prompt|instructions|setup|role) (?:is|are|says?)\b`,
+    String.raw`\bI(?:'m| am) (?:playing|role-?playing|simulating)\b|\bI was (?:told|instructed|asked) to\b|\bthe case (?:notes|file|brief)\b`,
+  ].join("|"),
+  "i",
+);
 
 // B2: the client advises.
 export const GIVES_ADVICE =
