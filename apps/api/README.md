@@ -54,8 +54,11 @@ Blank values count as unset. `apps/api/.env` is read on start; shell variables w
 | `RATE_LIMIT_WINDOW_SEC` | `60` | Window length. Over the limit → 429 `rate_limited` with `Retry-After`. |
 | `PORT` | `8787` | Local server only. |
 
-A role with no provider, or no key for its provider, answers 503 `model_unavailable`. The
-server keeps running, and `/health` and `/cases` still work.
+A role with no provider, or no key for its provider, answers 503 `model_unavailable`. So does
+a misspelt provider (`LLM_PROVIDER=claude`): the start-up log prints one `config error` line
+naming the variable, never its value. Other invalid values (say `RATE_LIMIT_MAX=lots`) fall
+back to their default, with the same log line. The server keeps running, and `/health` and
+`/cases` still work.
 
 ## Switching models
 
@@ -109,5 +112,7 @@ domain `https://psygym-api.novawerk.io`. The lead deploys and sets the environme
   `../../content`, so keep "Include files outside the root directory" on (Vercel's default).
 - Streams: responses carry `Cache-Control: no-cache, no-transform` and `X-Accel-Buffering: no`,
   and a `: ping` comment every 15 s keeps idle connections open.
-- The rate limit lives in each instance's memory. On Vercel that means "per warm instance": a
+- Request bodies over 1 MB get 400 `invalid_request`. We read the rest of the body and drop it
+  (up to 16 MB), so the client finishes sending and its keep-alive connection stays usable.
+- The rate limit lives in each instance's memory, at most 10 000 keys. On Vercel that means "per warm instance": a
   brake, not a guarantee. Fine for an invite-only demo.

@@ -1,5 +1,6 @@
 // Copied from Novawerk/agent-starter (MIT), apps/agent/src/llm/anthropic.ts at fcbd91c.
-// https://github.com/Novawerk/agent-starter — changes: import paths (.js), LlmConfig comes from ../config.js.
+// https://github.com/Novawerk/agent-starter — changes: import paths (.js), LlmConfig comes from ../config.js,
+// no retry after a failed stream (we use no tools, and a retry would repeat text already sent).
 // Claude adapter (native Anthropic SDK).
 //
 // Where it differs from the OpenAI-compatible adapter, it is to give Claude its full feature set:
@@ -32,7 +33,6 @@ import type {
 const FALLBACK_MODELS = /^claude-(opus-5|fable-5-1|sonnet-5-5)/;
 /** Haiku 4.5 and older models don't support adaptive thinking / effort */
 const LEGACY_THINKING = /^claude-(haiku|3|sonnet-4-5|opus-4-5|opus-4-1|sonnet-4-0|opus-4-0)/;
-const MAX_JSON_RETRIES = 2;
 
 export class AnthropicProvider implements ModelProvider {
   readonly name = "anthropic";
@@ -80,19 +80,10 @@ export class AnthropicProvider implements ModelProvider {
   }
 
   async stream(req: ModelRequest, handlers: StreamHandlers): Promise<ModelResponse> {
-    const params = this.buildRequest(req);
-    for (let attempt = 0; ; attempt++) {
-      const stream = this.client.beta.messages.stream(params, { signal: req.signal });
-      if (handlers.onText) stream.on("text", (delta) => handlers.onText?.(delta));
-      if (handlers.onReasoning) stream.on("thinking", (delta) => handlers.onReasoning?.(delta));
-      try {
-        const final = await stream.finalMessage();
-        return toModelResponse(final, this.name);
-      } catch (err) {
-        // Only retry when streaming tool-argument JSON failed to parse; API errors (rate limits, auth, user abort) are rethrown
-        if (err instanceof Anthropic.APIError || req.signal?.aborted || attempt >= MAX_JSON_RETRIES) throw err;
-      }
-    }
+    const stream = this.client.beta.messages.stream(this.buildRequest(req), { signal: req.signal });
+    if (handlers.onText) stream.on("text", (delta) => handlers.onText?.(delta));
+    if (handlers.onReasoning) stream.on("thinking", (delta) => handlers.onReasoning?.(delta));
+    return toModelResponse(await stream.finalMessage(), this.name);
   }
 }
 

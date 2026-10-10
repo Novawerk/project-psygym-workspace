@@ -58,6 +58,8 @@ export type RoleLlm = { ok: true; llm: LlmConfig } | { ok: false; reason: string
 
 export interface AppConfig {
   llm: Record<Role, RoleLlm>;
+  /** Variables we ignored because their value was invalid. Names only, never values. */
+  errors: string[];
   inviteCodes: Set<string> | null;
   rateLimit: { max: number; windowMs: number };
 }
@@ -88,9 +90,12 @@ function keyFor(provider: ProviderName, e: Env): string | undefined {
   }
 }
 
-function roleLlm(role: Role, e: Env): RoleLlm {
+function roleLlm(role: Role, e: Env, invalid: Set<string>): RoleLlm {
   const prefix = role === "client" ? "CLIENT" : "SUPERVISOR";
+  // A misspelt provider makes the role unavailable; it never falls back to another provider.
+  if (invalid.has(`${prefix}_LLM_PROVIDER`)) return { ok: false, reason: `${prefix}_LLM_PROVIDER is not a known provider` };
   const override = role === "client" ? e.CLIENT_LLM_PROVIDER : e.SUPERVISOR_LLM_PROVIDER;
+  if (!override && invalid.has("LLM_PROVIDER")) return { ok: false, reason: "LLM_PROVIDER is not a known provider" };
   const provider = override ?? e.LLM_PROVIDER;
   if (!provider) return { ok: false, reason: `no provider: set LLM_PROVIDER or ${prefix}_LLM_PROVIDER` };
 
@@ -118,20 +123,37 @@ function roleLlm(role: Role, e: Env): RoleLlm {
   };
 }
 
+/**
+ * Never throws: a bad value must not take /health down with it. Invalid variables are dropped
+ * (so they fall back to their default, or make their role unavailable) and listed in `errors`.
+ */
 export function loadConfig(env: Record<string, string | undefined> = process.env): AppConfig {
   // Blank lines in .env (`FOO=`) mean "not set".
-  const set = Object.fromEntries(Object.entries(env).filter(([, v]) => v !== undefined && v.trim() !== ""));
-  const parsed = EnvSchema.safeParse(set);
+  const set: Record<string, string> = {};
+  for (const [k, v] of Object.entries(env)) if (v !== undefined && v.trim() !== "") set[k] = v;
+
+  const invalid = new Set<string>();
+  let parsed = EnvSchema.safeParse(set);
   if (!parsed.success) {
-    throw new Error(`Invalid environment variables:\n${z.prettifyError(parsed.error)}`);
+    for (const issue of parsed.error.issues) {
+      const key = issue.path[0];
+      if (typeof key === "string") {
+        invalid.add(key);
+        delete set[key];
+      }
+    }
+    parsed = EnvSchema.safeParse(set);
   }
+  // Only keys from the schema can fail, and each one is optional or has a default.
+  if (!parsed.success) throw new Error("unreachable: env still invalid after dropping bad keys");
   const e = parsed.data;
   const codes = (e.INVITE_CODES ?? "")
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
   return {
-    llm: { client: roleLlm("client", e), supervisor: roleLlm("supervisor", e) },
+    llm: { client: roleLlm("client", e, invalid), supervisor: roleLlm("supervisor", e, invalid) },
+    errors: [...invalid].sort().map((k) => `${k} has an invalid value and is ignored`),
     inviteCodes: codes.length ? new Set(codes) : null,
     rateLimit: { max: e.RATE_LIMIT_MAX, windowMs: e.RATE_LIMIT_WINDOW_SEC * 1000 },
   };

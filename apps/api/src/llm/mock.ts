@@ -58,19 +58,32 @@ export class MockProvider implements ModelProvider {
 
 /**
  * Demo behaviour for 聆镜: a short in-character line for the AI client, a small Markdown report
- * for the supervisor. The prompts start with a role marker (<!-- psygym:client|supervisor -->).
+ * for the supervisor, with the same three headings and closing line as prompts/supervisor.md.
+ * The prompts start with a role marker (<!-- psygym:client|supervisor -->); the language comes
+ * from the language line src/session.ts appends.
  */
 const demoStep: MockStep = (req) => {
+  const en = /Speak English|Write the report in English/.test(req.system);
   if (req.system.includes("<!-- psygym:supervisor -->")) {
     return {
-      text:
-        "## 做得好的\n\n- （mock）你用了开放式提问。\n\n" +
-        "## 错在哪\n\n- （mock）这里会引用原话，指出问题。\n\n" +
-        "## 下次练什么\n\n- （mock）练习共情回应。\n",
+      text: en
+        ? "## What went well\n\n- (mock) You asked an open question.\n\n" +
+          "## What to improve\n\n- (mock) A quote and a better wording go here.\n\n" +
+          "## What to practise next\n\n- (mock) Practise empathic reflections.\n\n" +
+          "This feedback is AI-generated, for practice only.\n"
+        : "## 做得好的地方\n\n- （mock）你用了开放式提问。\n\n" +
+          "## 需要改进的地方\n\n- （mock）这里会引用原话，并给出可以换成的说法。\n\n" +
+          "## 下次练什么\n\n- （mock）练习共情回应。\n\n" +
+          "这份反馈由 AI 生成，仅供练习参考。\n",
       toolCalls: [],
     };
   }
-  return { text: "（mock 来访者）嗯……我也不知道从哪儿说起，最近就是提不起劲。", toolCalls: [] };
+  return {
+    text: en
+      ? "(mock client) Um… I don't really know where to start. I just can't get going lately."
+      : "（mock 来访者）嗯……我也不知道从哪儿说起，最近就是提不起劲。",
+    toolCalls: [],
+  };
 };
 
 function* chunk(text: string, size = 6) {

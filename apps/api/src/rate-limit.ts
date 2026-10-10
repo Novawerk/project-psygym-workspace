@@ -4,6 +4,9 @@
 // instance": a brake on casual abuse, not a hard guarantee. Good enough for an invite-only demo.
 import type { Context } from "hono";
 
+/** Most keys we keep. Past this we drop expired windows, then the oldest ones. */
+export const MAX_KEYS = 10_000;
+
 export class FixedWindowLimiter {
   private readonly hits = new Map<string, { count: number; resetAt: number }>();
 
@@ -11,14 +14,21 @@ export class FixedWindowLimiter {
     private readonly limit: number,
     private readonly windowMs: number,
     private readonly now: () => number = Date.now,
+    private readonly maxKeys = MAX_KEYS,
   ) {}
+
+  get size() {
+    return this.hits.size;
+  }
 
   /** Counts one hit for `key`. Returns 0 when allowed, else the seconds until the window resets. */
   take(key: string): number {
     const t = this.now();
-    if (this.hits.size > 10_000) this.prune(t);
     const entry = this.hits.get(key);
     if (!entry || entry.resetAt <= t) {
+      // Re-insert, so Map order stays "oldest window first".
+      this.hits.delete(key);
+      if (this.hits.size >= this.maxKeys) this.evict(t);
       this.hits.set(key, { count: 1, resetAt: t + this.windowMs });
       return 0;
     }
@@ -27,8 +37,13 @@ export class FixedWindowLimiter {
     return 0;
   }
 
-  private prune(t: number) {
+  private evict(t: number) {
     for (const [key, entry] of this.hits) if (entry.resetAt <= t) this.hits.delete(key);
+    // Still full: drop the oldest windows (Map iterates in insertion order).
+    for (const key of this.hits.keys()) {
+      if (this.hits.size < this.maxKeys) break;
+      this.hits.delete(key);
+    }
   }
 }
 

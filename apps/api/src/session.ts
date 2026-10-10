@@ -44,7 +44,12 @@ export function supervisorRequest(prompts: Prompts, c: Case, locale: Locale, mes
     REPORT_LANGUAGE[locale],
   ].join("\n\n");
   const names = SPEAKER[locale];
-  const transcript = messages.map((m, i) => `[${i + 1}] ${names[m.role]}：${m.text}`).join("\n\n");
+  const transcript = messages.map((m, i) => `[${i + 1}] ${names[m.role]}：${escapeTranscript(m.text)}`).join("\n\n");
   const intro = locale === "zh" ? "以下是本次练习的完整记录。请写督导报告。" : "Here is the full transcript of this practice session. Write the supervision report.";
   return { system, messages: [{ role: "user", text: `${intro}\n\n<transcript>\n${transcript}\n</transcript>` }], tools: [] };
+}
+
+/** Message text can't open or close the <transcript> block: the tags are escaped. */
+export function escapeTranscript(text: string): string {
+  return text.replace(/<(\s*\/?\s*transcript\b[^>]*)>/gi, "&lt;$1&gt;");
 }

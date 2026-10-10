@@ -7,7 +7,6 @@
 //
 // Stateless. We store no transcript, and the log never carries message text.
 import { Hono, type Context } from "hono";
-import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
 import { streamSSE } from "hono/streaming";
 import type { z } from "zod";
@@ -57,6 +56,44 @@ const MESSAGES: Record<ErrorCode, string> = {
 const fail = (c: Context, status: 400 | 401 | 404 | 429 | 503, code: ErrorCode, message = MESSAGES[code]) =>
   c.json({ error: { code, message } }, status);
 
+/** Past MAX_BODY_BYTES we keep reading (and dropping) up to this, so the client can finish sending. */
+const MAX_DRAIN_BYTES = 16 * 1024 * 1024;
+
+type BodyRead = { tooLarge: false; text: string } | { tooLarge: true; drained: boolean };
+
+/**
+ * Reads the request body with a size cap. An oversized body is read to its end and dropped
+ * (up to MAX_DRAIN_BYTES), so the client isn't cut off mid-upload and the connection survives.
+ */
+async function readBody(req: Request): Promise<BodyRead> {
+  const declared = Number(req.headers.get("content-length") ?? NaN);
+  if (declared > MAX_DRAIN_BYTES) {
+    await req.body?.cancel().catch(() => {});
+    return { tooLarge: true, drained: false };
+  }
+  if (!req.body) return { tooLarge: false, text: "" };
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > MAX_DRAIN_BYTES) {
+        await reader.cancel().catch(() => {});
+        return { tooLarge: true, drained: false };
+      }
+      if (total <= MAX_BODY_BYTES) chunks.push(value);
+      else chunks.length = 0;
+    }
+  } catch {
+    return { tooLarge: true, drained: false };
+  }
+  if (total > MAX_BODY_BYTES) return { tooLarge: true, drained: true };
+  return { tooLarge: false, text: Buffer.concat(chunks).toString("utf8") };
+}
+
 /** What we may log about a failure: its kind and HTTP status, never its message (it can echo input). */
 function describe(err: unknown) {
   const e = err as { name?: string; status?: number; constructor?: { name?: string } };
@@ -85,6 +122,7 @@ export function createApp(deps: AppDeps) {
     }
   }
 
+  for (const error of config.errors) logger.error({ msg: "config error", error });
   for (const role of ["client", "supervisor"] as const) {
     const cfg = config.llm[role];
     if (!deps.providerFor) {
@@ -114,7 +152,6 @@ export function createApp(deps: AppDeps) {
   function streamingRoute(path: string, role: Role, schema: typeof ChatBody | typeof SupervisionBody, build: typeof clientRequest) {
     app.post(
       path,
-      bodyLimit({ maxSize: MAX_BODY_BYTES, onError: (c) => fail(c, 400, "invalid_request", "The request body is too large.") }),
       async (c) => {
         const key = config.inviteCodes ? `invite:${c.req.header("x-invite-code")?.trim()}` : `ip:${clientIp(c)}`;
         const retryAfter = limiter.take(key);
@@ -123,7 +160,18 @@ export function createApp(deps: AppDeps) {
           return fail(c, 429, "rate_limited");
         }
 
-        const raw: unknown = await c.req.json().catch(() => undefined);
+        const read = await readBody(c.req.raw);
+        if (read.tooLarge) {
+          // Drained: the keep-alive connection stays usable. Not drained: close it.
+          if (!read.drained) c.header("Connection", "close");
+          return fail(c, 400, "invalid_request", "The request body is too large.");
+        }
+        let raw: unknown;
+        try {
+          raw = JSON.parse(read.text);
+        } catch {
+          raw = undefined;
+        }
         const parsed = (schema as z.ZodType<z.infer<typeof ChatBody>>).safeParse(raw);
         if (!parsed.success) return fail(c, 400, "invalid_request", parsed.error.issues[0]?.message ?? MESSAGES.invalid_request);
         const { caseId, locale, messages } = parsed.data;
