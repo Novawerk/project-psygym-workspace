@@ -34,6 +34,10 @@ abstract class AppComponent(
 
     @AppScope
     @Provides
+    protected fun caseStore(api: PsygymApi): CaseStore = CaseStore(api)
+
+    @AppScope
+    @Provides
     protected fun history(dir: HistoryDir): HistoryRepository = HistoryRepository(dir.path.toPath())
     abstract val api: PsygymApi
 

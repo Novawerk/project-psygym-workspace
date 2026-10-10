@@ -7,14 +7,24 @@ import io.novawerk.psygym.data.api.ApiError
 import io.novawerk.psygym.data.api.ApiException
 import io.novawerk.psygym.data.api.PsygymApi
 import io.novawerk.psygym.data.api.toError
-import io.novawerk.psygym.di.AppScope
 import io.novawerk.psygym.domain.model.CaseSummary
-import me.tatarka.inject.annotations.Inject
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
-/** The case list, shared by Home (H1) and the case library (C1). Fetched once per app run. */
-@AppScope
-@Inject
-class CaseStore(private val api: PsygymApi) {
+/**
+ * The case list, shared by Home (H1) and the case library (C1).
+ *
+ * The store owns its request, in its own app-wide [scope]: screens only ask. A forced load
+ * (new invite code, demo data switched) cancels the request in flight and starts over, so
+ * a screen's effect being cancelled can never leave the list stuck loading.
+ */
+class CaseStore(
+    private val api: PsygymApi,
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
+) {
     var cases by mutableStateOf<List<CaseSummary>?>(null)
         private set
     var error by mutableStateOf<ApiError?>(null)
@@ -22,33 +32,29 @@ class CaseStore(private val api: PsygymApi) {
     var loading by mutableStateOf(false)
         private set
 
-    /** A forced reload asked for while a request was running (e.g. a new invite code). */
-    private var reloadPending = false
+    private var job: Job? = null
 
-    /**
-     * Loads unless we already have the list. [force] reloads, e.g. after switching demo
-     * data or saving an invite code; if a request is already running, it reloads again
-     * once that one ends, so the new code is never lost.
-     */
-    suspend fun load(force: Boolean = false) {
-        if (loading) {
-            if (force) reloadPending = true
-            return
-        }
-        if (!force && cases != null) return
+    /** Bumped by every request; only the newest may write state. */
+    private var generation = 0
+
+    /** Loads unless we have the list or a request is running. [force] always starts over. */
+    fun load(force: Boolean = false) {
+        if (!force && (cases != null || job?.isActive == true)) return
+        job?.cancel()
+        val mine = ++generation
         loading = true
         error = null
         if (force) cases = null
-        try {
-            cases = api.cases()
-        } catch (e: ApiException) {
-            error = e.toError()
-        } finally {
-            loading = false
-        }
-        if (reloadPending) {
-            reloadPending = false
-            load(force = true)
+        job = scope.launch {
+            try {
+                val result = api.cases()
+                if (mine == generation) cases = result
+            } catch (e: ApiException) {
+                if (mine == generation) error = e.toError()
+            } finally {
+                // A cancelled, older request must not end the newer one's loading.
+                if (mine == generation) loading = false
+            }
         }
     }
 }

@@ -188,7 +188,7 @@ fun App(component: AppComponent) {
                             onStart = { nav.navigate(CasesRoute) },
                             onPickCase = openCase,
                             onAllCases = { nav.navigate(CasesRoute) },
-                            onRetryCases = { scope.launch { caseStore.load(force = true) } },
+                            onRetryCases = { caseStore.load(force = true) },
                             onOpenSettings = openSettings,
                             onHelp = openHelp,
                             onTab = onTab,
@@ -226,7 +226,7 @@ fun App(component: AppComponent) {
                             onInterruptedShown = { practiceInterrupted = false },
                             onBack = { if (!nav.popBackStack()) goHome() },
                             onPick = openCase,
-                            onRetry = { scope.launch { caseStore.load(force = true) } },
+                            onRetry = { caseStore.load(force = true) },
                             onOpenSettings = openSettings,
                         )
                     }
