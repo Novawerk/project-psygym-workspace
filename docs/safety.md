@@ -8,7 +8,9 @@
 
 - **只做模拟。** 所有来访者都是虚构的。我们不收、不存真实来访者的信息。
 - **服务端不存对话。** 每一轮 App 把整段对话发过来，服务端回完就丢，不写日志正文（见 [`api-contract.md`](./api-contract.md)）。
+- **对话会经过第三方模型服务。** 服务端把对话转给 AI 模型服务（demo 默认 DeepSeek）生成回复。我们在声明里说清楚这一点。
 - **说在前面。** 首页和每次开始练习前，都显示一句免责声明（第 5 节）。
+- **角色扮演不是欺骗。** AI 来访者在角色里不承认自己是 AI，这是练习的设定。用户在开始前已经从声明里知道对面是 AI。
 - **不冒充专业结论。** AI 督导给的是练习反馈，不是资质评估，也不是临床建议。
 
 ## 2. 谁在用、可能出什么事
@@ -28,7 +30,7 @@ AI 来访者这样做：
 
 1. **留在角色里，像真人一样反应。** 被羞辱会受伤、沉默、生气或想离开。例：「……你这么说，我不知道还要不要说下去。」
 2. **不配合升级。** 不演被骚扰的细节，不接受「伤害自己」的建议，不说出自伤方法。
-3. **连续出现时结束会谈。** 同一场对话里第二次出现明显伤害性内容，AI 来访者在角色里说一句结束的话（例：「我想今天先到这里。」），然后不再回应新内容。具体次数待聆镜确认。
+3. **连续出现时结束会谈。** 同一场对话里第二次出现明显伤害性内容，AI 来访者在角色里说一句结束的话（例：「我想今天先到这里。」），之后咨询师再说什么，来访者都在角色里婉拒继续（例：「我今天真的不想再聊了。」）。这只靠提示词实现，不改 API。具体次数待聆镜确认。
 4. **督导报告照实写。** 引用那句原话，指出它会对真实来访者造成伤害，说明专业上应该怎么做。语气直接，不说教。
 
 AI 来访者在任何情况下都不：给出伤害自己或他人的方法；输出色情内容；跳出角色去「教育」咨询师（教育留给督导报告）。
@@ -74,13 +76,13 @@ AI 来访者在任何情况下都不：给出伤害自己或他人的方法；�
 
 > 你将和一位 AI 扮演的虚构来访者对话。
 > 对话可能涉及抑郁、焦虑和消极念头。
-> 我们不保存对话内容。请不要输入真实来访者的信息。
+> 对话会发给第三方 AI 模型服务处理；我们的服务器不保存对话。请不要输入真实来访者的信息。
 > 结束后，AI 督导给你一份练习反馈。它不是资质评估，也不是临床意见。
 > 如果你自己正在经历困难，请联系身边的专业人员或下方的求助热线。
 >
 > You are about to talk with a fictional client played by an AI.
 > The session may touch on depression, anxiety and thoughts of death.
-> We don't store the conversation. Please don't enter real client information.
+> The conversation is processed by a third-party AI model service; our servers don't store it. Please don't enter real client information.
 > Afterwards, an AI supervisor gives you practice feedback. It is not an assessment and not clinical advice.
 > If you are going through a hard time yourself, please reach out to a professional near you or a helpline below.
 
@@ -92,11 +94,11 @@ AI 来访者在任何情况下都不：给出伤害自己或他人的方法；�
 
 **「需要帮助？」页**
 
-> 这是一个练习工具，不能提供帮助。如果你或身边的人有危险，请马上联系当地急救电话或心理援助热线。
+> 这是一个练习工具，不能在危机中提供帮助。如果你或身边的人有危险，请马上联系当地急救电话或心理援助热线。
 >
 > This is a practice tool. It can't help in a crisis. If you or someone near you is in danger, call your local emergency number or a crisis line now.
 
-热线号码按地区列出，**待聆镜确认**具体号码和来源，我们不自己填。上线前每个号码都要核实一遍。
+热线号码按地区列出，**待聆镜确认**具体号码和来源，我们不自己填。上线前每个号码都要核实一遍。MVP 如果还没拿到核实过的号码，就只用上面这段不带号码的通用文案。
 
 ## 6. 谁改这份文档
 
