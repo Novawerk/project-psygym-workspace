@@ -9,6 +9,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import io.novawerk.psygym.di.AppComponent
+import io.novawerk.psygym.di.HistoryDir
 import io.novawerk.psygym.di.create
 import okio.Path.Companion.toPath
 
@@ -22,7 +23,11 @@ private val componentLock = Any()
 private fun appComponent(context: Context): AppComponent {
     sharedComponent?.let { return it }
     return synchronized(componentLock) {
-        sharedComponent ?: AppComponent.create(appDataStore(context)).also { sharedComponent = it }
+        sharedComponent ?: AppComponent.create(
+            appDataStore(context),
+            // App-private storage; allowBackup=false keeps it out of backups.
+            HistoryDir(context.applicationContext.filesDir.resolve("history").absolutePath),
+        ).also { sharedComponent = it }
     }
 }
 

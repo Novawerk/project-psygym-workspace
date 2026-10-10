@@ -1,86 +1,210 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">聆镜 PSYGYM</string>
     <!-- The language the backend should answer in. Must be "zh" or "en". -->
     <string name="api_locale" translatable="false">en</string>
 
+    <!-- General -->
+    <string name="app_name">聆镜 PSYGYM</string>
     <string name="back">Back</string>
+    <string name="close">Close</string>
     <string name="retry">Try again</string>
     <string name="demo_badge">Demo data</string>
+    <string name="help_link">Need help?</string>
+    <string name="lang_toggle">中</string>
+    <string name="lang_toggle_cd">Switch to Chinese</string>
 
-    <string name="home_tagline">Practise counseling with an AI client.</string>
-    <string name="home_intro">Hold a CBT session with an AI client, then get a supervision report: what went well, what went wrong, what to practise next.</string>
-    <string name="home_safety_title">Please note</string>
-    <string name="home_safety_body">PSYGYM is a practice tool for counselors. An AI plays the client. Every client is fictional. This is not therapy. The conversation is processed by a third-party AI model service; our servers don’t store it.</string>
-    <string name="home_start">Start practice</string>
+    <!-- Onboarding (O1–O3) -->
+    <string name="onb_skip">Skip</string>
+    <string name="onb_continue">Continue</string>
+    <string name="onb_welcome_title">Practise with an AI client</string>
+    <string name="onb_welcome_subtitle">A practice tool for new counselors.</string>
+    <string name="onb_step1_title">Pick a case.</string>
+    <string name="onb_step1_body">Every client is fictional.</string>
+    <string name="onb_step2_title">Hold a session.</string>
+    <string name="onb_step2_body">An AI plays the client and responds like a real person.</string>
+    <string name="onb_step3_title">Get feedback.</string>
+    <string name="onb_step3_body">It quotes your words: what went well, what to change.</string>
+    <string name="onb_consent_title">Before we start</string>
+    <string name="onb_consent_1_title">This is not therapy.</string>
+    <string name="onb_consent_1_body">It’s a practice tool for counselors. It’s not for clients, and it can’t help in a crisis. If you’re going through a hard time yourself, tap “Need help?” below.</string>
+    <string name="onb_consent_2_title">The clients are fictional.</string>
+    <string name="onb_consent_2_body">An AI plays them. Sessions may touch on depression, anxiety and dark thoughts.</string>
+    <string name="onb_consent_3_title">An AI model processes the conversation.</string>
+    <string name="onb_consent_3_body">We send the conversation to a third-party AI model service to generate replies. Our servers don’t store it.</string>
+    <string name="onb_consent_4_title">Don’t enter real client information.</string>
+    <string name="onb_consent_4_body">No names, histories or any detail that could identify someone.</string>
+    <string name="onb_consent_5_title">The feedback is for practice only.</string>
+    <string name="onb_consent_5_body">An AI writes it. It is not an assessment and not clinical advice.</string>
+    <string name="onb_consent_check">I understand this is a practice tool, not therapy.</string>
+    <string name="onb_consent_accept">Got it</string>
+    <string name="onb_link_privacy">Privacy</string>
+    <string name="onb_ready_title">Almost ready</string>
+    <string name="onb_ready_language_title">Language</string>
+    <string name="onb_ready_language_note">Cases are written in Chinese for now. With the English interface, the client and the report are in English.</string>
+    <string name="onb_ready_invite_title">Invite code</string>
+    <string name="onb_ready_invite_body">We need an invite code during testing. No code? Skip for now.</string>
+    <string name="onb_ready_invite_hint">Enter invite code</string>
+    <string name="onb_ready_start">Start practising</string>
+    <string name="onb_ready_skip">Skip for now</string>
+
+    <!-- Home (H1) -->
+    <string name="home_greeting">Ready for a session?</string>
+    <string name="home_tagline">Pick a client and start a CBT session.</string>
+    <string name="home_start_card_title">Start practising</string>
+    <string name="home_start_card_meta">About 15 min · supervision feedback at the end</string>
+    <string name="home_start_card_button">Pick a client</string>
+    <string name="home_cases_section">Cases</string>
+    <string name="home_cases_all">All</string>
+    <string name="home_disclaimer">PSYGYM is a practice tool for counselors. An AI plays the client. Every client is fictional. This is not therapy.</string>
     <string name="home_settings">Settings</string>
 
+    <!-- Cases (C1) and case brief (C2) -->
     <string name="cases_title">Choose a case</string>
+    <string name="cases_intro">Every client is fictional, played by an AI.</string>
     <string name="cases_empty">No cases yet.</string>
+    <string name="cases_more">More cases and approaches are on the way.</string>
     <string name="cases_school_cbt">CBT</string>
+    <string name="case_title_with_alias">%1$s · %2$s</string>
+    <string name="cases_minutes">About %1$d min</string>
+    <string name="case_difficulty_intro">Intro</string>
+    <string name="case_difficulty_medium">Medium</string>
+    <string name="case_difficulty_hard">Hard</string>
+    <string name="brief_focus">What to practise</string>
+    <string name="brief_client">The client</string>
+    <string name="brief_setup">Session</string>
+    <string name="brief_setup_body">15–30 turns suggested · about 15 min · end any time.</string>
+    <string name="brief_content_note">This session may touch on depression, anxiety and dark thoughts. The client is fictional. A third-party AI model processes the conversation; our servers don’t store it.</string>
+    <string name="brief_start">Start session</string>
 
+    <!-- Session (S1, S2) -->
+    <string name="practice_meta">Turn %1$d · %2$s</string>
+    <string name="practice_meta_turns">Turn %1$d</string>
+    <string name="practice_empty">You are the counselor. Open the session when you’re ready, as you would a real first session.</string>
+    <string name="practice_real_info_hint">Please don’t enter real client information.</string>
+    <string name="practice_near_limit">A few turns left. Time to wrap up.</string>
+    <string name="practice_limit_reached">This session is long enough. End it to see the supervision.</string>
     <string name="practice_input_hint">Say something as the counselor…</string>
     <string name="practice_send">Send</string>
-    <string name="practice_end">End &amp; see feedback</string>
-    <string name="practice_empty">You are the counselor. Open the session when you’re ready.</string>
     <string name="practice_role_counselor">You</string>
     <string name="practice_role_client">Client</string>
-    <string name="practice_limit_reached">This session is long enough. End it to get your supervision report.</string>
+    <string name="practice_chars_left">%1$d characters left</string>
+    <string name="practice_end">End</string>
+    <string name="practice_end_cd">End session</string>
+    <string name="practice_end_title">End this session?</string>
+    <string name="practice_end_body">The supervisor reads the whole session and gives you feedback.</string>
+    <string name="practice_end_body_short">The session is short, so the feedback will be limited.</string>
+    <string name="practice_end_confirm">End and see supervision</string>
+    <string name="practice_end_cancel">Keep going</string>
+    <string name="practice_end_note">The session and report are saved on this phone. You can turn this off under Me.</string>
     <string name="practice_leave_title">Leave this practice?</string>
-    <string name="practice_leave_body">We don’t keep this conversation. If you leave, it’s gone.</string>
+    <string name="practice_leave_body">You haven’t started. Leaving now means no feedback.</string>
     <string name="practice_leave_confirm">Leave</string>
     <string name="practice_leave_cancel">Stay</string>
+    <string name="practice_client_ended">The client has ended the session</string>
+    <string name="practice_incomplete">(incomplete)</string>
+    <string name="practice_interrupted">Your last practice was interrupted. Pick a case to start again.</string>
+    <string name="practice_help_cd">Need help</string>
+    <string name="practice_timer_cd">Show or hide the timer</string>
 
-    <string name="supervision_title">Supervision report</string>
-    <string name="supervision_generating">Your supervisor is writing…</string>
-    <string name="supervision_note">This feedback is AI-generated, for practice only. The conversation is processed by a third-party AI model service; our servers don’t store it.</string>
+    <!-- Report (R1) -->
+    <string name="supervision_title">Supervision</string>
+    <string name="supervision_generating">Your supervisor is reading the session…</string>
+    <string name="supervision_meta">%1$s · %2$d min · %3$s</string>
+    <string name="supervision_again">Practise this case again</string>
+    <string name="supervision_other_case">Try another case</string>
     <string name="supervision_home">Back to home</string>
-    <string name="supervision_again">Practise again</string>
+    <string name="supervision_leave_title">Leave the report?</string>
+    <string name="supervision_leave_body">Once you leave, this report is gone.</string>
+    <string name="supervision_leave_writing">The report isn’t finished. If you leave, you won’t see it.</string>
+    <string name="supervision_leave_confirm">Leave</string>
+    <string name="supervision_leave_cancel">Stay</string>
 
+    <!-- Need help? (X1) -->
+    <string name="help_title">If you need help now</string>
+    <string name="help_body">This is a practice tool. It can’t help in a crisis. If you or someone near you is in danger, call your local emergency number or a crisis line now.</string>
+    <string name="help_hard_time">If you’re going through a hard time yourself, please reach out to a professional near you or call a local crisis line.</string>
+    <string name="help_practice_note">If practising has upset you, take a break and talk to your supervisor or someone you trust.</string>
+
+    <!-- Settings (P1) -->
     <string name="settings_title">Settings</string>
+    <string name="settings_general">General</string>
     <string name="settings_language">Language</string>
     <string name="settings_language_system">Follow system</string>
     <string name="settings_language_zh">中文</string>
     <string name="settings_language_en">English</string>
     <string name="settings_invite">Invite code</string>
-    <string name="settings_invite_hint">Enter your invite code</string>
-    <string name="settings_invite_desc">You get one from the PSYGYM team. It lets the app reach our server.</string>
+    <string name="settings_invite_hint">Enter invite code</string>
+    <string name="settings_invite_desc">You get one from the 聆镜 (Lingjing) team. It lets the app reach our server.</string>
     <string name="settings_invite_save">Save</string>
     <string name="settings_invite_saved">Saved</string>
+    <string name="settings_help_section">Help</string>
+    <string name="settings_replay_onboarding">Replay the intro</string>
+    <string name="settings_privacy">Privacy</string>
     <string name="settings_debug">Developer</string>
     <string name="settings_fake_api">Use demo data</string>
     <string name="settings_fake_api_desc">Fake cases and replies, no server needed. Debug builds only.</string>
-    <string name="settings_about">About</string>
     <string name="settings_version">Version %1$s</string>
 
-    <string name="invite_dialog_title">Do you have an invite code?</string>
-    <string name="invite_dialog_body">PSYGYM is invite-only for now. You can also add the code later in Settings.</string>
-    <string name="invite_dialog_save">Save</string>
-    <string name="invite_dialog_skip">Skip</string>
+    <!-- Privacy (P3) -->
+    <string name="privacy_title">Privacy</string>
+    <string name="privacy_vendor">DeepSeek</string>
+    <string name="privacy_q_where">Where does the conversation go?</string>
+    <string name="privacy_a_where">Each message, with the conversation so far, goes to our server and on to a third-party AI model service that writes the reply. We currently use %1$s.</string>
+    <string name="privacy_q_store">Do you store it?</string>
+    <string name="privacy_a_store">Our servers don’t store the conversation or log its text.</string>
+    <string name="privacy_q_vendor">Does the AI model service store it?</string>
+    <string name="privacy_a_vendor">It follows its own policy.</string>
+    <string name="privacy_q_device">Is it stored on my phone?</string>
+    <string name="privacy_a_device">Yes. Each session and its report are saved in the app’s own space on this phone. Nothing is uploaded or backed up to the cloud. Records are stored unencrypted in the app’s private storage. Turn saving off or delete everything under Me; delete a single session from your practice history. Uninstalling the app deletes everything.</string>
+    <string name="privacy_q_collect">What do you collect?</string>
+    <string name="privacy_a_collect">Your invite code (to reach our server) and your language, kept on this phone only. No account. We don’t collect your name, phone number or location.</string>
+    <string name="privacy_q_real">Can I enter real client information?</string>
+    <string name="privacy_a_real">No. Please use it for practice only.</string>
 
-    <string name="error_invalid_request">This session is too long. End it and get feedback, or start a new one.</string>
-    <string name="error_invite_required">You need a valid invite code. Add it in Settings.</string>
-    <string name="error_case_not_found">This case isn’t available any more. Go back and pick another one.</string>
-    <string name="error_rate_limited">Too many requests right now. Try again in a little while.</string>
-    <string name="error_model_unavailable">The AI is unavailable right now. Try again in a few minutes.</string>
+    <!-- Errors (screens.md, plus Retry-After and the timeout wording from testing) -->
     <string name="error_network">Can’t reach the server. Check your connection and try again.</string>
+    <string name="error_invite_required">You need a valid invite code.</string>
+    <string name="error_rate_limited">Too many requests. Try again in a little while.</string>
+    <string name="error_rate_limited_seconds">Too many requests. Try again in %1$d seconds.</string>
+    <string name="error_model_unavailable">The AI is unavailable right now. Try again in a few minutes.</string>
+    <string name="error_case_not_found">This case isn’t available right now.</string>
+    <string name="error_invalid_request">This session is already long. End it and see what the supervisor says.</string>
+    <string name="error_timeout">No response for too long. Try again.</string>
     <string name="error_unknown">Something went wrong. Try again.</string>
     <string name="error_open_settings">Open Settings</string>
-    <string name="practice_incomplete">Incomplete</string>
-    <string name="practice_help">Need help?</string>
-    <string name="help_title">Need help?</string>
-    <string name="help_body">This is a practice tool. It can’t help in a crisis. If you or someone near you is in danger, call your local emergency number or a crisis line now.</string>
-    <string name="help_close">Close</string>
-    <string name="briefing_title">Before you start</string>
-    <string name="briefing_1">You are about to talk with a fictional client played by an AI.</string>
-    <string name="briefing_2">The session may touch on depression, anxiety and thoughts of death.</string>
-    <string name="briefing_3">The conversation is processed by a third-party AI model service; our servers don’t store it. Please don’t enter real client information.</string>
-    <string name="briefing_4">Afterwards, an AI supervisor gives you practice feedback. It is not an assessment and not clinical advice.</string>
-    <string name="briefing_5">If you are going through a hard time yourself, please reach out to a professional near you or a helpline below.</string>
-    <string name="briefing_ok">I understand</string>
-    <string name="error_rate_limited_seconds">Too many requests right now. Try again in %1$d seconds.</string>
-    <string name="error_timeout">The AI took too long to reply. Try again.</string>
-    <string name="error_back_to_cases">Back to cases</string>
-    <string name="practice_interrupted">Your last practice was interrupted. Pick a case to start again.</string>
-    <string name="practice_chars_left">%1$d characters left</string>
+    <string name="error_other_case">Try another case</string>
+    <string name="error_retry_in">Try again (%1$d)</string>
+    <string name="tab_practice">Practise</string>
+    <string name="tab_history">History</string>
+    <string name="tab_me">Me</string>
+    <string name="me_title">Me</string>
+    <string name="me_settings_section">Settings</string>
+    <string name="history_title">Practice history</string>
+    <string name="history_local_note">Records stay on this phone.</string>
+    <string name="history_group_today">Today</string>
+    <string name="history_group_week">This week</string>
+    <string name="history_group_earlier">Earlier</string>
+    <string name="history_next">Next: %1$s</string>
+    <string name="history_report_unfinished">Report unfinished</string>
+    <string name="history_empty">No practice yet. Finish a session and it shows up here.</string>
+    <string name="history_empty_action">Start practising</string>
+    <string name="history_detail_report">Report</string>
+    <string name="history_detail_chat">Conversation</string>
+    <string name="history_delete_one">Delete this session</string>
+    <string name="history_delete_one_confirm">Delete this session? This can’t be undone.</string>
+    <string name="history_meta">%1$s · %2$d min · %3$s</string>
+    <string name="history_delete">Delete</string>
+    <string name="history_cancel">Cancel</string>
+    <string name="history_no_report">The report wasn’t finished.</string>
+    <string name="settings_history_section">Practice history</string>
+    <string name="settings_history_toggle">Save practice history on this phone</string>
+    <string name="settings_history_toggle_desc">When off, new sessions aren’t saved. Saved ones stay.</string>
+    <string name="settings_history_delete_all">Delete all practice history</string>
+    <string name="settings_history_delete_confirm">This can’t be undone.</string>
+    <string name="settings_history_delete_action">Delete</string>
+    <string name="practice_end_note_off">This session won’t be saved. Once you leave the report, it’s gone.</string>
+    <plurals name="turns_count">
+        <item quantity="one">%1$d turn</item>
+        <item quantity="other">%1$d turns</item>
+    </plurals>
 </resources>

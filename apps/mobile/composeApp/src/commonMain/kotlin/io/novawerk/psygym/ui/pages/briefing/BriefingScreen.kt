@@ -7,62 +7,78 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.outlined.Shield
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.novawerk.psygym.domain.model.CaseSummary
 import io.novawerk.psygym.resources.Res
 import io.novawerk.psygym.resources.back
-import io.novawerk.psygym.resources.briefing_1
-import io.novawerk.psygym.resources.briefing_2
-import io.novawerk.psygym.resources.briefing_3
-import io.novawerk.psygym.resources.briefing_4
-import io.novawerk.psygym.resources.briefing_5
-import io.novawerk.psygym.resources.briefing_ok
-import io.novawerk.psygym.resources.briefing_title
+import io.novawerk.psygym.resources.brief_client
+import io.novawerk.psygym.resources.brief_content_note
+import io.novawerk.psygym.resources.brief_focus
+import io.novawerk.psygym.resources.brief_setup
+import io.novawerk.psygym.resources.brief_setup_body
+import io.novawerk.psygym.resources.brief_start
+import io.novawerk.psygym.ui.components.BorderedCard
+import io.novawerk.psygym.ui.components.BottomActions
+import io.novawerk.psygym.ui.components.CaseAvatar
+import io.novawerk.psygym.ui.components.CaseTags
+import io.novawerk.psygym.ui.components.displayTitle
+import io.novawerk.psygym.ui.components.HelpLink
+import io.novawerk.psygym.ui.components.PrimaryButton
+import io.novawerk.psygym.ui.components.SafetyNote
 import io.novawerk.psygym.ui.locale.rememberApiLocale
 import org.jetbrains.compose.resources.stringResource
 
 /**
- * The case, then the full notice (docs/safety.md §5, acceptance A3/E2). Only
- * "I understand" leads into the session. A page of its own so it can grow into the
- * case intro page later.
+ * C2 · Case brief: who the client is, the session setup, and the content note before
+ * every session (acceptance A3/E2/G6). Without the D2 case fields, "The client" shows
+ * the summary and "What to practise" is left out.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BriefingScreen(
     case: CaseSummary?,
-    onAccept: () -> Unit,
+    caseIndex: Int,
+    onStart: () -> Unit,
     onBack: () -> Unit,
+    onHelp: () -> Unit,
     onSessionLost: () -> Unit,
 ) {
     LaunchedEffect(Unit) { if (case == null) onSessionLost() }
+    if (case == null) return
     val locale = rememberApiLocale()
+    val scroll = rememberScrollState()
+    // The title appears in the top bar once the header has scrolled away.
+    val showTitle by remember { derivedStateOf { scroll.value > 120 } }
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(Res.string.briefing_title)) },
+                title = {
+                    if (showTitle) Text(case.displayTitle(locale), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back))
@@ -72,16 +88,9 @@ fun BriefingScreen(
             )
         },
         bottomBar = {
-            Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
-                Button(
-                    onClick = onAccept,
-                    enabled = case != null,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .navigationBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 10.dp)
-                        .height(52.dp),
-                ) { Text(stringResource(Res.string.briefing_ok), style = MaterialTheme.typography.titleMedium) }
+            BottomActions {
+                PrimaryButton(stringResource(Res.string.brief_start), onStart)
+                HelpLink(onHelp)
             }
         },
     ) { padding ->
@@ -89,34 +98,49 @@ fun BriefingScreen(
             Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scroll)
                 .padding(horizontal = 20.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            if (case != null) {
-                Text(case.title.get(locale), style = MaterialTheme.typography.headlineSmall)
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    case.summary.get(locale),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.height(24.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                CaseAvatar(case, caseIndex, locale, size = 52.dp)
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(case.displayTitle(locale), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                    CaseTags(case, locale)
+                }
             }
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                ),
-            ) {
-                Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
-                    Icon(Icons.Outlined.Shield, contentDescription = null)
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        listOf(Res.string.briefing_1, Res.string.briefing_2, Res.string.briefing_3, Res.string.briefing_4, Res.string.briefing_5)
-                            .forEach { Text(stringResource(it), style = MaterialTheme.typography.bodyMedium) }
+            Section(stringResource(Res.string.brief_client), (case.clientIntro ?: case.summary).get(locale))
+            if (case.practiceFocus.isNotEmpty()) {
+                BorderedCard(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(stringResource(Res.string.brief_focus), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        case.practiceFocus.forEach { focus ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Outlined.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Text(focus.get(locale), style = MaterialTheme.typography.bodyLarge)
+                            }
+                        }
                     }
                 }
             }
-            Spacer(Modifier.height(24.dp))
+            Section(stringResource(Res.string.brief_setup), stringResource(Res.string.brief_setup_body))
+            SafetyNote {
+                Text(
+                    case.contentNotes?.get(locale) ?: stringResource(Res.string.brief_content_note),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+        }
+    }
+}
+
+@Composable
+private fun Section(title: String, body: String) {
+    BorderedCard(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(body, style = MaterialTheme.typography.bodyLarge)
         }
     }
 }

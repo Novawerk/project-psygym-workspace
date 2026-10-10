@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- App data (settings now, practice history later; docs/decisions/0005) never leaves
+<!-- App data (settings and practice history; docs/decisions/0005) never leaves
      the phone: no cloud backup and no device-to-device transfer (Android 12+). -->
 <data-extraction-rules>
     <cloud-backup>

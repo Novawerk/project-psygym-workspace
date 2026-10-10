@@ -6,9 +6,12 @@ YIMA and Berlin Chinese Food Map. See [docs/decisions/0001-stack.md](../../docs/
 and [0004-mobile-app.md](../../docs/decisions/0004-mobile-app.md).
 
 The app only talks to our backend ([docs/api-contract.md](../../docs/api-contract.md)).
-No AI SDK, no model keys on the device. It stores two things locally: the language
-choice and the invite code. Conversations live in memory and are gone when the
-practice ends. On iOS the settings file sits in Application Support, excluded from backup.
+No AI SDK, no model keys on the device. On the phone it keeps settings (DataStore) and,
+unless the user turns it off under Me, practice history: one JSON file per finished
+session in app-private storage, unencrypted, never uploaded
+([decision 0005](../../docs/decisions/0005-local-practice-history.md)). Android:
+`allowBackup=false` plus data extraction rules. iOS: Application Support, excluded from
+backup.
 
 ## Run it
 
@@ -92,10 +95,13 @@ composeApp/src/commonMain/kotlin/io/novawerk/psygym/
 ├── AppConfig.kt              # debug vs release, backend URL
 ├── data/api/                 # PsygymApi, KtorPsygymApi (SSE), FakePsygymApi, SwitchingPsygymApi
 ├── domain/model/             # Contract shapes (docs/api-contract.md)
-├── domain/settings/          # DataStore: language, invite code
-├── domain/practice/          # In-memory transcript for the supervision screen
+├── domain/settings/          # DataStore: language, invite code, intro and disclaimer version, history switch
+├── domain/practice/          # The session in progress (memory), the shared case list
+├── domain/history/           # Saved sessions on the phone (decision 0005)
 ├── di/                       # kotlin-inject AppComponent
-└── ui/                       # theme, locale, components, pages/{home,cases,briefing,practice,supervision,settings}
+└── ui/                       # theme, locale, components, pages/ (ids from docs/product)
+                              #   onboarding O1–O3, home H1, cases C1, briefing C2, practice S1/S2,
+                              #   supervision R1, help X1, me P1, privacy P3, history M1/M2
 composeApp/src/commonMain/composeResources/values{,-zh}/strings.xml
 ```
 

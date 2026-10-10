@@ -36,6 +36,25 @@ class KtorPsygymApiTest {
     }
 
     @Test
+    fun parsesOptionalCaseFieldsAndCopesWithoutThem() = runTest {
+        val body = """{"cases":[
+            {"id":"a","school":"cbt","title":{"zh":"甲","en":"A"},"summary":{"zh":"s","en":"s"},
+             "tags":[{"zh":"抑郁","en":"Depression"}],"difficulty":"medium","estimatedMinutes":20,
+             "clientAlias":{"zh":"小林","en":"Lin"},"clientIntro":{"zh":"i","en":"i"},
+             "practiceFocus":[{"zh":"建立关系","en":"Rapport"}],"contentNotes":{"zh":"n","en":"n"},
+             "somethingNew":true},
+            {"id":"b","school":"cbt","title":{"zh":"乙","en":"B"},"summary":{"zh":"s","en":"s"}}
+        ]}"""
+        val (a, b) = api(json(body)).cases()
+        assertEquals("小林", a.clientAlias?.zh)
+        assertEquals(io.novawerk.psygym.domain.model.Difficulty.Medium, a.difficulty)
+        assertEquals(20, a.estimatedMinutes)
+        assertEquals(1, a.practiceFocus.size)
+        assertEquals(null, b.clientAlias)
+        assertEquals(emptyList(), b.tags)
+    }
+
+    @Test
     fun errorBodyCodeWins() = runTest {
         val e = assertFailsWith<ApiException> {
             api(json("""{"error":{"code":"rate_limited","message":"slow"}}""", HttpStatusCode.TooManyRequests)).cases()

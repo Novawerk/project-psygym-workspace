@@ -13,7 +13,7 @@ class SwitchingPsygymApi(
 ) : PsygymApi {
     override suspend fun cases() = pick().cases()
 
-    override fun chat(request: TurnRequest): Flow<String> = flow { emitAll(pick().chat(request)) }
+    override fun chat(request: TurnRequest): Flow<ChatEvent> = flow { emitAll(pick().chat(request)) }
 
     override fun supervision(request: TurnRequest): Flow<String> = flow { emitAll(pick().supervision(request)) }
 

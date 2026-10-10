@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import io.novawerk.psygym.data.api.ApiError
 import io.novawerk.psygym.data.api.ApiErrorCode
 import io.novawerk.psygym.data.api.ApiException
+import io.novawerk.psygym.data.api.ChatEvent
 import io.novawerk.psygym.data.api.PsygymApi
 import io.novawerk.psygym.data.api.toError
 import io.novawerk.psygym.domain.model.ApiLocale
@@ -18,6 +19,10 @@ import io.novawerk.psygym.domain.model.TurnRequest
 import io.novawerk.psygym.domain.practice.PracticeSession
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+
+enum class EndKind { NotStarted, Short, Normal }
+
+private const val NEAR_LIMIT = 70
 
 /** One bubble. An incomplete reply broke off mid-stream: shown, never sent back. */
 data class ChatItem(val message: Message, val incomplete: Boolean = false)
@@ -39,15 +44,38 @@ class PracticeViewModel(
     var error by mutableStateOf<ApiError?>(null)
         private set
 
+    /** The client ended the session (`session_end`): input locked, only "End" remains. */
+    var clientEnded by mutableStateOf(session.clientEnded)
+        private set
+
     private var job: Job? = null
+
+    init {
+        // A new session starts when this screen opens; the clock starts here.
+        if (session.case != null && session.startedAt == null) session.begin()
+    }
+
+    val turns: Int get() = transcript.count { it.role == Role.Counselor }
+
+    /** Which end-of-session sheet to show (screens.md S2). */
+    val endKind: EndKind
+        get() = when {
+            clientEnded -> EndKind.Normal
+            transcript.none { it.role == Role.Client && it.text.isNotBlank() } -> EndKind.NotStarted
+            turns <= 2 -> EndKind.Short
+            else -> EndKind.Normal
+        }
 
     /** What the server sees: complete messages only. */
     private val transcript: List<Message> get() = items.filterNot { it.incomplete }.map { it.message }
 
-    /** Room left for one more counselor message and the client's reply. */
+    /** No room for one more counselor message and the client's reply. */
     val atLimit: Boolean get() = transcript.size > ContractLimits.MAX_MESSAGES - 2
 
-    val canSend: Boolean get() = case != null && !streaming && !atLimit
+    /** From the 70th message on (screens.md S1). */
+    val nearLimit: Boolean get() = transcript.size >= NEAR_LIMIT && !atLimit
+
+    val canSend: Boolean get() = case != null && !streaming && !atLimit && !clientEnded
 
     val canEnd: Boolean get() = !streaming && transcript.any { it.role == Role.Client && it.text.isNotBlank() }
 
@@ -77,9 +105,17 @@ class PracticeViewModel(
         job = viewModelScope.launch {
             val reply = StringBuilder()
             try {
-                api.chat(request).collect { delta ->
-                    reply.append(delta)
-                    replaceItems(before + ChatItem(Message(Role.Client, reply.toString())))
+                api.chat(request).collect { event ->
+                    when (event) {
+                        is ChatEvent.Delta -> {
+                            reply.append(event.text)
+                            replaceItems(before + ChatItem(Message(Role.Client, reply.toString())))
+                        }
+                        ChatEvent.SessionEnd -> {
+                            clientEnded = true
+                            session.markClientEnded()
+                        }
+                    }
                 }
                 if (reply.isEmpty()) error = ApiError(ApiErrorCode.Unknown)
             } catch (e: ApiException) {

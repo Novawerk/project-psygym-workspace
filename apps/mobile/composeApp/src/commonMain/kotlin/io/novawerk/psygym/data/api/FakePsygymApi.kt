@@ -2,6 +2,7 @@ package io.novawerk.psygym.data.api
 
 import io.novawerk.psygym.domain.model.ApiLocale
 import io.novawerk.psygym.domain.model.CaseSummary
+import io.novawerk.psygym.domain.model.Difficulty
 import io.novawerk.psygym.domain.model.LocalizedText
 import io.novawerk.psygym.domain.model.Role
 import io.novawerk.psygym.domain.model.TurnRequest
@@ -24,10 +25,15 @@ class FakePsygymApi(
         return CASES
     }
 
-    override fun chat(request: TurnRequest): Flow<String> {
-        val replies = if (request.locale == ApiLocale.Zh) CLIENT_ZH else CLIENT_EN
-        val turn = request.messages.size / 2
-        return typeOut(replies[turn % replies.size])
+    override fun chat(request: TurnRequest): Flow<ChatEvent> = flow {
+        val zh = request.locale == ApiLocale.Zh
+        // Like the mock backend: a counselor message containing #end makes the client leave.
+        val ending = request.messages.lastOrNull()?.text?.contains("#end") == true
+        val replies = if (zh) CLIENT_ZH else CLIENT_EN
+        val turn = request.messages.count { it.role == Role.Counselor } - 1
+        val text = if (ending) (if (zh) ENDING_ZH else ENDING_EN) else replies[turn.coerceAtLeast(0) % replies.size]
+        typeOut(text).collect { emit(ChatEvent.Delta(it)) }
+        if (ending) emit(ChatEvent.SessionEnd)
     }
 
     override fun supervision(request: TurnRequest): Flow<String> {
@@ -50,20 +56,35 @@ class FakePsygymApi(
             CaseSummary(
                 id = "demo-depression",
                 school = "cbt",
-                title = LocalizedText(zh = "【演示】情绪低落的大学生", en = "[Demo] A low-mood student"),
+                title = LocalizedText(zh = "情绪低落的大学生", en = "A low-mood student"),
                 summary = LocalizedText(
                     zh = "演示数据。20 岁，最近几个月提不起劲，常觉得自己不够好。",
                     en = "Demo data. 20 years old, low energy for months, often feels not good enough.",
+                ),
+                // This one carries every optional field; the other only a pseudonym, so both paths show.
+                tags = listOf(LocalizedText(zh = "抑郁", en = "Depression")),
+                difficulty = Difficulty.Intro,
+                estimatedMinutes = 15,
+                clientAlias = LocalizedText(zh = "小林", en = "Lin"),
+                clientIntro = LocalizedText(
+                    zh = "演示数据。小林，20 岁，大二学生。最近总提不起劲，室友劝他来聊聊。",
+                    en = "Demo data. Lin, 20, a second-year student. Low for months; a roommate suggested talking to someone.",
+                ),
+                practiceFocus = listOf(
+                    LocalizedText(zh = "建立关系", en = "Building rapport"),
+                    LocalizedText(zh = "识别自动思维", en = "Spotting automatic thoughts"),
                 ),
             ),
             CaseSummary(
                 id = "demo-depression-anxiety",
                 school = "cbt",
-                title = LocalizedText(zh = "【演示】焦虑又疲惫的职场人", en = "[Demo] An anxious, tired professional"),
+                title = LocalizedText(zh = "焦虑又疲惫的职场人", en = "An anxious, tired professional"),
                 summary = LocalizedText(
                     zh = "演示数据。32 岁，工作压力大，睡不好，总担心出错。",
                     en = "Demo data. 32 years old, high work pressure, sleeps badly, worries about mistakes.",
                 ),
+                // Only a pseudonym: the other optional fields stay empty to show the fallbacks.
+                clientAlias = LocalizedText(zh = "阿杰", en = "Jie"),
             ),
         )
 
@@ -73,6 +94,9 @@ class FakePsygymApi(
             "可能是吧。我总觉得别人都比我做得好。",
             "说出来好像轻松了一点点。",
         )
+        const val ENDING_ZH = "我想今天先到这里。"
+        const val ENDING_EN = "I think I'd like to stop here today."
+
         val CLIENT_EN = listOf(
             "Um… I don't really know where to start. Nothing feels worth it lately.",
             "I wake up and don't want to get out of bed. It feels pointless.",
