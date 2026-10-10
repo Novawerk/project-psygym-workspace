@@ -11,7 +11,9 @@ in a PR that touches both sides, or not at all.
   `https://psygym-api.novawerk.io`).
 - JSON in, JSON or SSE out. UTF-8.
 - Stateless. The app sends the whole conversation each turn. The server stores no
-  transcript and never logs message text.
+  transcript and never logs message text. `/chat` and `/supervision` pass the conversation to
+  the model vendor to get a reply, and nowhere else. The only conversation text that goes
+  anywhere beyond that is one passage the user reports with `POST /report`.
 - Header `X-Invite-Code: <code>` on every request. The server checks it only when
   `INVITE_CODES` is set; otherwise any value (or none) passes.
 
@@ -76,6 +78,32 @@ own bucket).
 `204` means we received it. Our server stores nothing; it forwards the feedback to the team's
 private Slack channel, where Slack keeps the message (or drops it when that isn't set up).
 Delivery is best effort; the app shows "thanks" either way. Errors: `400 invalid_request`,
+`401 invite_required`, `404 case_not_found`, `429 rate_limited`.
+
+### `POST /report` → `204` (no body)
+
+The user reports one AI passage from inside the app: a reply from the AI client, or a passage of
+the supervision report.
+
+```ts
+{
+  caseId: string;
+  locale: Locale;
+  source: "client_reply" | "report";             // where the passage comes from
+  reason: "harmful" | "out_of_role" | "unsafe_advice" | "other";  // keys match the app's copy
+  comment?: string;                               // the user's note, ≤ 500 characters
+  reportedText: string;                           // the reported passage, 1–2000 characters
+}
+```
+
+**This is the only request whose conversation text we pass on.** The server forwards the
+reported passage, the reason and the note to the team's private Slack channel, marked as a
+report. Our server stores nothing; Slack keeps the message. Exactly one passage, which the app
+shows the user before sending; never the rest of the session: any other field is a 400. Our log
+keeps only ids, enums and lengths, never the passage or the note.
+
+Same invite code check; same rate limit, its own bucket. Same delivery as `/feedback`: `204`
+either way, best effort, dropped when Slack isn't set up. Errors: `400 invalid_request`,
 `401 invite_required`, `404 case_not_found`, `429 rate_limited`.
 
 ## Stream format (both streaming endpoints)
