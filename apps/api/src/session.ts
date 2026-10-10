@@ -39,9 +39,16 @@ export const FAREWELL: Record<Locale, string> = {
   en: "I'd like to stop here for today.",
 };
 
+const ALIAS_LINE: Record<Locale, (name: string) => string> = {
+  zh: (name) => `你叫「${name}」。需要自称或介绍自己时用这个名字。`,
+  en: (name) => `Your name here is "${name}". Use it when you introduce yourself or are asked your name.`,
+};
+
 /** The AI client answers the counselor's last message, in character. */
 export function clientRequest(prompts: Prompts, c: Case, locale: Locale, messages: Message[]): Omit<ModelRequest, "signal"> {
-  const system = [prompts.client, "## 你扮演的来访者（病例）", c.brief, "## 语言", LANGUAGE[locale]].join("\n\n");
+  // The pseudonym, when the case has one, is what the client calls itself in this language.
+  const alias = c.clientAlias ? [`## 你的化名\n\n${ALIAS_LINE[locale](c.clientAlias[locale])}`] : [];
+  const system = [prompts.client, "## 你扮演的来访者（病例）", c.brief, ...alias, "## 语言", LANGUAGE[locale]].join("\n\n");
   const out: LlmMessage[] = messages.map((m) =>
     m.role === "counselor"
       ? { role: "user", text: m.text }

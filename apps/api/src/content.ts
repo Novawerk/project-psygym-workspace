@@ -42,18 +42,20 @@ const Required = z.object({
 /** The template lets 聆镜 write difficulty in Chinese. */
 const DIFFICULTY: Record<string, "intro" | "medium" | "hard"> = { 入门: "intro", 中等: "medium", 较难: "hard" };
 
-/**
- * Optional, public (GET /cases only, never sent to a model as the supervisor's input).
- * Each one is checked on its own: a bad value drops that field with a warning, and the case
- * still loads. A missing field is simply left out of the response.
- */
 /** Whole minutes; a number, or a string of digits ("20"). Never true/false or other coercions. */
 const Minutes = z.preprocess((v) => (typeof v === "string" && /^\s*\d+\s*$/.test(v) ? Number(v) : v), z.number().int().min(1).max(180));
 
+/**
+ * Optional, public (GET /cases only, never sent to a model as the supervisor's input; the
+ * client's alias also goes to the AI client as its own name).
+ * Each one is checked on its own: a bad value drops that field with a warning, and the case
+ * still loads. A missing field is simply left out of the response.
+ */
 const Optional = {
   tags: z.array(Localized).min(1),
   difficulty: z.preprocess((v) => (typeof v === "string" ? (DIFFICULTY[v.trim()] ?? v.trim()) : v), z.enum(["intro", "medium", "hard"])),
   estimatedMinutes: Minutes,
+  clientAlias: Localized,
   clientIntro: Localized,
   practiceFocus: z.array(Localized).min(1),
   contentNotes: Localized,
