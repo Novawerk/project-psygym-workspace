@@ -1,5 +1,5 @@
 // Copy to Config.xcconfig (gitignored). TEAM_ID is the Apple team that signs
-// (Haodong Ju's account; not a secret). Signing is Automatic.
+// (the personal developer account; not a secret). Signing is Automatic.
 TEAM_ID=9VLTG4HRL9
 
 PRODUCT_NAME=PSYGYM
