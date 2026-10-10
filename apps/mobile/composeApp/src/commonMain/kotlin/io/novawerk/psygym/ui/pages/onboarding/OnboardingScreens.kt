@@ -1,0 +1,334 @@
+package io.novawerk.psygym.ui.pages.onboarding
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Masks
+import androidx.compose.material.icons.outlined.PersonOff
+import androidx.compose.material.icons.outlined.RateReview
+import androidx.compose.material.icons.outlined.Shield
+import androidx.compose.material.icons.outlined.SmartToy
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import io.novawerk.psygym.domain.settings.AppLanguage
+import io.novawerk.psygym.resources.Res
+import io.novawerk.psygym.resources.app_name
+import io.novawerk.psygym.resources.onb_consent_1_body
+import io.novawerk.psygym.resources.onb_consent_1_title
+import io.novawerk.psygym.resources.onb_consent_2_body
+import io.novawerk.psygym.resources.onb_consent_2_title
+import io.novawerk.psygym.resources.onb_consent_3_body
+import io.novawerk.psygym.resources.onb_consent_3_title
+import io.novawerk.psygym.resources.onb_consent_4_body
+import io.novawerk.psygym.resources.onb_consent_4_title
+import io.novawerk.psygym.resources.onb_consent_5_body
+import io.novawerk.psygym.resources.onb_consent_5_title
+import io.novawerk.psygym.resources.onb_consent_accept
+import io.novawerk.psygym.resources.onb_consent_check
+import io.novawerk.psygym.resources.onb_consent_title
+import io.novawerk.psygym.resources.onb_continue
+import io.novawerk.psygym.resources.onb_link_privacy
+import io.novawerk.psygym.resources.onb_ready_invite_body
+import io.novawerk.psygym.resources.onb_ready_invite_hint
+import io.novawerk.psygym.resources.onb_ready_invite_title
+import io.novawerk.psygym.resources.onb_ready_language_note
+import io.novawerk.psygym.resources.onb_ready_language_title
+import io.novawerk.psygym.resources.onb_ready_skip
+import io.novawerk.psygym.resources.onb_ready_start
+import io.novawerk.psygym.resources.onb_ready_title
+import io.novawerk.psygym.resources.onb_skip
+import io.novawerk.psygym.resources.onb_step1_body
+import io.novawerk.psygym.resources.onb_step1_title
+import io.novawerk.psygym.resources.onb_step2_body
+import io.novawerk.psygym.resources.onb_step2_title
+import io.novawerk.psygym.resources.onb_step3_body
+import io.novawerk.psygym.resources.onb_step3_title
+import io.novawerk.psygym.resources.onb_welcome_subtitle
+import io.novawerk.psygym.resources.onb_welcome_title
+import io.novawerk.psygym.resources.settings_language_en
+import io.novawerk.psygym.resources.settings_language_system
+import io.novawerk.psygym.resources.settings_language_zh
+import io.novawerk.psygym.ui.components.BottomActions
+import io.novawerk.psygym.ui.components.HelpLink
+import io.novawerk.psygym.ui.components.LanguageToggle
+import io.novawerk.psygym.ui.components.PrimaryButton
+import io.novawerk.psygym.ui.components.SecondaryButton
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
+
+// docs/product/onboarding.md: three pages, page dots, 中/EN top right, one main button
+// at the bottom. O1 and O3 can be skipped; O2 can't. No system permissions.
+
+/** Top row shared by O1–O3: page dots, Skip (when allowed), language toggle. */
+@Composable
+private fun OnboardingTopBar(page: Int, onSkip: (() -> Unit)?, onLanguage: (AppLanguage) -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().statusBarsPadding().padding(start = 20.dp, end = 8.dp, top = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            repeat(3) { i ->
+                Box(
+                    Modifier.size(if (i == page) 8.dp else 6.dp).background(
+                        if (i == page) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline,
+                        CircleShape,
+                    ),
+                )
+            }
+        }
+        Spacer(Modifier.weight(1f))
+        if (onSkip != null) {
+            TextButton(onClick = onSkip) {
+                Text(stringResource(Res.string.onb_skip), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        LanguageToggle(onChange = onLanguage)
+    }
+}
+
+@Composable
+private fun OnboardingPage(
+    page: Int,
+    onSkip: (() -> Unit)?,
+    onLanguage: (AppLanguage) -> Unit,
+    bottom: @Composable ColumnScope.() -> Unit,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Scaffold(
+        topBar = { OnboardingTopBar(page, onSkip, onLanguage) },
+        bottomBar = { BottomActions(content = bottom) },
+    ) { padding ->
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            content = content,
+        )
+    }
+}
+
+/** O1 · Welcome. */
+@Composable
+fun WelcomeScreen(onContinue: () -> Unit, onSkip: () -> Unit, onLanguage: (AppLanguage) -> Unit) {
+    OnboardingPage(
+        page = 0,
+        onSkip = onSkip,
+        onLanguage = onLanguage,
+        bottom = { PrimaryButton(stringResource(Res.string.onb_continue), onContinue) },
+    ) {
+        Text(
+            stringResource(Res.string.app_name),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(32.dp))
+        WelcomeArt()
+        Spacer(Modifier.height(32.dp))
+        Text(stringResource(Res.string.onb_welcome_title), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(8.dp))
+        Text(
+            stringResource(Res.string.onb_welcome_subtitle),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(28.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
+            Step(1, Res.string.onb_step1_title, Res.string.onb_step1_body)
+            Step(2, Res.string.onb_step2_title, Res.string.onb_step2_body)
+            Step(3, Res.string.onb_step3_title, Res.string.onb_step3_body)
+        }
+    }
+}
+
+/** Placeholder for the O1 illustration: two chairs, one with a soft light (the AI client). */
+@Composable
+private fun WelcomeArt() {
+    Row(
+        Modifier.fillMaxWidth().height(120.dp).background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.large),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Icons.Outlined.ChatBubbleOutline, contentDescription = null, modifier = Modifier.size(40.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.width(24.dp))
+        Box(Modifier.size(40.dp).background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f), CircleShape))
+    }
+}
+
+@Composable
+private fun Step(n: Int, title: StringResource, body: StringResource) {
+    Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        Box(
+            Modifier.size(28.dp).background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) { Text("$n", style = MaterialTheme.typography.labelLarge) }
+        Column {
+            Text(stringResource(title), style = MaterialTheme.typography.titleSmall)
+            Text(stringResource(body), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+/** O2 · Before we start. Must tick and confirm; can't be skipped (G3). */
+@Composable
+fun ConsentScreen(
+    onAccept: () -> Unit,
+    onPrivacy: () -> Unit,
+    onHelp: () -> Unit,
+    onLanguage: (AppLanguage) -> Unit,
+) {
+    var checked by rememberSaveable { mutableStateOf(false) }
+    OnboardingPage(
+        page = 1,
+        onSkip = null,
+        onLanguage = onLanguage,
+        bottom = {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .toggleable(value = checked, onValueChange = { checked = it }, role = Role.Checkbox)
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Checkbox(checked = checked, onCheckedChange = null)
+                Spacer(Modifier.width(12.dp))
+                Text(stringResource(Res.string.onb_consent_check), style = MaterialTheme.typography.bodyMedium)
+            }
+            PrimaryButton(stringResource(Res.string.onb_consent_accept), onAccept, enabled = checked)
+            Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
+                TextButton(onClick = onPrivacy) {
+                    Text(stringResource(Res.string.onb_link_privacy), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                HelpLink(onHelp)
+            }
+        },
+    ) {
+        Icon(Icons.Outlined.Shield, contentDescription = null, modifier = Modifier.size(28.dp))
+        Spacer(Modifier.height(12.dp))
+        Text(stringResource(Res.string.onb_consent_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(20.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
+            Point(Icons.Outlined.PersonOff, Res.string.onb_consent_1_title, Res.string.onb_consent_1_body)
+            Point(Icons.Outlined.Masks, Res.string.onb_consent_2_title, Res.string.onb_consent_2_body)
+            Point(Icons.Outlined.SmartToy, Res.string.onb_consent_3_title, Res.string.onb_consent_3_body)
+            Point(Icons.Outlined.Lock, Res.string.onb_consent_4_title, Res.string.onb_consent_4_body)
+            Point(Icons.Outlined.RateReview, Res.string.onb_consent_5_title, Res.string.onb_consent_5_body)
+        }
+    }
+}
+
+@Composable
+private fun Point(icon: ImageVector, title: StringResource, body: StringResource) {
+    Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(22.dp).padding(top = 2.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(stringResource(title), style = MaterialTheme.typography.titleSmall)
+            Text(stringResource(body), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+/** O3 · Almost ready: language and invite code. The invite code isn't checked here. */
+@Composable
+fun ReadyScreen(
+    language: AppLanguage,
+    inviteCode: String,
+    onLanguage: (AppLanguage) -> Unit,
+    onStart: (inviteCode: String) -> Unit,
+    onSkip: () -> Unit,
+) {
+    var code by rememberSaveable { mutableStateOf(inviteCode) }
+    OnboardingPage(
+        page = 2,
+        onSkip = onSkip,
+        onLanguage = onLanguage,
+        bottom = {
+            PrimaryButton(stringResource(Res.string.onb_ready_start), { onStart(code) })
+            SecondaryButton(stringResource(Res.string.onb_ready_skip), onSkip)
+        },
+    ) {
+        Text(stringResource(Res.string.onb_ready_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(24.dp))
+        Text(stringResource(Res.string.onb_ready_language_title), style = MaterialTheme.typography.titleSmall)
+        Spacer(Modifier.height(4.dp))
+        Column(Modifier.selectableGroup()) {
+            listOf(
+                AppLanguage.System to Res.string.settings_language_system,
+                AppLanguage.Zh to Res.string.settings_language_zh,
+                AppLanguage.En to Res.string.settings_language_en,
+            ).forEach { (value, label) ->
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .selectable(selected = value == language, onClick = { onLanguage(value) }, role = Role.RadioButton)
+                        .padding(vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RadioButton(selected = value == language, onClick = null)
+                    Spacer(Modifier.width(12.dp))
+                    Text(stringResource(label), style = MaterialTheme.typography.bodyLarge)
+                }
+            }
+        }
+        Text(
+            stringResource(Res.string.onb_ready_language_note),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(28.dp))
+        Text(stringResource(Res.string.onb_ready_invite_title), style = MaterialTheme.typography.titleSmall)
+        Spacer(Modifier.height(4.dp))
+        Text(
+            stringResource(Res.string.onb_ready_invite_body),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(12.dp))
+        OutlinedTextField(
+            value = code,
+            onValueChange = { code = it },
+            singleLine = true,
+            placeholder = { Text(stringResource(Res.string.onb_ready_invite_hint)) },
+            shape = MaterialTheme.shapes.small,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}

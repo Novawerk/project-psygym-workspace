@@ -77,7 +77,7 @@ class KtorPsygymApiStreamTest {
             it.frame("""{"type":"turn_end","usage":{"inputTokens":1,"outputTokens":2}}""")
         }
 
-        assertEquals(listOf("我", "还好"), api().chat(request).toList())
+        assertEquals(listOf(ChatEvent.Delta("我"), ChatEvent.Delta("还好")), api().chat(request).toList())
         assertEquals("code-1", lastInvite)
         assertTrue(lastRequestBody.contains("\"caseId\":\"demo\""))
         assertTrue(lastRequestBody.contains("\"locale\":\"zh\""))
@@ -85,16 +85,28 @@ class KtorPsygymApiStreamTest {
     }
 
     @Test
-    fun unknownFrameTypesAreIgnored() = runBlocking {
-        // e.g. the coming session_end frame, which arrives before turn_end.
+    fun sessionEndIsReportedAndUnknownFramesIgnored() = runBlocking {
         script = {
             it.frame("""{"type":"turn_start"}""")
             it.frame("""{"type":"text_delta","text":"我想今天先到这里。"}""")
-            it.frame("""{"type":"session_end"}""")
             it.frame("""{"type":"something_new","extra":{"a":1}}""")
+            it.frame("""{"type":"session_end"}""")
             it.frame("""{"type":"turn_end"}""")
         }
-        assertEquals(listOf("我想今天先到这里。"), api().chat(request).toList())
+        assertEquals(
+            listOf(ChatEvent.Delta("我想今天先到这里。"), ChatEvent.SessionEnd),
+            api().chat(request).toList(),
+        )
+    }
+
+    @Test
+    fun supervisionIgnoresSessionEnd() = runBlocking {
+        script = {
+            it.frame("""{"type":"text_delta","text":"## 做得好的地方"}""")
+            it.frame("""{"type":"session_end"}""")
+            it.frame("""{"type":"turn_end"}""")
+        }
+        assertEquals(listOf("## 做得好的地方"), api().supervision(request).toList())
     }
 
     @Test

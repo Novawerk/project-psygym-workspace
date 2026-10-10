@@ -28,3 +28,9 @@ Date: 2026-10-10. Status: accepted.
   `invite_required` points to Settings.
 - **Nothing kept:** the transcript lives in memory (`PracticeSession`) and is cleared
   when the practice ends. DataStore holds only language and invite code.
+- **Practice history** (decision 0005): one JSON file per session under the app's private
+  `history/` directory, read and written with okio. Saved when the report screen opens
+  ("report unfinished") and updated when the report is in. A small file store is enough
+  for a few hundred sessions; move to a database if history grows into search or stats.
+- **Navigation:** three top-level pages with a bottom bar (Practise / History / Me); flow
+  pages have none. Content is capped at 640dp wide, centred, for tablets.

@@ -9,11 +9,18 @@ interface PsygymApi {
     /** `GET /cases`. Throws [ApiException]. */
     suspend fun cases(): List<CaseSummary>
 
-    /** `POST /chat`. Emits the client's reply text in pieces; throws [ApiException]. */
-    fun chat(request: TurnRequest): Flow<String>
+    /** `POST /chat`. Emits the client's reply in pieces, then maybe [ChatEvent.SessionEnd]; throws [ApiException]. */
+    fun chat(request: TurnRequest): Flow<ChatEvent>
 
     /** `POST /supervision`. Emits the Markdown report in pieces; throws [ApiException]. */
     fun supervision(request: TurnRequest): Flow<String>
+}
+
+sealed interface ChatEvent {
+    data class Delta(val text: String) : ChatEvent
+
+    /** The client ended the session in character (`session_end` frame). Lock the input. */
+    data object SessionEnd : ChatEvent
 }
 
 /** Error codes from the contract, plus two the app produces itself. */

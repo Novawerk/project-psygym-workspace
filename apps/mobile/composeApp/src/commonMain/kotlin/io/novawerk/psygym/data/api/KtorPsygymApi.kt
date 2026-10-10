@@ -30,6 +30,7 @@ import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.timeout
+import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.flow.transformWhile
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -58,9 +59,10 @@ class KtorPsygymApi(
         install(SSE) { showCommentEvents() }
         install(HttpTimeout) {
             connectTimeoutMillis = 15_000
-            // Covers the wait for response headers. Once events flow, Flow.timeout below
-            // decides: engines report a read timeout mid-stream inconsistently.
-            socketTimeoutMillis = idleTimeoutMillis
+            // A backstop for the wait for response headers. Mid-stream, Flow.timeout below
+            // decides; the margin keeps the two from racing (engines report a read timeout
+            // mid-stream inconsistently, sometimes as a clean end).
+            socketTimeoutMillis = idleTimeoutMillis + SOCKET_TIMEOUT_MARGIN_MILLIS
         }
         defaultRequest { url(baseUrl.trimEnd('/') + "/") }
     }
@@ -71,12 +73,13 @@ class KtorPsygymApi(
         response.body<CasesResponse>().cases
     }
 
-    override fun chat(request: TurnRequest): Flow<String> = stream("chat", request)
+    override fun chat(request: TurnRequest): Flow<ChatEvent> = stream("chat", request)
 
-    override fun supervision(request: TurnRequest): Flow<String> = stream("supervision", request)
+    override fun supervision(request: TurnRequest): Flow<String> =
+        stream("supervision", request).transform { if (it is ChatEvent.Delta) emit(it.text) }
 
     @OptIn(FlowPreview::class)
-    private fun stream(path: String, request: TurnRequest): Flow<String> = channelFlow {
+    private fun stream(path: String, request: TurnRequest): Flow<ChatEvent> = channelFlow {
         val code = inviteCode()
         // How the stream ended. An error frame is thrown after the SSE block closes:
         // thrown inside, the connection teardown would replace it with a transport error.
@@ -101,8 +104,12 @@ class KtorPsygymApi(
                             val frame = json.decodeFromString(StreamFrame.serializer(), data)
                             when (frame.type) {
                                 "text_delta" -> {
-                                    frame.text?.let { emit(it) }
+                                    frame.text?.let { emit(ChatEvent.Delta(it)) }
                                     true
+                                }
+                                "session_end" -> {
+                                    emit(ChatEvent.SessionEnd)
+                                    true // turn_end still follows
                                 }
                                 "turn_end" -> {
                                     ended = true
@@ -177,5 +184,6 @@ class KtorPsygymApi(
 
     private companion object {
         const val INVITE_HEADER = "X-Invite-Code"
+        const val SOCKET_TIMEOUT_MARGIN_MILLIS = 5_000L
     }
 }

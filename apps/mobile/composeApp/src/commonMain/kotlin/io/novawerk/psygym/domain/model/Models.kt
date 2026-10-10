@@ -42,7 +42,22 @@ data class CaseSummary(
     val school: String,
     val title: LocalizedText,
     val summary: LocalizedText,
+    // Optional: any of these may be missing; screens fall back (docs/product/screens.md).
+    val tags: List<LocalizedText> = emptyList(),
+    val difficulty: Difficulty? = null,
+    val estimatedMinutes: Int? = null,
+    val clientAlias: LocalizedText? = null,
+    val clientIntro: LocalizedText? = null,
+    val practiceFocus: List<LocalizedText> = emptyList(),
+    val contentNotes: LocalizedText? = null,
 )
+
+@Serializable
+enum class Difficulty {
+    @SerialName("intro") Intro,
+    @SerialName("medium") Medium,
+    @SerialName("hard") Hard,
+}
 
 @Serializable
 data class CasesResponse(val cases: List<CaseSummary>)
