@@ -38,9 +38,14 @@ describe.each(endpoints)("POST %s: 400 invalid_request", (path) => {
     await expectError(await call(path, { rawBody: big }), 400, "invalid_request");
     // A server that answers before reading the whole body can leave the kept-alive
     // connection broken; the app's next request would then fail for no visible reason.
-    const next = await call("/cases");
-    expect(next.status).toBe(200);
-    await next.body?.cancel();
+    // The broken socket is not always the next one picked, so try a few.
+    for (let i = 0; i < 4; i++) {
+      const next = await call("/cases").catch((e) => {
+        throw new Error(`request ${i + 1} after the oversized body failed: ${e.cause?.code ?? e.message}`);
+      });
+      expect(next.status).toBe(200);
+      await next.body?.cancel();
+    }
   });
 });
 
