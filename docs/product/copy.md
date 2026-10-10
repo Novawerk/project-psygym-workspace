@@ -131,7 +131,7 @@ key 沿用 App 现有命名（`home_*`、`cases_*`、`practice_*`、`supervision
 | supervision_feedback_failed | 新 | 没发出去 | Didn't send |
 | supervision_leave_writing | 新 | 报告还没写完，离开就看不到了。 | The report isn't finished. If you leave, you won't see it. |
 
-### 举报（🔵 第 2 批，待决策 D8）
+### 举报（🔵 第 2 批，D8 已定）
 
 | key | 中文 | English |
 |-----|------|---------|
@@ -151,7 +151,7 @@ key 沿用 App 现有命名（`home_*`、`cases_*`、`practice_*`、`supervision
 | report_thanks | 谢谢，我们收到了。 | Thanks, we got it. |
 | report_failed | 没发出去 | Didn't send |
 | privacy_q_report | 举报一条回复时，你们收到什么？ | What do you receive when I report a reply? |
-| privacy_a_report | 被举报的那一段文字、你选的原因和你写的话，转到我们内部的 Slack 频道，不进数据库。不会发送整场对话。 | The reported text, the reason you chose and your note, sent to our internal Slack channel, not a database. The rest of the session is not sent. |
+| privacy_a_report | 被举报的那一段文字、你选的原因和你写的话，还有病例编号和界面语言，转到我们内部的 Slack 频道（第三方服务），不进数据库。不会发送整场对话。 | The reported text, the reason you chose and your note, with the case id and interface language, go to our internal Slack channel (a third-party service), not a database. The rest of the session is not sent. |
 
 ### 需要帮助？
 
