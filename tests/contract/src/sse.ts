@@ -4,6 +4,7 @@
 export type Frame =
   | { type: "turn_start" }
   | { type: "text_delta"; text: string }
+  | { type: "session_end" }
   | { type: "turn_end"; usage?: { inputTokens: number; outputTokens: number } }
   | { type: "error"; code: string; message: string };
 
@@ -84,10 +85,12 @@ export async function readStream(res: Response, timeoutMs: number): Promise<Stre
 
 /**
  * Check the frame order from the contract:
- *   turn_start → text_delta* → (turn_end | error), nothing after.
+ *   turn_start → text_delta* → [session_end] → (turn_end | error), nothing after.
+ * session_end is /chat only: at most once, and only right before turn_end.
  * Returns a list of problems; empty means the stream is valid.
  */
-export function frameProblems(r: StreamResult): string[] {
+export function frameProblems(r: StreamResult, opts: { sessionEnd?: boolean } = {}): string[] {
+  const allowSessionEnd = opts.sessionEnd ?? true;
   const p: string[] = [];
   if (r.timedOut) p.push("stream did not end before the timeout");
   if (r.badJson.length) p.push(`data that is not JSON: ${JSON.stringify(r.badJson.slice(0, 3))}`);
@@ -112,6 +115,10 @@ export function frameProblems(r: StreamResult): string[] {
         if (isFirst || isLast) p.push(`text_delta at position ${i}`);
         if (typeof fr.text !== "string") p.push(`text_delta.text is not a string at ${i}`);
         break;
+      case "session_end":
+        if (!allowSessionEnd) p.push(`session_end at ${i} on an endpoint that must not send it`);
+        else if (i !== f.length - 2 || last.type !== "turn_end") p.push(`session_end at ${i} is not right before turn_end`);
+        break;
       case "turn_end":
         if (!isLast) p.push(`turn_end at ${i} is not the last frame`);
         if (fr.usage !== undefined) {
@@ -133,6 +140,10 @@ export function frameProblems(r: StreamResult): string[] {
     }
   });
   return p;
+}
+
+export function countType(r: StreamResult, type: string): number {
+  return r.frames.filter((f) => f.type === type).length;
 }
 
 export function joinedText(r: StreamResult): string {

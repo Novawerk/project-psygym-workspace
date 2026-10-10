@@ -4,7 +4,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { setTimeout as sleep } from "node:timers/promises";
 
 const runs = [
-  { name: "open (no invite codes)", server: {}, test: {}, script: "test" },
+  { name: "open (no invite codes)", server: {}, test: { END_TRIGGER: "#end" }, script: "test" },
   { name: "invite codes on", server: { INVITE_CODES: "alpha,beta" }, test: { INVITE_CODE: "beta" }, script: "test" },
   { name: "no model", server: { NO_MODEL: "1" }, test: { EXPECT_MODEL_UNAVAILABLE: "1" }, script: "test" },
   { name: "rate limit", server: { RATE_LIMIT: "20" }, test: {}, script: "test:rate-limit" },

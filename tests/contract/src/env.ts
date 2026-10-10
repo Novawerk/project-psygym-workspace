@@ -13,6 +13,9 @@ export const env = {
   // Set to 1 when the server runs with no model configured: /chat and /supervision
   // must then answer 503 model_unavailable.
   expectModelUnavailable: process.env.EXPECT_MODEL_UNAVAILABLE === "1",
+  // A counselor line that makes the server's mock client end the session (apps/api: "#end").
+  // Mock only; with a real model the session_end tests are skipped.
+  endTrigger: process.env.END_TRIGGER || undefined,
   streamTimeoutMs: num(process.env.STREAM_TIMEOUT_MS, 90_000),
   // Rate-limit test: how many requests to fire before giving up on seeing a 429.
   rateLimitBurst: num(process.env.RATE_LIMIT_BURST, 150),

@@ -38,6 +38,16 @@ describe("frameProblems", () => {
     expect(frameProblems(result([{ type: "turn_start" }, { type: "turn_end" }, { type: "text_delta", text: "x" }]))).not.toEqual([]);
     expect(frameProblems(result([{ type: "turn_start" }, { type: "turn_end" }, { type: "error", code: "x", message: "" }]))).not.toEqual([]);
   });
+  it("accepts session_end right before turn_end", () => {
+    expect(frameProblems(result([{ type: "turn_start" }, { type: "text_delta", text: "再见" }, { type: "session_end" }, { type: "turn_end" }]))).toEqual([]);
+  });
+  it("rejects session_end anywhere else, twice, before an error, or where it is not allowed", () => {
+    const s = { type: "session_end" }, st = { type: "turn_start" }, d = { type: "text_delta", text: "x" }, e = { type: "turn_end" };
+    expect(frameProblems(result([st, s, d, e]))).not.toEqual([]);
+    expect(frameProblems(result([st, d, s, s, e]))).not.toEqual([]);
+    expect(frameProblems(result([st, d, s, { type: "error", code: "x", message: "" }]))).not.toEqual([]);
+    expect(frameProblems(result([st, d, s, e]), { sessionEnd: false })).not.toEqual([]);
+  });
   it("rejects a stream with no ending, unknown types and bad usage", () => {
     expect(frameProblems(result([{ type: "turn_start" }, { type: "text_delta", text: "x" }]))).not.toEqual([]);
     expect(frameProblems(result([{ type: "turn_start" }, { type: "thinking" }, { type: "turn_end" }]))).not.toEqual([]);
