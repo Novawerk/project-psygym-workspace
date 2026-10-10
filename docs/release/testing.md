@@ -40,7 +40,7 @@ Beta 审核过了以后，同一个版本号下的新 build 一般不用重新�
 >
 > 这一版请试：选一个病例 → 读病例简介 → 和来访者谈 5–10 轮 → 结束并看督导反馈。看看来访者像不像真人，反馈有没有用。问题和想法发到 info@novawerk.io。请不要输入真实来访者的信息。
 >
-> PSYGYM is a practice tool for new counselors. An AI plays the client; afterwards an AI supervisor gives feedback. Every client is fictional. This is not therapy and not for clients.
+> 聆镜 PSYGYM is a practice tool for new counselors. An AI plays the client; afterwards an AI supervisor gives feedback. Every client is fictional. This is not therapy and not for clients.
 >
 > Please try: pick a case → read the brief → talk with the client for 5–10 turns → end and read the feedback. Does the client feel real? Is the feedback useful? Send problems and ideas to info@novawerk.io. Please don't enter real client information.
 

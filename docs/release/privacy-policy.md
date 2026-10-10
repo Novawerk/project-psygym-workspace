@@ -66,7 +66,7 @@
 
 ### What this is
 
-PSYGYM is a practice tool for counselors. An AI plays a fictional client; afterwards an AI supervisor gives feedback. It is not therapy and not for clients.
+聆镜 PSYGYM is a practice tool for counselors. An AI plays a fictional client; afterwards an AI supervisor gives feedback. It is not therapy and not for clients.
 
 Operator: to be decided (see [README](./README.md), "Publisher"). Contact: info@novawerk.io.
 
@@ -110,7 +110,7 @@ In the EU you have the GDPR rights of access, rectification, erasure, restrictio
 
 ### Age
 
-PSYGYM is for adult counseling professionals and trainees. It is not for anyone under 18.
+聆镜 PSYGYM is for adult counseling professionals and trainees. It is not for anyone under 18.
 
 ### Changes
 

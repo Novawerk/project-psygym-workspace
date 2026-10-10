@@ -60,7 +60,7 @@ key 沿用 App 现有命名（`home_*`、`cases_*`、`practice_*`、`supervision
 | home_start_card_meta | 新 | 约 15 分钟 · 结束后有督导反馈 | About 15 min · supervision feedback at the end |
 | home_cases_section | 新 | 病例 | Cases |
 | home_cases_all | 新 | 全部 | All |
-| home_disclaimer | 新（替代 home_safety_title/body，和 `safety.md` §5 首页短版一致） | 聆镜 PSYGYM 是给咨询师的练习工具。来访者由 AI 扮演，全部是虚构的。这不是心理治疗。 | PSYGYM is a practice tool for counselors. An AI plays the client. Every client is fictional. This is not therapy. |
+| home_disclaimer | 新（替代 home_safety_title/body，和 `safety.md` §5 首页短版一致） | 聆镜 PSYGYM 是给咨询师的练习工具。来访者由 AI 扮演，全部是虚构的。这不是心理治疗。 | 聆镜 PSYGYM is a practice tool for counselors. An AI plays the client. Every client is fictional. This is not therapy. |
 | help_link | 新 | 需要帮助？ | Need help? |
 
 ### 病例库和病例简介
@@ -196,8 +196,8 @@ key 沿用 App 现有命名（`home_*`、`cases_*`、`practice_*`、`supervision
 | settings_help_section | 帮助 | Help |
 | settings_replay_onboarding | 重新看引导 | Replay the intro |
 | settings_privacy | 隐私说明 | Privacy |
-| settings_about_app | 关于聆镜 PSYGYM | About PSYGYM |
-| about_body | 聆镜 PSYGYM 是给新手咨询师的练习工具，由聆镜团队和 Novawerk 一起做。 | PSYGYM is a practice tool for new counselors, made by the 聆镜 (Lingjing) team and Novawerk. |
+| settings_about_app | 关于聆镜 PSYGYM | About 聆镜 PSYGYM |
+| about_body | 聆镜 PSYGYM 是给新手咨询师的练习工具，由聆镜团队和 Novawerk 一起做。 | 聆镜 PSYGYM is a practice tool for new counselors, made by the 聆镜 (Lingjing) team and Novawerk. |
 | about_open_source | 代码和文档在 GitHub 公开，MIT 许可。 | The code and docs are open on GitHub under the MIT licence. |
 | about_feedback | 有想法或发现问题？在 GitHub 提 issue 告诉我们。 | Ideas or problems? Open an issue on GitHub. |
 
