@@ -8,6 +8,7 @@
 
 - **只做模拟。** 所有来访者都是虚构的。我们不收、不存真实来访者的信息。
 - **服务端不存对话。** 每一轮 App 把整段对话发过来，服务端回完就丢，不写日志正文（见 [`api-contract.md`](./api-contract.md)）。
+- **练习记录只存在用户自己的手机上。** 默认开，可以关、可以删，不上传、不进云备份（见 [`decisions/0005-local-practice-history.md`](./decisions/0005-local-practice-history.md)）。第一次保存前告诉用户。用户主动给的报告评价（👍 / 👎 和最多 500 字的一句话）会转到我们内部的 Slack 频道（第三方服务），不进数据库，带上病例编号和界面语言，不带对话（见 [`api-contract.md`](./api-contract.md) 的 `POST /feedback`）。记录未加密保存在本机（是否加密待定）。
 - **对话会经过第三方模型服务。** 服务端把对话转给 AI 模型服务（demo 默认 DeepSeek）生成回复。我们在声明里说清楚这一点。
 - **说在前面。** 第一次打开 App 时读完并勾选同意；首页和每次练习前的病例简介页都有短的提示（第 5 节）。
 - **角色扮演不是欺骗。** AI 来访者在角色里不承认自己是 AI，这是练习的设定。用户在开始前已经从声明里知道对面是 AI。
@@ -91,9 +92,9 @@ AI 来访者在任何情况下都不：给出伤害自己或他人的方法；�
 
 **每次练习前（病例简介页的内容提示，不需要确认）**
 
-> 这场会谈可能涉及抑郁、焦虑和消极念头。来访者是虚构的。对话会交给第三方 AI 模型处理，我们不保存。
+> 这场会谈可能涉及抑郁、焦虑和消极念头。来访者是虚构的。对话会交给第三方 AI 模型处理，我们的服务器不保存。
 >
-> This session may touch on depression, anxiety and dark thoughts. The client is fictional. A third-party AI model processes the conversation; we don't store it.
+> This session may touch on depression, anxiety and dark thoughts. The client is fictional. A third-party AI model processes the conversation; our servers don't store it.
 
 **督导报告末尾（一行）**
 

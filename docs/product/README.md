@@ -9,7 +9,8 @@
 | [information-architecture.md](./information-architecture.md) | 页面地图和导航。 |
 | [onboarding.md](./onboarding.md) | 第一次打开 App 的引导，逐页写清楚。 |
 | [screens.md](./screens.md) | 每个页面：目的、内容、操作、状态、文案。 |
-| [history-and-progress.md](./history-and-progress.md) | 本机练习记录和技能进度（等决策 D3、D5）。 |
+| [history-and-progress.md](./history-and-progress.md) | 本机练习记录和技能进度。 |
+| [skill-tags.md](./skill-tags.md) | 督导报告技能标签的格式草案（等督导标准）。 |
 | [copy.md](./copy.md) | 文案规范和中英文对照表。 |
 | [open-decisions.md](./open-decisions.md) | 待决策项：会改合同、数据存储或验收的事，写清利弊。 |
 
