@@ -123,19 +123,24 @@ describe("model requests", () => {
 });
 
 describe("what the supervisor sees", () => {
-  it.each(["zh", "en"] as const)("title and summary only, never the role brief (%s)", async (locale) => {
-    const mock = new MockProvider([() => ({ text: "ok", toolCalls: [] })]);
-    const { app } = makeApp(undefined, { providerFor: () => mock });
-    await (await post(app, "/supervision", body({ locale }))).text();
-    const req = mock.requests[0]!;
-    const c = cases.get(CASE_ID)!;
-    expect(req.system).toContain(c.title[locale]);
-    expect(req.system).toContain(c.summary[locale]);
-    // No line of the brief (beyond trivial ones) reaches the supervisor.
-    for (const line of c.brief.split("\n").map((l) => l.trim()).filter((l) => l.length > 12)) {
-      expect(req.system).not.toContain(line);
+  it.each(["zh", "en"] as const)("no case text at all: no brief, no title, no summary (%s)", async (locale) => {
+    for (const c of cases.values()) {
+      const mock = new MockProvider([() => ({ text: "ok", toolCalls: [] })]);
+      const { app } = makeApp(undefined, { providerFor: () => mock });
+      await (await post(app, "/supervision", body({ caseId: c.id, locale }))).text();
+      const req = mock.requests[0]!;
+      const sent = req.system + JSON.stringify(req.messages);
+      for (const l of ["zh", "en"] as const) {
+        expect(sent).not.toContain(c.summary[l]);
+        expect(sent).not.toContain(c.title[l]);
+      }
+      // Also no fragment of the summary, e.g. 「对什么都提不起兴趣」.
+      for (const part of c.summary.zh.split(/[，。、；]/).filter((p) => p.length >= 6)) expect(sent).not.toContain(part);
+      for (const line of c.brief.split("\n").map((l) => l.trim()).filter((l) => l.length > 12)) {
+        expect(sent).not.toContain(line);
+      }
+      expect(req.temperature).toBe(SUPERVISOR_TEMPERATURE);
     }
-    expect(req.temperature).toBe(SUPERVISOR_TEMPERATURE);
   });
 
   it("the client keeps the provider's default temperature", async () => {
@@ -151,6 +156,8 @@ describe("what the supervisor sees", () => {
     expect(prompts.supervisor).toContain("报告里不要出现任何编号");
     expect(prompts.supervisor).toContain("不提病例设定");
     expect(prompts.supervisor).toContain("一律用「来访者」");
+    expect(prompts.supervisor).toContain("都必须是 `<transcript>` 里逐字出现过的话");
+    expect(prompts.supervisor).toContain("不算引用");
     // The risk-screening check is the first rule, before the transcript note and the structure,
     // and the structure repeats it.
     const check = prompts.supervisor.indexOf("## 第一条规则：写报告前先做风险筛查检查");
