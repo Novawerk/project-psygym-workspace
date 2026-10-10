@@ -142,6 +142,7 @@ for (const c of cases.filter((c) => !ONLY_CASE || c.id === ONLY_CASE)) {
     // /supervision wants the counselor's line last; end on a closing line.
     const closing = LOCALE === "zh" ? "今天我们先到这里，谢谢你。" : "Let's stop here for today. Thank you.";
     messages.push({ role: "counselor", text: closing });
+    md.push(`**${L.counselor} ${OPENERS[LOCALE].length + 1}:** ${closing}`, ``);
     const report = await stream("/supervision", c.id, messages);
     const quoted = quotedLines(report, messages.filter((m) => m.role === "counselor").map((m) => m.text));
     if (quoted.length === 0) flags.push("C2: report quotes no counselor line");
