@@ -21,7 +21,7 @@ in a PR that touches both sides, or not at all.
 type Locale = "zh" | "en";
 type Role = "counselor" | "client";          // counselor = the trainee, client = the AI
 type Message = { role: Role; text: string };  // text ≤ 2000 chars, ≤ 80 messages
-// Either role may come first; the last message must be the counselor's.
+// Either role may come first.
 type LocalizedText = { zh: string; en: string };
 type CaseSummary = { id: string; school: "cbt"; title: LocalizedText; summary: LocalizedText };
 ```
@@ -38,13 +38,14 @@ Only what the picker shows. The full case (the AI's role brief) stays on the ser
 
 ### `POST /chat` → `text/event-stream`
 
-Body: `{ caseId: string, locale: Locale, messages: Message[] }`. The last message is the
-counselor's. The server answers as the client, in character.
+Body: `{ caseId: string, locale: Locale, messages: Message[] }`. The last message must be
+the counselor's (else 400). The server answers as the client, in character.
 
 ### `POST /supervision` → `text/event-stream`
 
 Body: `{ caseId: string, locale: Locale, messages: Message[] }`. The server streams one
-supervision report in Markdown: what went well, what went wrong, what to practise next.
+supervision report in Markdown. Any message may come last, and a very short session still
+gets a report: what went well, what went wrong, what to practise next.
 
 ## Stream format (both streaming endpoints)
 
