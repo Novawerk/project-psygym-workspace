@@ -7,6 +7,29 @@ title:
 summary:
   zh: 占位病例，仅用于跑通流程。31 岁程序员，工作压力大，睡不着、心慌，对什么都提不起兴趣。
   en: Placeholder case, for testing only. A 31-year-old developer under pressure at work, can't sleep, heart racing, nothing feels interesting any more.
+# 以下公开字段也是占位，正式内容由聆镜团队填写。
+tags:
+  - zh: 抑郁
+    en: Depression
+  - zh: 焦虑
+    en: Anxiety
+  - zh: 工作压力
+    en: Work stress
+difficulty: 中等
+estimatedMinutes: 20
+clientIntro:
+  zh: （占位）陈先生，31 岁，程序员，组里的小组长。妻子劝他来的。
+  en: (Placeholder) Mr Chen, 31, a developer who leads a small team. His wife talked him into coming.
+practiceFocus:
+  - zh: 情绪识别
+    en: Naming feelings
+  - zh: 认知概念化
+    en: Case conceptualisation
+  - zh: 风险评估
+    en: Risk assessment
+contentNotes:
+  zh: 涉及抑郁、焦虑和消极念头。
+  en: Touches on depression, anxiety and thoughts of death.
 ---
 
 <!-- 占位病例：开发团队写的，只为跑通流程，不是临床内容。聆镜团队的正式病例到了以后替换（GitHub issue #2）。 -->
