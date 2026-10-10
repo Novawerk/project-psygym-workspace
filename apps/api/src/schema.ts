@@ -24,10 +24,9 @@ export const ChatBody = base.refine((b) => b.messages.at(-1)?.role === "counselo
   path: ["messages"],
 });
 
-export const SupervisionBody = base.refine((b) => b.messages.some((m) => m.role === "counselor"), {
-  message: "the transcript needs at least one counselor message",
-  path: ["messages"],
-});
+// A session usually ends on the client's reply, so supervision takes either role last.
+// A very short transcript still gets a report (the prompt says how to handle it).
+export const SupervisionBody = base;
 
 export type ErrorCode = "invalid_request" | "invite_required" | "case_not_found" | "rate_limited" | "model_unavailable";
 

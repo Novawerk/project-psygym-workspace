@@ -133,8 +133,24 @@ describe("errors before the stream", () => {
     await expectError(await post(app, "/chat", body({ messages: [] })), 400, "invalid_request");
     await expectError(await post(app, "/chat", body({ messages: [{ role: "client", text: "hi" }] })), 400, "invalid_request");
     await expectError(await post(app, "/chat", body({ messages: [{ role: "counselor", text: "x".repeat(2001) }] })), 400, "invalid_request");
+    // Too large is 400 too, never 413.
+    const huge = body({ messages: [{ role: "counselor", text: "x".repeat(1_100_000) }] });
+    await expectError(await post(app, "/chat", huge), 400, "invalid_request");
+    await expectError(await post(app, "/supervision", huge), 400, "invalid_request");
     const tooMany = Array.from({ length: 81 }, () => ({ role: "counselor", text: "hi" }));
     await expectError(await post(app, "/supervision", body({ messages: tooMany })), 400, "invalid_request");
+  });
+
+  it("either role may come first; supervision may end on the client", async () => {
+    const { app } = makeApp();
+    const clientFirst = [
+      { role: "client", text: "我先说吧。" },
+      { role: "counselor", text: "好的。" },
+    ];
+    expect((await post(app, "/chat", body({ messages: clientFirst }))).status).toBe(200);
+    const endsOnClient = [...clientFirst, { role: "client", text: "嗯。" }];
+    expect((await post(app, "/supervision", body({ messages: endsOnClient }))).status).toBe(200);
+    await expectError(await post(app, "/chat", body({ messages: endsOnClient })), 400, "invalid_request");
   });
 
   it("404 case_not_found", async () => {
