@@ -2,6 +2,7 @@ package io.novawerk.psygym.domain.history
 
 import io.novawerk.psygym.domain.model.CaseSummary
 import io.novawerk.psygym.domain.model.Message
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -49,14 +50,19 @@ class HistoryRepository(
     /** Newest first. Null until the first [load]. */
     val sessions: StateFlow<List<SavedSession>?> = _sessions.asStateFlow()
 
+    // Disk trouble (full, unreadable) never crashes the app: a save that fails is skipped,
+    // a list that can't be read is empty. History is a convenience, not the practice itself.
+
     suspend fun load() = mutex.withLock { _sessions.value = readAll() }
 
-    suspend fun save(session: SavedSession) = mutex.withLock {
-        io {
+    /** Returns false when the file couldn't be written. */
+    suspend fun save(session: SavedSession): Boolean = mutex.withLock {
+        val ok = io {
             fileSystem.createDirectories(dir)
             fileSystem.write(file(session.id)) { writeUtf8(json.encodeToString(SavedSession.serializer(), session)) }
-        }
+        } != null
         _sessions.value = readAll()
+        ok
     }
 
     suspend fun delete(id: String) = mutex.withLock {
@@ -66,13 +72,13 @@ class HistoryRepository(
 
     suspend fun deleteAll() = mutex.withLock {
         io { fileSystem.deleteRecursively(dir, mustExist = false) }
-        _sessions.value = emptyList()
+        _sessions.value = readAll()
     }
 
     fun find(id: String): SavedSession? = _sessions.value?.firstOrNull { it.id == id }
 
     private suspend fun readAll(): List<SavedSession> = io {
-        if (!fileSystem.exists(dir)) return@io emptyList()
+        if (!fileSystem.exists(dir)) return@io emptyList<SavedSession>()
         fileSystem.list(dir)
             .filter { it.name.endsWith(SUFFIX) }
             .mapNotNull { path ->
@@ -80,11 +86,20 @@ class HistoryRepository(
                 runCatching { json.decodeFromString(SavedSession.serializer(), fileSystem.read(path) { readUtf8() }) }.getOrNull()
             }
             .sortedByDescending { it.startedAtMillis }
-    }
+    } ?: emptyList()
 
     private fun file(id: String): Path = dir / "$id$SUFFIX"
 
-    private suspend fun <T> io(block: () -> T): T = withContext(Dispatchers.IO) { block() }
+    /** Runs file IO off the main thread; null when it failed. */
+    private suspend fun <T> io(block: () -> T): T? = withContext(Dispatchers.IO) {
+        try {
+            block()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            null
+        }
+    }
 
     private companion object {
         const val SUFFIX = ".json"

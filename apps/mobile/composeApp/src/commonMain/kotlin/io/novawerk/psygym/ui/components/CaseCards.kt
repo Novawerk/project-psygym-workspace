@@ -26,6 +26,7 @@ import io.novawerk.psygym.domain.model.CaseSummary
 import io.novawerk.psygym.domain.model.Difficulty
 import io.novawerk.psygym.resources.Res
 import io.novawerk.psygym.resources.case_difficulty_hard
+import io.novawerk.psygym.resources.case_title_with_alias
 import io.novawerk.psygym.resources.case_difficulty_intro
 import io.novawerk.psygym.resources.case_difficulty_medium
 import io.novawerk.psygym.resources.cases_minutes
@@ -52,15 +53,23 @@ fun CaseAvatar(case: CaseSummary, index: Int, locale: ApiLocale, size: Dp = 44.d
     ) { Text(label, style = MaterialTheme.typography.titleMedium) }
 }
 
-/** Chinese names: the last character (小林 → 林). Latin names: the first letter, upper case (Lin → L). */
+/**
+ * Chinese names: the last character (小林 → 林). Alphabetic scripts (Latin with accents,
+ * Greek, Cyrillic): the first letter, upper case (Lin → L, Émile → É).
+ */
 fun avatarLetter(alias: String): String {
-    val latin = alias.first().let { it in 'a'..'z' || it in 'A'..'Z' }
-    return if (latin) alias.first().uppercase() else alias.last().toString()
+    val first = alias.first()
+    // Everything alphabetic sits below the CJK blocks (U+2E80 on).
+    val alphabetic = first.isLetter() && first.code < 0x2E80
+    return if (alphabetic) first.uppercase() else alias.last().toString()
 }
 
-/** "小林 · 大学毕业后的低落", or just the title without a pseudonym. */
-fun CaseSummary.displayTitle(locale: ApiLocale): String =
-    clientAlias?.get(locale)?.takeIf { it.isNotBlank() }?.let { "$it · ${title.get(locale)}" } ?: title.get(locale)
+/** "小林 · 大学毕业后的低落" (copy.md case_title_with_alias), or just the title without a pseudonym. */
+@Composable
+fun CaseSummary.displayTitle(locale: ApiLocale): String {
+    val alias = clientAlias?.get(locale)?.takeIf { it.isNotBlank() } ?: return title.get(locale)
+    return stringResource(Res.string.case_title_with_alias, alias, title.get(locale))
+}
 
 /** Topic tags · difficulty · about N min · CBT. Missing fields are left out. */
 @OptIn(ExperimentalLayoutApi::class)

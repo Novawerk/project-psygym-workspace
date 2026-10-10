@@ -13,6 +13,8 @@ class SmallRulesTest {
         assertEquals("杰", avatarLetter("阿杰"))
         assertEquals("L", avatarLetter("Lin"))
         assertEquals("J", avatarLetter("jie"))
+        assertEquals("É", avatarLetter("émile"))
+        assertEquals("А", avatarLetter("анна"))
     }
 
     @Test

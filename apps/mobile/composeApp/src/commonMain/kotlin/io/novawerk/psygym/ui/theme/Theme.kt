@@ -44,7 +44,8 @@ private val LightColors = lightColorScheme(
     surface = White,
     onSurface = Zinc950,
     surfaceVariant = Zinc100,
-    onSurfaceVariant = Zinc500,
+    // zinc-600, not 500: small secondary text on zinc-100 needs 4.5:1.
+    onSurfaceVariant = Zinc600,
     surfaceTint = Color.Transparent,
     surfaceContainerLowest = White,
     surfaceContainerLow = White,
@@ -77,7 +78,8 @@ private val DarkColors = darkColorScheme(
     onBackground = Zinc50,
     surface = Zinc950,
     onSurface = Zinc50,
-    surfaceVariant = Zinc800,
+    // Muted blocks (cards, notes, client bubbles) are zinc-900 on zinc-950 (screens.md).
+    surfaceVariant = Zinc900,
     onSurfaceVariant = Zinc400,
     surfaceTint = Color.Transparent,
     surfaceContainerLowest = Zinc950,

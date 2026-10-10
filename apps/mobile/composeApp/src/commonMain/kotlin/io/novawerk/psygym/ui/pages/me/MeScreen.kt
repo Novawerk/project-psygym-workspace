@@ -15,12 +15,14 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
@@ -45,6 +47,7 @@ import io.novawerk.psygym.AppConfig
 import io.novawerk.psygym.BuildKonfig
 import io.novawerk.psygym.domain.settings.AppLanguage
 import io.novawerk.psygym.resources.Res
+import io.novawerk.psygym.resources.back
 import io.novawerk.psygym.resources.help_link
 import io.novawerk.psygym.resources.history_cancel
 import io.novawerk.psygym.resources.me_settings_section
@@ -93,16 +96,25 @@ fun MeScreen(
     onHelp: () -> Unit,
     onPrivacy: () -> Unit,
     onTab: (TopTab) -> Unit,
+    /** Set when opened on top of a flow (from an error card): back arrow, no bottom bar. */
+    onBack: (() -> Unit)? = null,
 ) {
     var confirmDeleteAll by rememberSaveable { mutableStateOf(false) }
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(Res.string.me_title)) },
+                navigationIcon = {
+                    if (onBack != null) {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back))
+                        }
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
             )
         },
-        bottomBar = { BottomBar(TopTab.Me, onTab) },
+        bottomBar = { if (onBack == null) BottomBar(TopTab.Me, onTab) },
     ) { padding ->
         Column(
             Modifier

@@ -21,13 +21,13 @@ Date: 2026-10-10. Status: accepted.
 - **Stream rules:** 30 s without any event (pings and `turn_start` count) is a timeout;
   a stream that ends without `turn_end` or `error` is a network error; unknown frame
   types are ignored, so new ones (like `session_end`) don't break older apps.
-- **Before every practice:** a page with the case and the full notice from
-  `docs/safety.md` §5; only "I understand" opens the session. A page, not a dialog, so it
-  can become the case intro page.
-- **Invite code, no login:** first launch asks once (skippable); a 401
-  `invite_required` points to Settings.
-- **Nothing kept:** the transcript lives in memory (`PracticeSession`) and is cleared
-  when the practice ends. DataStore holds only language and invite code.
+- **Before every practice:** the intro's consent page (O2, versioned) once, then the case
+  brief (C2) with the content note before every session (docs/product).
+- **Invite code, no login:** asked on the intro's last page (skippable); a 401
+  `invite_required` opens Settings on top of the session, and Back returns to it.
+- **What the phone keeps:** settings in DataStore (language, invite code, intro and
+  disclaimer version, the history switch) and practice history (decision 0005, below).
+  The session in progress lives in memory (`PracticeSession`).
 - **Practice history** (decision 0005): one JSON file per session under the app's private
   `history/` directory, read and written with okio. Saved when the report screen opens
   ("report unfinished") and updated when the report is in. A small file store is enough

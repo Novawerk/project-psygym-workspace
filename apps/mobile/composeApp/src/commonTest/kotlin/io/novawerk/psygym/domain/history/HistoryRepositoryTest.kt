@@ -57,6 +57,19 @@ class HistoryRepositoryTest {
     }
 
     @Test
+    fun diskTroubleIsSkippedNotThrown() = runTest {
+        // A plain file where the directory should be: every write fails.
+        fs.createDirectories("/app".toPath())
+        fs.write(dir) { writeUtf8("not a directory") }
+        val repo = HistoryRepository(dir, fs)
+        repo.load()
+        assertEquals(false, repo.save(session("a", 1_000)))
+        assertEquals(emptyList(), repo.sessions.value)
+        repo.delete("a")
+        repo.deleteAll()
+    }
+
+    @Test
     fun skipsFilesItCannotRead() = runTest {
         fs.createDirectories(dir)
         fs.write(dir / "broken.json") { writeUtf8("{not json") }

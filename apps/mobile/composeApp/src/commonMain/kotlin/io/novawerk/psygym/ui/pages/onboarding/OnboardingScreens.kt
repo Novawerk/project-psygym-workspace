@@ -1,5 +1,6 @@
 package io.novawerk.psygym.ui.pages.onboarding
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,7 +22,6 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Masks
 import androidx.compose.material.icons.outlined.PersonOff
@@ -43,6 +43,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -179,17 +183,39 @@ fun WelcomeScreen(onContinue: () -> Unit, onSkip: () -> Unit, onLanguage: (AppLa
     }
 }
 
-/** Placeholder for the O1 illustration: two chairs, one with a soft light (the AI client). */
+/**
+ * O1 illustration: a counseling room, two chairs facing each other. One is empty (you);
+ * above the other floats a soft light (the AI client). Line art in the theme's greys.
+ */
 @Composable
 private fun WelcomeArt() {
-    Row(
-        Modifier.fillMaxWidth().height(120.dp).background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.large),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(Icons.Outlined.ChatBubbleOutline, contentDescription = null, modifier = Modifier.size(40.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.width(24.dp))
-        Box(Modifier.size(40.dp).background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f), CircleShape))
+    val line = MaterialTheme.colorScheme.onSurfaceVariant
+    val glow = MaterialTheme.colorScheme.onSurface
+    Canvas(Modifier.fillMaxWidth().height(140.dp)) {
+        val stroke = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round)
+        val u = size.height / 10f // one unit
+        val floor = size.height * 0.9f
+        val cx = size.width / 2f
+        drawLine(line.copy(alpha = 0.4f), Offset(cx - 9 * u, floor), Offset(cx + 9 * u, floor), strokeWidth = stroke.width, cap = StrokeCap.Round)
+        // A chair seen from the side; [facing] = +1 faces right, -1 faces left.
+        fun chair(x: Float, facing: Float) {
+            val seatY = floor - 3.2f * u
+            val back = x - facing * 1.8f * u
+            val front = x + facing * 1.8f * u
+            val path = Path().apply {
+                moveTo(back, floor); lineTo(back, floor - 7f * u) // back post
+                moveTo(back, seatY); lineTo(front, seatY) // seat
+                moveTo(front, seatY); lineTo(front, floor) // front leg
+            }
+            drawPath(path, line, style = stroke)
+        }
+        chair(cx - 4.5f * u, +1f)
+        chair(cx + 4.5f * u, -1f)
+        // The soft light above the client's chair.
+        val light = Offset(cx + 4.2f * u, floor - 5.6f * u)
+        drawCircle(glow.copy(alpha = 0.08f), radius = 2.2f * u, center = light)
+        drawCircle(glow.copy(alpha = 0.16f), radius = 1.4f * u, center = light)
+        drawCircle(glow.copy(alpha = 0.55f), radius = 0.6f * u, center = light)
     }
 }
 

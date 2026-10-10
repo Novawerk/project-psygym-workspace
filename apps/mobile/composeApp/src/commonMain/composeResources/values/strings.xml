@@ -64,6 +64,7 @@
     <string name="cases_empty">No cases yet.</string>
     <string name="cases_more">More cases and approaches are on the way.</string>
     <string name="cases_school_cbt">CBT</string>
+    <string name="case_title_with_alias">%1$s · %2$s</string>
     <string name="cases_minutes">About %1$d min</string>
     <string name="case_difficulty_intro">Intro</string>
     <string name="case_difficulty_medium">Medium</string>

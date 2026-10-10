@@ -39,6 +39,7 @@ import io.novawerk.psygym.ui.navigation.ReadyRoute
 import io.novawerk.psygym.ui.navigation.HistoryDetailRoute
 import io.novawerk.psygym.ui.navigation.HistoryRoute
 import io.novawerk.psygym.ui.navigation.MeRoute
+import io.novawerk.psygym.ui.navigation.SettingsRoute
 import io.novawerk.psygym.ui.navigation.SupervisionRoute
 import io.novawerk.psygym.ui.navigation.WelcomeRoute
 import io.novawerk.psygym.ui.pages.briefing.BriefingScreen
@@ -81,8 +82,9 @@ fun App(component: AppComponent) {
     val nav = rememberNavController()
     var practiceInterrupted by remember { mutableStateOf(false) }
 
-    // Cases come from whichever backend is active; reload when demo data is switched.
-    LaunchedEffect(demoData) { caseStore.load(force = true) }
+    // Cases come from whichever backend is active, with the current invite code: reload when
+    // either changes (the code is often entered after the first, failed, fetch).
+    LaunchedEffect(demoData, inviteCode) { caseStore.load(force = true) }
     LaunchedEffect(Unit) { history.load() }
 
     val lang = language ?: return
@@ -95,7 +97,9 @@ fun App(component: AppComponent) {
             PsygymTheme {
                 val setLanguage: (io.novawerk.psygym.domain.settings.AppLanguage) -> Unit =
                     { scope.launch { settings.setLanguage(it) } }
-                val openSettings = { nav.openTab(TopTab.Me) }
+                // From an error card (e.g. invite_required): push Me on top so Back returns to the
+                // session or report, ViewModels intact (acceptance D2). openTab is for the bar only.
+                val openSettings = { nav.navigate(SettingsRoute) { launchSingleTop = true } }
                 val onTab = { tab: TopTab -> nav.openTab(tab) }
                 val openHelp = { nav.navigate(HelpRoute) { launchSingleTop = true } }
                 val goHome = { nav.goHome() }
@@ -110,6 +114,24 @@ fun App(component: AppComponent) {
                 }
                 val caseIndex = { case: CaseSummary? -> caseStore.cases?.indexOfFirst { it.id == case?.id }?.coerceAtLeast(0) ?: 0 }
 
+                val meScreen: @Composable (onBack: (() -> Unit)?) -> Unit = { onBack ->
+                    MeScreen(
+                        language = lang,
+                        inviteCode = inviteCode,
+                        saveHistory = saveHistory,
+                        useFakeApi = demoData,
+                        onLanguageChange = setLanguage,
+                        onInviteCodeSave = { scope.launch { settings.setInviteCode(it) } },
+                        onSaveHistoryChange = { scope.launch { settings.setSaveHistory(it) } },
+                        onDeleteAllHistory = { scope.launch { history.deleteAll() } },
+                        onUseFakeApiChange = { scope.launch { settings.setUseFakeApi(it) } },
+                        onReplayOnboarding = { nav.navigate(WelcomeRoute) },
+                        onHelp = openHelp,
+                        onPrivacy = { nav.navigate(PrivacyRoute) },
+                        onTab = onTab,
+                        onBack = onBack,
+                    )
+                }
                 // On a tablet, keep lines readable: content capped at 640dp, centred.
                 Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background), contentAlignment = Alignment.TopCenter) {
                 NavHost(
@@ -144,7 +166,8 @@ fun App(component: AppComponent) {
                     composable<ReadyRoute> {
                         val finish = { code: String? ->
                             scope.launch {
-                                if (code != null && code.isNotBlank()) settings.setInviteCode(code)
+                                // Start saves what's in the field, including clearing it; Skip keeps the old code.
+                                if (code != null) settings.setInviteCode(code)
                                 settings.finishOnboarding()
                             }
                             nav.finishIntro()
@@ -224,7 +247,11 @@ fun App(component: AppComponent) {
                             elapsed = { session.elapsed },
                             showRealInfoHint = !realInfoHintSeen,
                             saveHistory = saveHistory,
-                            onLeave = { nav.popBackStack() },
+                            onLeave = {
+                                // Nothing kept: coming back starts a fresh session (timer, messages).
+                                session.finish()
+                                nav.popBackStack()
+                            },
                             onSessionLost = sessionLost,
                             onEnd = { nav.navigate(SupervisionRoute) { popUpTo(BriefingRoute) { inclusive = true } } },
                             onHelp = openHelp,
@@ -257,23 +284,8 @@ fun App(component: AppComponent) {
                     }
                     composable<HelpRoute> { HelpScreen(onClose = { nav.popBackStack() }) }
                     composable<PrivacyRoute> { PrivacyScreen(onBack = { nav.popBackStack() }) }
-                    composable<MeRoute> {
-                        MeScreen(
-                            language = lang,
-                            inviteCode = inviteCode,
-                            saveHistory = saveHistory,
-                            useFakeApi = demoData,
-                            onLanguageChange = setLanguage,
-                            onInviteCodeSave = { scope.launch { settings.setInviteCode(it) } },
-                            onSaveHistoryChange = { scope.launch { settings.setSaveHistory(it) } },
-                            onDeleteAllHistory = { scope.launch { history.deleteAll() } },
-                            onUseFakeApiChange = { scope.launch { settings.setUseFakeApi(it) } },
-                            onReplayOnboarding = { nav.navigate(WelcomeRoute) },
-                            onHelp = openHelp,
-                            onPrivacy = { nav.navigate(PrivacyRoute) },
-                            onTab = onTab,
-                        )
-                    }
+                    composable<MeRoute> { meScreen(null) }
+                    composable<SettingsRoute> { meScreen { nav.popBackStack() } }
                 }
                 }
             }

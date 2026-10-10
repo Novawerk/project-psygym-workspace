@@ -59,6 +59,7 @@
     <string name="cases_empty">还没有病例。</string>
     <string name="cases_more">更多病例和流派在路上。</string>
     <string name="cases_school_cbt">CBT</string>
+    <string name="case_title_with_alias">%1$s · %2$s</string>
     <string name="cases_minutes">约 %1$d 分钟</string>
     <string name="case_difficulty_intro">入门</string>
     <string name="case_difficulty_medium">中等</string>

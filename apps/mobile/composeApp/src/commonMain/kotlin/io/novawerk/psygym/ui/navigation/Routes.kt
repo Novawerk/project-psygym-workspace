@@ -34,6 +34,9 @@ import kotlinx.serialization.Serializable
 /** P1 · Me. */
 @Serializable data object MeRoute
 
+/** P1 opened from an error card (e.g. a bad invite code): a back arrow, no bottom bar. */
+@Serializable data object SettingsRoute
+
 /** M1. */
 @Serializable data object HistoryRoute
 

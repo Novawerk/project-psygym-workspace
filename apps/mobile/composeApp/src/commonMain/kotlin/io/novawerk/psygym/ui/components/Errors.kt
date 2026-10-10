@@ -86,8 +86,11 @@ fun ErrorCard(
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 when {
-                    error.code == ApiErrorCode.InviteRequired ->
+                    // Fix the code in Settings, come back, try again (acceptance D2).
+                    error.code == ApiErrorCode.InviteRequired -> {
                         TextButton(onClick = onOpenSettings) { Text(stringResource(Res.string.error_open_settings)) }
+                        if (onRetry != null) TextButton(onClick = onRetry) { Text(stringResource(Res.string.retry)) }
+                    }
                     error.code == ApiErrorCode.CaseNotFound && onOtherCase != null ->
                         TextButton(onClick = onOtherCase) { Text(stringResource(Res.string.error_other_case)) }
                     error.code == ApiErrorCode.InvalidRequest && onEndSession != null ->
