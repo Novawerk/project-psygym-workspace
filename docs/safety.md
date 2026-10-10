@@ -9,7 +9,7 @@
 - **只做模拟。** 所有来访者都是虚构的。我们不收、不存真实来访者的信息。
 - **服务端不存对话。** 每一轮 App 把整段对话发过来，服务端回完就丢，不写日志正文（见 [`api-contract.md`](./api-contract.md)）。
 - **对话会经过第三方模型服务。** 服务端把对话转给 AI 模型服务（demo 默认 DeepSeek）生成回复。我们在声明里说清楚这一点。
-- **说在前面。** 首页和每次开始练习前，都显示一句免责声明（第 5 节）。
+- **说在前面。** 第一次打开 App 时读完并勾选同意；首页和每次练习前的病例简介页都有短的提示（第 5 节）。
 - **角色扮演不是欺骗。** AI 来访者在角色里不承认自己是 AI，这是练习的设定。用户在开始前已经从声明里知道对面是 AI。
 - **不冒充专业结论。** AI 督导给的是练习反馈，不是资质评估，也不是临床建议。
 
@@ -53,7 +53,7 @@ AI 来访者在任何情况下都不：给出伤害自己或他人的方法；�
 
 **App 层面**
 
-- 练习前的声明里说明：这个病例可能涉及抑郁、消极念头等话题。
+- 第一次打开时的「先说清楚」页（O2）和每次练习前的病例简介页（C2）都说明：会谈可能涉及抑郁、焦虑和消极念头。
 - 会谈页面常驻一个「需要帮助？」入口，点开是求助信息（第 5 节）。
 - AI 来访者提到消极念头时**不弹提示**：弹窗会打断练习，而会谈页的「需要帮助？」入口一直在。（2026-10-10 我们定。）
 
@@ -77,19 +77,23 @@ AI 来访者在任何情况下都不：给出伤害自己或他人的方法；�
 >
 > PSYGYM is a practice tool for counselors. An AI plays the client. Every client is fictional. This is not therapy.
 
-**开始练习前（完整版，需要用户点「我知道了」）**
+**第一次打开（完整版，Onboarding「先说清楚」页，需要勾选同意）**
 
-> 你将和一位 AI 扮演的虚构来访者对话。
-> 对话可能涉及抑郁、焦虑和消极念头。
-> 对话会发给第三方 AI 模型服务处理；我们的服务器不保存对话。请不要输入真实来访者的信息。
-> 结束后，AI 督导给你一份练习反馈。它不是资质评估，也不是临床意见。
-> 如果你自己正在经历困难，请联系身边的专业人员或下方的求助热线。
+五条，每条一句粗体 + 一句解释。全文和英文见 [`product/onboarding.md`](./product/onboarding.md) O2：
+
+1. 这不是心理治疗。（不能在危机中提供帮助；自己有困难点「需要帮助？」）
+2. 来访者是虚构的。（由 AI 扮演；可能涉及抑郁、焦虑和消极念头）
+3. 对话会交给 AI 模型处理。（发给第三方 AI 模型服务；我们的服务器不保存）
+4. 不要输入真实来访者的信息。
+5. 督导反馈只供练习参考。（不是资质评估，也不是临床意见）
+
+勾选「我已了解，这是练习工具，不是治疗。」后才能继续。确认结果和声明版本号存本机；这段文字有实质改动时升版本号，用户下次打开重新确认。
+
+**每次练习前（病例简介页的内容提示，不需要确认）**
+
+> 这场会谈可能涉及抑郁、焦虑和消极念头。来访者是虚构的。对话会交给第三方 AI 模型处理，我们不保存。
 >
-> You are about to talk with a fictional client played by an AI.
-> The session may touch on depression, anxiety and thoughts of death.
-> The conversation is processed by a third-party AI model service; our servers don't store it. Please don't enter real client information.
-> Afterwards, an AI supervisor gives you practice feedback. It is not an assessment and not clinical advice.
-> If you are going through a hard time yourself, please reach out to a professional near you or a helpline below.
+> This session may touch on depression, anxiety and dark thoughts. The client is fictional. A third-party AI model processes the conversation; we don't store it.
 
 **督导报告末尾（一行）**
 
