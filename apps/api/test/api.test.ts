@@ -151,6 +151,25 @@ describe("mock supervisor", () => {
   });
 });
 
+describe("mock supervisor quotes the counselor", () => {
+  it.each([
+    ["zh", "你说：「后来呢？你当时怎么想的？」"],
+    ["en", "You said “后来呢？你当时怎么想的？”"],
+  ])("quotes the last counselor message verbatim (%s)", async (locale, expected) => {
+    const { app } = makeApp();
+    const messages = [
+      { role: "counselor", text: "你好。" },
+      { role: "client", text: "嗯。" },
+      { role: "counselor", text: "后来呢？你当时怎么想的？" },
+      { role: "client", text: "不知道。" },
+    ];
+    const { frames } = await readSse(await post(app, "/supervision", body({ locale, messages })));
+    const text = frames.filter((f) => f.type === "text_delta").map((f) => f.text).join("");
+    const improve = text.split(/^## /m)[2]!;
+    expect(improve).toContain(expected);
+  });
+});
+
 describe("errors before the stream", () => {
   const expectError = async (res: Response, status: number, code: string) => {
     expect(res.status).toBe(status);
