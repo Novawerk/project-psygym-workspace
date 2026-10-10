@@ -1,6 +1,6 @@
 // Copied from Novawerk/agent-starter (MIT), apps/agent/src/llm/anthropic.ts at fcbd91c.
 // https://github.com/Novawerk/agent-starter — changes: import paths (.js), LlmConfig comes from ../config.js,
-// no retry after a failed stream (we use no tools, and a retry would repeat text already sent).
+// ModelRequest.temperature (only where the model accepts it), no retry after a failed stream (we use no tools, and a retry would repeat text already sent).
 // Claude adapter (native Anthropic SDK).
 //
 // Where it differs from the OpenAI-compatible adapter, it is to give Claude its full feature set:
@@ -31,6 +31,11 @@ import type {
 
 /** Models that support fallbacks: "default" (on the Claude API) */
 const FALLBACK_MODELS = /^claude-(opus-5|fable-5-1|sonnet-5-5)/;
+/**
+ * Models that reject a non-default temperature (sampling parameters removed or fixed).
+ * On these we leave temperature out; adaptive thinking and effort steer instead.
+ */
+const NO_SAMPLING = /^claude-(fable|mythos|opus-5|opus-4-[78]|sonnet-5|haiku-5)/;
 /** Haiku 4.5 and older models don't support adaptive thinking / effort */
 const LEGACY_THINKING = /^claude-(haiku|3|sonnet-4-5|opus-4-5|opus-4-1|sonnet-4-0|opus-4-0)/;
 
@@ -60,12 +65,16 @@ export class AnthropicProvider implements ModelProvider {
       eager_input_streaming: true,
     }));
     const legacy = LEGACY_THINKING.test(this.model);
+    // Thinking can't be combined with a non-default temperature, so temperature only goes out
+    // on the no-thinking (legacy) branch, and never to a model that rejects sampling parameters.
+    const temperature = req.temperature !== undefined && legacy && !NO_SAMPLING.test(this.model) ? req.temperature : undefined;
     const fallback = FALLBACK_MODELS.test(this.model);
     return {
       model: this.model,
       max_tokens: this.maxOutputTokens,
       stream: true,
       system: req.system,
+      ...(temperature !== undefined ? { temperature } : {}),
       messages: toAnthropicMessages(req.messages, this.model),
       ...(tools.length ? { tools } : {}),
       cache_control: { type: "ephemeral" },

@@ -1,5 +1,6 @@
 // Copied from Novawerk/agent-starter (MIT), apps/agent/src/llm/types.ts at fcbd91c.
-// https://github.com/Novawerk/agent-starter — changes: import paths (.js), Usage inlined (no @app/shared).
+// https://github.com/Novawerk/agent-starter — changes: import paths (.js), Usage inlined (no @app/shared),
+// ModelRequest.temperature.
 // Provider-neutral message / call shapes. The harness only knows these types; each provider adapter
 // converts to and from its native format.
 export interface Usage {
@@ -62,6 +63,8 @@ export interface ModelRequest {
   system: string;
   messages: Message[];
   tools: ToolSpec[];
+  /** Sampling temperature. Adapters drop it where the model doesn't accept it. */
+  temperature?: number;
   signal?: AbortSignal;
 }
 

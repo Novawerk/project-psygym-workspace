@@ -87,8 +87,11 @@ you set `CLIENT_LLM_MODEL` / `SUPERVISOR_LLM_MODEL` (and `_BASE_URL`).
 - AI client: [`prompts/client.md`](./prompts/client.md) + the case brief + a language line.
   The counselor's messages go in as user turns, the client's as assistant turns.
 - AI supervisor: [`prompts/supervisor.md`](./prompts/supervisor.md) + the rubric
-  (`content/rubrics/<school>.md`) + the case brief + a language line. The whole transcript goes
-  in as one user message, numbered `[1] 咨询师：…`.
+  (`content/rubrics/<school>.md`) + the case title and summary (never the role brief, so the
+  report rests only on what was said) + a language line. The whole transcript goes in as one
+  user message, numbered `[1] 咨询师：…` for the model; the report itself carries no numbers.
+  Temperature 0.3 where the model accepts it (DeepSeek yes; current Claude models reject
+  sampling parameters, so we leave it out there).
 - Cases: `content/cases/<id>.md`. Frontmatter `id`, `school`, `title.zh/en`, `summary.zh/en`
   is what `GET /cases` returns; the body is the role brief and stays on the server. See
   [`content/README.md`](../../content/README.md) for the template.
