@@ -21,6 +21,7 @@ in a PR that touches both sides, or not at all.
 type Locale = "zh" | "en";
 type Role = "counselor" | "client";          // counselor = the trainee, client = the AI
 type Message = { role: Role; text: string };  // text ≤ 2000 chars, ≤ 80 messages
+// Either role may come first; the last message must be the counselor's.
 type LocalizedText = { zh: string; en: string };
 type CaseSummary = { id: string; school: "cbt"; title: LocalizedText; summary: LocalizedText };
 ```
@@ -28,6 +29,8 @@ type CaseSummary = { id: string; school: "cbt"; title: LocalizedText; summary: L
 ## Endpoints
 
 ### `GET /health` → `200 {"ok":true}`
+
+Never checks the invite code.
 
 ### `GET /cases` → `200 {"cases": CaseSummary[]}`
 
@@ -65,7 +68,7 @@ JSON `{ "error": { "code": string, "message": string } }` with:
 
 | HTTP | code | meaning |
 |------|------|---------|
-| 400 | `invalid_request` | body fails validation |
+| 400 | `invalid_request` | body fails validation, or is too large (never 413) |
 | 401 | `invite_required` | invite code missing or wrong |
 | 404 | `case_not_found` | unknown `caseId` |
 | 429 | `rate_limited` | too many requests; `Retry-After` header set |
