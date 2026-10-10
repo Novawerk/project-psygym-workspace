@@ -57,16 +57,15 @@ export const SUPERVISOR_TEMPERATURE = 0.3;
 
 /**
  * The AI supervisor reads the whole transcript and writes one report.
- * It gets the case's title and summary only, never the role brief: the report must rest on what
- * was said in the session, not on facts the counselor never heard.
+ * It gets no case text at all (no role brief, no title, no summary): the report must rest only
+ * on what was said in the session. Even the picker's summary got quoted back as if the client
+ * had said it.
  */
 export function supervisorRequest(prompts: Prompts, c: Case, locale: Locale, messages: Message[]): Omit<ModelRequest, "signal"> {
   const system = [
     prompts.supervisor,
     "## 督导标准",
     prompts.rubrics[c.school],
-    "## 本次病例（学员选病例时看到的标题和简介，仅作背景，不要在报告里引用）",
-    `${c.title[locale]}：${c.summary[locale]}`,
     "## 语言",
     REPORT_LANGUAGE[locale],
   ].join("\n\n");

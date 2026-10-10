@@ -97,8 +97,9 @@ you set `CLIENT_LLM_MODEL` / `SUPERVISOR_LLM_MODEL` (and `_BASE_URL`).
 - A turn with no text to show (and no `end_session`) ends with an `error` frame
   (`model_unavailable`), so the app offers a retry instead of an empty bubble.
 - AI supervisor: [`prompts/supervisor.md`](./prompts/supervisor.md) + the rubric
-  (`content/rubrics/<school>.md`) + the case title and summary (never the role brief, so the
-  report rests only on what was said) + a language line. The whole transcript goes in as one
+  (`content/rubrics/<school>.md`) + a language line. No case text at all (no role brief, no
+  title, no summary), so the report rests only on what was said; every quote in it must appear
+  word for word in the transcript. The whole transcript goes in as one
   user message, numbered `[1] 咨询师：…` for the model; the report itself carries no numbers.
   Temperature 0.3 where the model accepts it (DeepSeek yes; current Claude models reject
   sampling parameters, so we leave it out there).
