@@ -1,4 +1,4 @@
-# Problem statement — 心理咨询师助手
+# Problem statement — 聆镜 PSYGYM
 
 *Step 01 — Validate. Sharpen this into a clear problem worth solving.*
 
@@ -14,7 +14,7 @@ and expensive.
 
 ## Why it isn't already solved
 
-<to validate with 聆镜PSYGYM. Their pitch names 咨询师之家, which focuses on
+<to validate with the founding team. Their pitch names 咨询师之家, which focuses on
 human counselors' growth; its AI training part is thin.>
 
 ## What "solved" would look like

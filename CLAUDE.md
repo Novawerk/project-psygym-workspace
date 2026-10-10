@@ -1,4 +1,4 @@
-# Agent guide — 心理咨询师助手 (PSYGYM)
+# Agent guide — 聆镜 PSYGYM (心理咨询师助手)
 
 This repo is part of the [Novawerk](https://novawerk.io) portfolio. When you
 need canonical facts about Novawerk (tagline, mission, the three principles,
@@ -11,7 +11,7 @@ skill already installed in this repo. Do not invent Novawerk facts — read the 
 AI practice partners for new counselors: an AI client to practise with, and an
 AI supervisor that points out mistakes and suggests what to work on.
 
-Status: **Planning** · Category: **App** · Built with 聆镜PSYGYM.
+Status: **Planning** · Category: **App** · Built with its founding team.
 
 Work is tracked on the Jira board `PSY` (site `novawerk-teams.atlassian.net`,
 board 67). Epic PSY-1 is the MVP (by 17–18 October 2026, the first demo); PSY-2 is

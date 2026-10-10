@@ -1,4 +1,4 @@
-# 心理咨询师助手 · PSYGYM
+# 聆镜 PSYGYM · 心理咨询师助手
 
 > AI practice partners for new counselors.
 
@@ -8,8 +8,8 @@ New counselors need practice and supervision. Both are hard to get. We build an
 open-source tool where trainee counselors practise with an AI client and get
 feedback from an AI supervisor.
 
-心理咨询师助手 is part of the [Novawerk](https://novawerk.io) portfolio, built
-with 聆镜PSYGYM. We build in the open and we build for real.
+聆镜 PSYGYM is part of the [Novawerk](https://novawerk.io) portfolio, built
+with its founding team. We build in the open and we build for real.
 
 ## Where we are
 
@@ -26,7 +26,7 @@ Right now, this project is **Planning**. Two milestones:
    - the interface in Chinese and English, the cases in Chinese first;
    - simulated sessions only. No real client data.
 
-2. **Everything 聆镜PSYGYM needs, by Christmas 2026**: psychoanalysis and
+2. **Everything the founding team needs, by Christmas 2026**: psychoanalysis and
    family therapy, more cases and comorbidities, finer supervision and
    one-to-one training modules, cases in English.
 
