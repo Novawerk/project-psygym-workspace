@@ -1,6 +1,6 @@
 # App 隐私标签和数据安全表（草稿）
 
-依据：2026-10-10 的代码（`apps/mobile`、`apps/api`），加上已定、但还在 PR 里的两项：本机练习记录（0005）和报告评价（D7，`POST /feedback`）。正式提交前按当时的代码再核一遍。
+依据：2026-10-10 的代码（`apps/mobile`、`apps/api`），加上已定、但还在 PR 里的两项：本机练习记录（0005）、报告评价（D7，`POST /feedback`）和举报单条 AI 内容（D8，`POST /report`，#47）。正式提交前按当时的代码再核一遍。
 
 ## 我们按代码核实过的事实
 
@@ -15,6 +15,7 @@
 | 服务端不存对话，日志只记路由、病例、语言、条数、模型、token 数、耗时 | `apps/api/src/app.ts` |
 | 发给模型服务的请求里不带用户 ID、IP 或其他元数据 | `apps/api/src/llm/*.ts` |
 | `/feedback` 只收 `{caseId, locale, rating, comment≤500}`，转发到 Slack；日志只记评论长度 | `apps/api/src/feedback.ts` |
+| `/report` 只收 `{caseId, locale, source, reason, comment≤500, reportedText≤2000}`：被举报的一段 AI 内容，不带会谈其余部分，多出字段返回 400；转发到 Slack；日志只记 id、枚举和长度 | [api-contract.md](../api-contract.md)、#47 |
 | IP 只在没配邀请码时用作限流键，只在内存里，不写日志 | `apps/api/src/rate-limit.ts` |
 | 本机只存语言、邀请码等几个设置（DataStore，未加密）；iOS 的存储目录排除在备份外 | `SettingsRepository.kt`、`MainViewController.kt` |
 
@@ -32,7 +33,7 @@ Apple 的「收集」指：数据离开设备，并且我们或第三方能在�
 | 数据类型 | 用途 | 关联到用户身份？ | 用于追踪？ |
 |----------|------|------------------|------------|
 | User Content → **Other User Content**（练习对话、督导报告） | App Functionality | 否 | 否 |
-| User Content → **Other User Content**（报告评价和一句话，D7 上线后加） | App Functionality；Analytics 不勾（我们没有分析 SDK，只是人工读反馈）。也可以只选 Other Purposes，提交时以 Apple 当时的说明为准 | 否 | 否 |
+| User Content → **Other User Content**（报告评价和一句话 D7；举报的那一段 AI 内容和一句话 D8。上线后加） | App Functionality；Analytics 不勾（我们没有分析 SDK，只是人工读反馈）。也可以只选 Other Purposes，提交时以 Apple 当时的说明为准 | 否 | 否 |
 
 **不申报的：**
 
@@ -69,12 +70,12 @@ Google 的「收集」指：数据离开设备。「共享」指：转给第三�
 
 **Is all of the user data collected by your app encrypted in transit?** → **Yes**（只走 HTTPS）
 
-**Do you provide a way for users to request that their data is deleted?** → 选「**No**」，并在说明里写清楚：没有账号；服务器不保存对话；本机记录用户在 App 里自己删；报告评价写邮件到 info@novawerk.io 删除。或者选「Yes」，然后填一个删除说明页的链接（可以是隐私政策里的「你的权利」一节）。建议选 Yes 加链接，审核更顺。
+**Do you provide a way for users to request that their data is deleted?** → 选「**No**」，并在说明里写清楚：没有账号；服务器不保存对话；本机记录用户在 App 里自己删；报告评价和举报写邮件到 info@novawerk.io 删除。或者选「Yes」，然后填一个删除说明页的链接（可以是隐私政策里的「你的权利」一节）。建议选 Yes 加链接，审核更顺。
 
 | 数据类别 → 类型 | 收集 / 共享 | 临时处理？ | 必需还是可选 | 用途 |
 |-----------------|-------------|------------|--------------|------|
 | App activity → **Other user-generated content**（练习对话、督导报告） | 收集；不共享 | **是**（我们的服务器只在内存里处理，不保存） | 必需（不发对话就没法练） | App functionality |
-| App activity → **Other user-generated content**（报告评价和一句话，D7 上线后加） | 收集；不共享 | 否（留在 Slack） | 可选 | App functionality（或 Analytics：Google 把「改进 App」算在 Analytics 下。提交时按当时 Google 的定义选） |
+| App activity → **Other user-generated content**（报告评价和一句话 D7；举报的那一段和一句话 D8。上线后加） | 收集；不共享 | 否（留在 Slack） | 可选 | App functionality（或 Analytics：Google 把「改进 App」算在 Analytics 下。提交时按当时 Google 的定义选） |
 
 不申报：Location、Personal info、Financial info、Health and fitness、Messages（这里指邮件、短信、App 内私信，不是我们的场景）、Photos and videos、Audio、Files and docs、Calendar、Contacts、Web browsing、App info and performance、Device or other IDs。
 
