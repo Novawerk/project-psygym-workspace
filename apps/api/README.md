@@ -92,7 +92,10 @@ you set `CLIENT_LLM_MODEL` / `SUPERVISOR_LLM_MODEL` (and `_BASE_URL`).
   second time), it says its closing line and calls the tool. We turn the call into one
   `session_end` frame before `turn_end`; the call itself never reaches the app. If the model
   calls it without a closing line, we send one ("我想今天先到这里。" / "I'd like to stop here
-  for today.").
+  for today."). If the app sends more after that, the client answers in one short line and
+  the stream carries `session_end` again.
+- A turn with no text to show (and no `end_session`) ends with an `error` frame
+  (`model_unavailable`), so the app offers a retry instead of an empty bubble.
 - AI supervisor: [`prompts/supervisor.md`](./prompts/supervisor.md) + the rubric
   (`content/rubrics/<school>.md`) + the case title and summary (never the role brief, so the
   report rests only on what was said) + a language line. The whole transcript goes in as one

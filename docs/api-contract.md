@@ -41,9 +41,10 @@ Only what the picker shows. The full case (the AI's role brief) stays on the ser
 Body: `{ caseId: string, locale: Locale, messages: Message[] }`. The last message must be
 the counselor's (else 400). The server answers as the client, in character.
 
-The stream may carry one `session_end` frame (see below): the client ended the session in
+The stream may carry a `session_end` frame (see below): the client ended the session in
 character. The app then locks the input and leaves only "End and see supervision". The server
-stays stateless: if the app sends another message anyway, it answers as usual.
+stays stateless: if the app sends another message after that anyway, the client answers with
+one short line and that stream carries `session_end` again.
 
 ### `POST /supervision` → `text/event-stream`
 
@@ -65,7 +66,7 @@ data: {"type":"error","code":"model_unavailable","message":"…"}
 ```
 
 - `text_delta` arrives zero or more times; the app appends `text` in order.
-- `session_end` (`/chat` only) arrives at most once, after the last `text_delta` and right
+- `session_end` (`/chat` only) arrives at most once per stream (not per session), after the last `text_delta` and right
   before `turn_end`; nothing but `turn_end` follows it. It means the AI client ended the
   session in character (see [`safety.md`](./safety.md) §3). The app locks the input.
 - Exactly one of `turn_end` or `error` ends the stream. `usage` is optional.

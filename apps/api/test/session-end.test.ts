@@ -106,6 +106,31 @@ describe("tool calls become one frame", () => {
     const fs = await frames(app, "/chat", "你好");
     expect(fs.some((f) => f.type === "session_end")).toBe(false);
   });
+
+  it("whitespace isn't a closing line: the server adds one", async () => {
+    const { app } = makeApp(() => new MockProvider([() => ({ text: "\n  ", toolCalls: [end] })]));
+    const fs = await frames(app, "/chat", "你好");
+    expectSessionEnd(fs);
+    expect(fs.filter((f) => f.type === "text_delta").at(-1)).toEqual({ type: "text_delta", text: FAREWELL.zh });
+  });
+
+  it.each([
+    ["only an unknown tool call", { text: "", toolCalls: [{ id: "x", name: "something_else", args: {} }] }],
+    ["no text at all", { text: "", toolCalls: [] }],
+    ["whitespace only", { text: " \n", toolCalls: [] }],
+  ])("%s → an error frame, never an empty reply", async (_, step) => {
+    const { app, lines } = makeApp(() => new MockProvider([() => step]));
+    const fs = await frames(app, "/chat", "你好");
+    expect(fs.at(-1)).toEqual({ type: "error", code: "model_unavailable", message: expect.any(String) });
+    expect(fs.some((f) => f.type === "turn_end" || f.type === "session_end")).toBe(false);
+    expect(lines.some((l) => l.msg === "turn failed" && l.error === "EmptyReplyError")).toBe(true);
+  });
+
+  it("an empty supervision report is an error too", async () => {
+    const { app } = makeApp(() => new MockProvider([() => ({ text: "", toolCalls: [] })]));
+    const fs = await frames(app, "/supervision", "你好");
+    expect(fs.at(-1)?.type).toBe("error");
+  });
 });
 
 // ── The real adapters, against a fake vendor on localhost ──
@@ -185,7 +210,10 @@ describe("real adapters turn end_session into session_end", () => {
     const fs = await frames(app, "/chat", "hello", "en");
     expectSessionEnd(fs);
     expect(fs.filter((f) => f.type === "text_delta").map((f) => f.text).join("")).toBe("I'd like to stop here.");
-    const sent = vendor.bodies[0] as { tools: { name: string }[] };
+    const sent = vendor.bodies[0] as { tools: { name: string }[]; thinking?: { type: string } };
     expect(sent.tools.map((t) => t.name)).toEqual(["end_session"]);
+    // Thinking stays on; no forced tool choice (current Claude models reject "any"/"tool").
+    expect(sent.thinking?.type).toBe("adaptive");
+    expect(sent).not.toHaveProperty("tool_choice");
   });
 });

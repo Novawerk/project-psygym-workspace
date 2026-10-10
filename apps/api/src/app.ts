@@ -94,6 +94,13 @@ async function readBody(req: Request): Promise<BodyRead> {
   return { tooLarge: false, text: Buffer.concat(chunks).toString("utf8") };
 }
 
+/** The model finished without any text to show. */
+class EmptyReplyError extends Error {
+  constructor(readonly stop: string) {
+    super("empty reply");
+  }
+}
+
 /** What we may log about a failure: its kind and HTTP status, never its message (it can echo input). */
 function describe(err: unknown) {
   const e = err as { name?: string; status?: number; constructor?: { name?: string } };
@@ -216,24 +223,28 @@ export function createApp(deps: AppDeps) {
       const log = { route: t.path, caseId: t.caseId, locale: t.locale, messages: t.count, provider: t.provider.name, model: t.provider.model };
       send({ type: "turn_start" });
       try {
-        let wroteText = false;
+        let said = "";
         const res = await t.provider.stream(
           { ...t.request, signal: abort.signal },
           {
             onText: (text) => {
               if (!text) return;
-              wroteText = true;
+              said += text;
               send({ type: "text_delta", text });
             },
           },
         );
+        const saidSomething = said.trim() !== "";
         // The AI client ends the session by calling end_session (only /chat offers the tool).
         // The tool call itself never reaches the app: it becomes one session_end frame.
         const sessionEnd = t.request.tools.length > 0 && endsSession(res.message.toolCalls);
         if (sessionEnd) {
           // Some models call the tool without saying goodbye; the app still needs a last line.
-          if (!wroteText) send({ type: "text_delta", text: FAREWELL[t.locale] });
+          if (!saidSomething) send({ type: "text_delta", text: FAREWELL[t.locale] });
           send({ type: "session_end" });
+        } else if (!saidSomething) {
+          // Nothing to show (e.g. only an unknown tool call): let the app offer a retry.
+          throw new EmptyReplyError(res.stopReason);
         }
         send({ type: "turn_end", usage: { inputTokens: res.usage.inputTokens, outputTokens: res.usage.outputTokens } });
         logger.info({
@@ -249,7 +260,13 @@ export function createApp(deps: AppDeps) {
         if (abort.signal.aborted) {
           logger.info({ ...log, msg: "turn aborted", ms: Date.now() - started });
         } else {
-          logger.error({ ...log, msg: "turn failed", ...describe(err), ms: Date.now() - started });
+          logger.error({
+            ...log,
+            msg: "turn failed",
+            ...describe(err),
+            ...(err instanceof EmptyReplyError ? { stop: err.stop } : {}),
+            ms: Date.now() - started,
+          });
           send({ type: "error", code: "model_unavailable", message: MESSAGES.model_unavailable });
         }
       } finally {

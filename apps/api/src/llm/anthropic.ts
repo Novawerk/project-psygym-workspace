@@ -1,6 +1,6 @@
 // Copied from Novawerk/agent-starter (MIT), apps/agent/src/llm/anthropic.ts at fcbd91c.
 // https://github.com/Novawerk/agent-starter — changes: import paths (.js), LlmConfig comes from ../config.js,
-// ModelRequest.temperature (only where the model accepts it), no retry after a failed stream (we use no tools, and a retry would repeat text already sent).
+// ModelRequest.temperature (only where the model accepts it), no retry after a failed stream (a retry would repeat text already sent to the app).
 // Claude adapter (native Anthropic SDK).
 //
 // Where it differs from the OpenAI-compatible adapter, it is to give Claude its full feature set:
