@@ -55,7 +55,7 @@
     <string name="home_start_card_button">Pick a client</string>
     <string name="home_cases_section">Cases</string>
     <string name="home_cases_all">All</string>
-    <string name="home_disclaimer">PSYGYM is a practice tool for counselors. An AI plays the client. Every client is fictional. This is not therapy.</string>
+    <string name="home_disclaimer">聆镜 PSYGYM is a practice tool for counselors. An AI plays the client. Every client is fictional. This is not therapy.</string>
     <string name="home_settings">Settings</string>
 
     <!-- Cases (C1) and case brief (C2) -->
@@ -140,6 +140,8 @@
     <string name="settings_help_section">Help</string>
     <string name="settings_replay_onboarding">Replay the intro</string>
     <string name="settings_privacy">Privacy</string>
+    <string name="settings_about_app">About 聆镜 PSYGYM</string>
+    <string name="about_body">聆镜 PSYGYM is a practice tool for new counselors, made by the 聆镜 (Lingjing) team and Novawerk.</string>
     <string name="settings_debug">Developer</string>
     <string name="settings_fake_api">Use demo data</string>
     <string name="settings_fake_api_desc">Fake cases and replies, no server needed. Debug builds only.</string>

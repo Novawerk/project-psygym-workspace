@@ -131,6 +131,8 @@
     <string name="settings_help_section">帮助</string>
     <string name="settings_replay_onboarding">重新看引导</string>
     <string name="settings_privacy">隐私说明</string>
+    <string name="settings_about_app">关于聆镜 PSYGYM</string>
+    <string name="about_body">聆镜 PSYGYM 是给新手咨询师的练习工具，由聆镜团队和 Novawerk 一起做。</string>
     <string name="settings_debug">开发者</string>
     <string name="settings_fake_api">使用演示数据</string>
     <string name="settings_fake_api_desc">假病例、假回复，不需要服务器。仅调试版可见。</string>
