@@ -116,6 +116,14 @@ createServer(async (req, res) => {
   res.write(": ping\n\n");
   const text = url.pathname === "/chat" ? CHAT_REPLY : REPORT;
   if (FAULT === "hang") return; // leave the stream open
+  // Like apps/api's mock: "#end" in the counselor's last line ends the session (/chat only).
+  const last = body.messages[body.messages.length - 1];
+  if (url.pathname === "/chat" && last.role === "counselor" && last.text.includes("#end")) {
+    send({ type: "text_delta", text: "……那我先走了。" });
+    send({ type: "session_end" });
+    send({ type: "turn_end" });
+    return res.end();
+  }
   if (FAULT === "stream_error") {
     send({ type: "text_delta", text: text.slice(0, 8) });
     send({ type: "error", code: "model_unavailable", message: "model_unavailable" });

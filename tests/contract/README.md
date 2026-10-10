@@ -21,6 +21,7 @@ requests; with a real model they cost tokens. Prefer a server running `LLM_PROVI
 | `INVITE_CODE` | unset | A valid code. Set it when the server has `INVITE_CODES`; the 401 tests run then. Unset: we check that any code (or none) passes. |
 | `CASE_ID` | first of `GET /cases` | Case used for `/chat` and `/supervision`. |
 | `EXPECT_MODEL_UNAVAILABLE` | unset | `1` when the server runs with no model. Stream tests are skipped; `503 model_unavailable` is checked instead. |
+| `END_TRIGGER` | unset | A counselor line that makes the mock client end the session (`#end` for apps/api with `LLM_PROVIDER=mock`). Set it to run the `session_end` tests; skip it with a real model. |
 | `STREAM_TIMEOUT_MS` | `90000` | How long one stream may take. |
 | `RATE_LIMIT_BURST` | `150` | Rate-limit test only: requests to send before giving up on a 429. |
 
