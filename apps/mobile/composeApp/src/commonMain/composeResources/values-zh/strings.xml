@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">聆镜 PSYGYM</string>
+    <string name="api_locale" translatable="false">zh</string>
+
+    <string name="back">返回</string>
+    <string name="retry">重试</string>
+    <string name="demo_badge">演示数据</string>
+
+    <string name="home_tagline">和 AI 来访者练习咨询。</string>
+    <string name="home_intro">和 AI 扮演的来访者进行一次认知行为疗法（CBT）会谈，结束后拿到一份督导报告：哪里做得好，哪里有问题，下次练什么。</string>
+    <string name="home_safety_title">使用须知</string>
+    <string name="home_safety_body">聆镜 PSYGYM 是给咨询师的练习工具。来访者由 AI 扮演，全部是虚构的。这不是心理治疗。对话会发给第三方 AI 模型服务处理；我们的服务器不保存对话。</string>
+    <string name="home_start">开始练习</string>
+    <string name="home_settings">设置</string>
+
+    <string name="cases_title">选择病例</string>
+    <string name="cases_empty">还没有病例。</string>
+    <string name="cases_school_cbt">CBT</string>
+
+    <string name="practice_input_hint">以咨询师身份说点什么…</string>
+    <string name="practice_send">发送</string>
+    <string name="practice_end">结束并查看督导</string>
+    <string name="practice_empty">你是咨询师。准备好了就开始会谈吧。</string>
+    <string name="practice_role_counselor">你</string>
+    <string name="practice_role_client">来访者</string>
+    <string name="practice_limit_reached">这次会谈已经够长了。结束练习，看看督导报告吧。</string>
+    <string name="practice_leave_title">离开这次练习？</string>
+    <string name="practice_leave_body">我们不保存这次对话，离开后就没有了。</string>
+    <string name="practice_leave_confirm">离开</string>
+    <string name="practice_leave_cancel">留下</string>
+
+    <string name="supervision_title">督导报告</string>
+    <string name="supervision_generating">督导正在写报告…</string>
+    <string name="supervision_note">这份反馈由 AI 生成，仅供练习参考。对话由第三方 AI 模型服务处理，我们的服务器不保存。</string>
+    <string name="supervision_home">回到首页</string>
+    <string name="supervision_again">再练一次</string>
+
+    <string name="settings_title">设置</string>
+    <string name="settings_language">语言</string>
+    <string name="settings_language_system">跟随系统</string>
+    <string name="settings_language_zh">中文</string>
+    <string name="settings_language_en">English</string>
+    <string name="settings_invite">邀请码</string>
+    <string name="settings_invite_hint">输入邀请码</string>
+    <string name="settings_invite_desc">邀请码由聆镜团队发放，用来连接我们的服务器。</string>
+    <string name="settings_invite_save">保存</string>
+    <string name="settings_invite_saved">已保存</string>
+    <string name="settings_debug">开发者</string>
+    <string name="settings_fake_api">使用演示数据</string>
+    <string name="settings_fake_api_desc">假病例、假回复，不需要服务器。仅调试版可见。</string>
+    <string name="settings_about">关于</string>
+    <string name="settings_version">版本 %1$s</string>
+
+    <string name="invite_dialog_title">有邀请码吗？</string>
+    <string name="invite_dialog_body">聆镜目前只对受邀用户开放。也可以稍后在设置里填写。</string>
+    <string name="invite_dialog_save">保存</string>
+    <string name="invite_dialog_skip">跳过</string>
+
+    <string name="error_invalid_request">这场会谈太长了。请结束并查看督导，或开始新的一场。</string>
+    <string name="error_invite_required">需要有效的邀请码，请到设置里填写。</string>
+    <string name="error_case_not_found">这个病例已经不可用了，请回到列表换一个。</string>
+    <string name="error_rate_limited">请求太频繁了，请稍后再试。</string>
+    <string name="error_model_unavailable">AI 暂时不可用，请过几分钟再试。</string>
+    <string name="error_network">连不上服务器，请检查网络后重试。</string>
+    <string name="error_unknown">出了点问题，请重试。</string>
+    <string name="error_open_settings">去设置</string>
+    <string name="practice_incomplete">未完成</string>
+    <string name="practice_help">需要帮助？</string>
+    <string name="help_title">需要帮助？</string>
+    <string name="help_body">这是一个练习工具，不能在危机中提供帮助。如果你或身边的人有危险，请马上联系当地急救电话或心理援助热线。</string>
+    <string name="help_close">关闭</string>
+    <string name="briefing_title">开始前请读一下</string>
+    <string name="briefing_1">你将和一位 AI 扮演的虚构来访者对话。</string>
+    <string name="briefing_2">对话可能涉及抑郁、焦虑和消极念头。</string>
+    <string name="briefing_3">对话会发给第三方 AI 模型服务处理；我们的服务器不保存对话。请不要输入真实来访者的信息。</string>
+    <string name="briefing_4">结束后，AI 督导给你一份练习反馈。它不是资质评估，也不是临床意见。</string>
+    <string name="briefing_5">如果你自己正在经历困难，请联系身边的专业人员或下方的求助热线。</string>
+    <string name="briefing_ok">我知道了</string>
+    <string name="error_rate_limited_seconds">请求太频繁了，请 %1$d 秒后再试。</string>
+    <string name="error_timeout">AI 回复超时了，请重试。</string>
+    <string name="error_back_to_cases">回到病例列表</string>
+    <string name="practice_interrupted">上一次练习已中断。选一个病例重新开始吧。</string>
+    <string name="practice_chars_left">还能输入 %1$d 字</string>
+</resources>

@@ -1,0 +1,15 @@
+*.iml
+.gradle
+.kotlin/
+**/build/
+local.properties
+.idea
+xcuserdata
+*.jks
+*.keystore
+*.p12
+secrets.properties
+google-services.json
+GoogleService-Info.plist
+hs_err_pid*.log
+iosApp/Configuration/Config.xcconfig
