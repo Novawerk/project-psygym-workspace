@@ -70,6 +70,7 @@ key 沿用 App 现有命名（`home_*`、`cases_*`、`practice_*`、`supervision
 | cases_intro | 新 | 每位来访者都是虚构的，由 AI 扮演。 | Every client is fictional, played by an AI. |
 | cases_empty | 不变 | 还没有病例。 | No cases yet. |
 | cases_more | 新 | 更多病例和流派在路上。 | More cases and approaches are on the way. |
+| case_title_with_alias | 新 | %1$s · %2$s | %1$s · %2$s |
 | cases_minutes | 新 | 约 %1$d 分钟 | About %1$d min |
 | case_difficulty_intro / medium / hard | 新 | 入门 / 中等 / 较难 | Intro / Medium / Hard |
 | brief_client | 新 | 来访者 | The client |
