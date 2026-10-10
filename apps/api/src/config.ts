@@ -42,6 +42,10 @@ const EnvSchema = z.object({
   /** Streaming requests allowed per key (invite code, else IP) per window. */
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(30),
   RATE_LIMIT_WINDOW_SEC: z.coerce.number().int().positive().default(60),
+
+  // ── Report feedback ──
+  /** Slack incoming webhook for POST /feedback. Unset: feedback is dropped (204). */
+  FEEDBACK_SLACK_WEBHOOK_URL: optionalString.pipe(z.url({ protocol: /^https$/ }).optional()),
 });
 
 export interface LlmConfig {
@@ -62,6 +66,8 @@ export interface AppConfig {
   errors: string[];
   inviteCodes: Set<string> | null;
   rateLimit: { max: number; windowMs: number };
+  /** Where POST /feedback goes. Null: dropped. */
+  feedbackWebhookUrl: string | null;
 }
 
 const PROVIDER_DEFAULTS: Record<ProviderName, { model: string; baseURL?: string; maxOutputTokens: number }> = {
@@ -156,5 +162,6 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     errors: [...invalid].sort().map((k) => `${k} has an invalid value and is ignored`),
     inviteCodes: codes.length ? new Set(codes) : null,
     rateLimit: { max: e.RATE_LIMIT_MAX, windowMs: e.RATE_LIMIT_WINDOW_SEC * 1000 },
+    feedbackWebhookUrl: e.FEEDBACK_SLACK_WEBHOOK_URL ?? null,
   };
 }
