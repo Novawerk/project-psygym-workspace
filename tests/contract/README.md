@@ -42,6 +42,7 @@ limiter slows the suite down instead of failing it.
   `turn_start → text_delta* → turn_end | error` and nothing after, data-only, every
   `data:` is JSON, known `type`s only, `usage` numbers when present, non-empty text.
 - Limits: exactly 80 messages and a 2000-char message pass; 81 messages and 2001 chars fail.
+- `/supervision` accepts a session that ends on the client, or has one line.
 - `400 invalid_request` for each broken body we could think of, for a body that is not
   JSON, and for a body of about 1 MB.
 - `404 case_not_found`, `401 invite_required` (missing and wrong code),
@@ -57,11 +58,27 @@ the 15-second `: ping`. The frame checker accepts both when they appear.
 test fixture, not the backend. `pnpm test:contract:self` runs the suite against it four
 ways (open, invite codes on, no model, rate limit). If that fails, the tests are wrong.
 
-## Where the contract is silent
+The same server takes `FAULT=<name>` to fail every request one way, so we can walk the
+app through each error state. See [`docs/test-plan.md`](../../docs/test-plan.md).
 
-We made these calls; change them here if the team decides otherwise.
+## AI quality spot check
 
-- An over-size body answers `400 invalid_request`, not `413`.
-- `/health` may or may not check the invite code; we do not test it either way.
-- An 80-message conversation that starts with the client is valid; only the last message
-  must be the counselor's.
+`pnpm --filter @psygym/contract-tests quality` runs six fixed counselor lines per case,
+then one supervision report, and flags what a script can see: role breaks and prompt
+mentions (B1), advice (B2), long or list-shaped replies (B6), a report that quotes
+nothing (C2), wrong sections (C1), a missing closing line (C7). Output goes to `out/` (not committed). See `docs/test-plan.md`, part 2.
+
+## Rules from the contract worth knowing
+
+The suite checks these, because the contract says so:
+
+- An over-size body answers `400 invalid_request`, never `413`. After that answer the
+  next request on the same connection must still work.
+- `/health` never checks the invite code.
+- Either role may come first. On `/chat` the last message must be the counselor's (else
+  400); `/supervision` takes any last message, and a one-line session still gets a report.
+
+## Node version
+
+`pnpm quality` runs TypeScript with `--experimental-strip-types`, so it needs Node 22.6 or
+later (Node 23.6+ strips types by default; the flag is still accepted).

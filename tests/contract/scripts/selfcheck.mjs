@@ -10,6 +10,16 @@ const runs = [
   { name: "rate limit", server: { RATE_LIMIT: "20" }, test: {}, script: "test:rate-limit" },
 ];
 
+async function waitForHealth(url) {
+  for (let i = 0; i < 50; i++) {
+    try {
+      if ((await fetch(url)).ok) return;
+    } catch {}
+    await sleep(100);
+  }
+  throw new Error(`server did not come up: ${url}`);
+}
+
 let failed = 0;
 for (const [i, run] of runs.entries()) {
   const port = String(8790 + i);
@@ -17,10 +27,10 @@ for (const [i, run] of runs.entries()) {
     env: { ...process.env, PORT: port, ...run.server },
     stdio: "ignore",
   });
-  await sleep(400);
+  await waitForHealth(`http://127.0.0.1:${port}/health`);
   console.log(`\n=== ${run.name} ===`);
   const r = spawnSync("pnpm", ["run", run.script], {
-    env: { ...process.env, BASE_URL: `http://localhost:${port}`, ...run.test },
+    env: { ...process.env, BASE_URL: `http://127.0.0.1:${port}`, ...run.test },
     stdio: "inherit",
   });
   server.kill();

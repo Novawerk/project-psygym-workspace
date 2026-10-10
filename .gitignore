@@ -26,3 +26,6 @@ coverage/
 node_modules/
 .venv/
 __pycache__/
+
+# Manual test screenshots and notes (docs/test-plan.md)
+test-results/

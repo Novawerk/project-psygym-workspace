@@ -2,6 +2,14 @@
 // the contract suite itself before apps/api exists. Not the product backend.
 //
 //   PORT=8799 INVITE_CODES=a,b RATE_LIMIT=40 NO_MODEL=1 node scripts/reference-server.mjs
+//
+// FAULT=<name> makes every POST /chat and /supervision fail one way, for walking the app
+// through its error states (docs/test-plan.md):
+//   invalid_request | invite_required | case_not_found | rate_limited | model_unavailable
+//     → that HTTP error before the stream
+//   stream_error → turn_start, some text, then an error frame
+//   slow         → text in small pieces every 300 ms, with ": ping" comments
+//   hang         → turn_start, then nothing (the app's own timeout must kick in)
 import { createServer } from "node:http";
 
 const PORT = Number(process.env.PORT ?? 8799);
@@ -9,6 +17,27 @@ const INVITES = (process.env.INVITE_CODES ?? "").split(",").filter(Boolean);
 const RATE_LIMIT = Number(process.env.RATE_LIMIT ?? 0); // requests per minute per IP on POST; 0 = off
 const NO_MODEL = process.env.NO_MODEL === "1";
 const MAX_BODY = 512 * 1024;
+const FAULT = process.env.FAULT ?? "";
+const FAULT_STATUS = {
+  invalid_request: 400,
+  invite_required: 401,
+  case_not_found: 404,
+  rate_limited: 429,
+  model_unavailable: 503,
+};
+if (FAULT && !(FAULT in FAULT_STATUS) && !["stream_error", "slow", "hang"].includes(FAULT)) {
+  console.error(`unknown FAULT=${FAULT}`);
+  process.exit(1);
+}
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+const CHAT_REPLY = "嗯……最近总是睡不好，早上起来也没什么力气。我也说不清楚为什么。";
+const REPORT = [
+  "## 做得好的地方\n\n- 开场问题开放，给了来访者空间。\n\n",
+  "## 需要改进的地方\n\n- 你说「你应该多出去走走」，这是建议，不是探索。可以换成：「出门这件事，对你来说难在哪里？」\n\n",
+  "## 下次练什么\n\n1. 多用情感反映。\n2. 先问具体情境，再问想法。\n\n",
+  "这份反馈由 AI 生成，仅供练习参考。\n",
+].join("");
 
 const CASES = [
   {
@@ -27,7 +56,7 @@ function json(res, status, body, headers = {}) {
 }
 const fail = (res, status, code, headers) => json(res, status, { error: { code, message: code } }, headers);
 
-function valid(b) {
+function valid(b, path) {
   if (!b || typeof b !== "object" || Array.isArray(b)) return false;
   if (typeof b.caseId !== "string" || !["zh", "en"].includes(b.locale)) return false;
   const m = b.messages;
@@ -35,7 +64,8 @@ function valid(b) {
   for (const x of m) {
     if (!x || !["counselor", "client"].includes(x.role) || typeof x.text !== "string" || x.text.length > 2000) return false;
   }
-  return m[m.length - 1].role === "counselor";
+  // Only /chat needs the counselor's line last.
+  return path !== "/chat" || m[m.length - 1].role === "counselor";
 }
 
 createServer(async (req, res) => {
@@ -73,16 +103,32 @@ createServer(async (req, res) => {
   } catch {
     return fail(res, 400, "invalid_request");
   }
-  if (!valid(body)) return fail(res, 400, "invalid_request");
+  if (!valid(body, url.pathname)) return fail(res, 400, "invalid_request");
   if (!CASES.some((c) => c.id === body.caseId)) return fail(res, 404, "case_not_found");
+  if (FAULT_STATUS[FAULT]) {
+    return fail(res, FAULT_STATUS[FAULT], FAULT, FAULT === "rate_limited" ? { "retry-after": "30" } : {});
+  }
   if (NO_MODEL) return fail(res, 503, "model_unavailable");
 
   res.writeHead(200, { "content-type": "text/event-stream; charset=utf-8", "cache-control": "no-cache" });
   const send = (o) => res.write(`data: ${JSON.stringify(o)}\n\n`);
   send({ type: "turn_start" });
   res.write(": ping\n\n");
-  const words = url.pathname === "/chat" ? ["我最近", "睡不好。"] : ["## 做得好\n", "……"];
-  for (const w of words) send({ type: "text_delta", text: w });
-  send({ type: "turn_end", usage: { inputTokens: 1, outputTokens: words.length } });
+  const text = url.pathname === "/chat" ? CHAT_REPLY : REPORT;
+  if (FAULT === "hang") return; // leave the stream open
+  if (FAULT === "stream_error") {
+    send({ type: "text_delta", text: text.slice(0, 8) });
+    send({ type: "error", code: "model_unavailable", message: "model_unavailable" });
+    return res.end();
+  }
+  const pieces = text.match(FAULT === "slow" ? /[\s\S]{1,3}/g : /[\s\S]{1,12}/g);
+  for (const [i, piece] of pieces.entries()) {
+    if (FAULT === "slow") {
+      await sleep(300);
+      if (i % 7 === 6) res.write(": ping\n\n");
+    }
+    send({ type: "text_delta", text: piece });
+  }
+  send({ type: "turn_end", usage: { inputTokens: 1, outputTokens: pieces.length } });
   res.end();
-}).listen(PORT, () => console.log(`reference server on http://localhost:${PORT}`));
+}).listen(PORT, "127.0.0.1", () => console.log(`reference server on http://127.0.0.1:${PORT}${FAULT ? ` (FAULT=${FAULT})` : ""}`));

@@ -30,6 +30,21 @@ describe.skipIf(env.expectModelUnavailable).each(endpoints)("POST %s stream", (p
   });
 });
 
+describe.skipIf(env.expectModelUnavailable)("POST /supervision, any shape of session", () => {
+  it.each([
+    ["ends on the client", () => conversation(2).reverse()],
+    ["one counselor line only (very short session)", () => conversation(1)],
+    ["one client line only", () => [{ role: "client" as const, text: "嗯。" }]],
+  ])("%s → 200 and a full report", async (_name, msgs) => {
+    const res = await call("/supervision", { body: await validBody("zh", msgs()) });
+    expect(res.status, await peek(res)).toBe(200);
+    const r = await readStream(res, env.streamTimeoutMs);
+    expect(frameProblems(r)).toEqual([]);
+    expect(r.frames[r.frames.length - 1]).toMatchObject({ type: "turn_end" });
+    expect(joinedText(r).trim().length).toBeGreaterThan(0);
+  });
+});
+
 /** For failure messages: read a non-200 body without consuming a 200 stream. */
 async function peek(res: Response): Promise<string> {
   if (res.status === 200) return "";
