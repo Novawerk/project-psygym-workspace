@@ -12,7 +12,7 @@ From the repo root:
 BASE_URL=http://localhost:8787 pnpm test:contract
 ```
 
-Never point this at production, and never at a server with `FEEDBACK_SLACK_WEBHOOK_URL` set: the `/feedback` tests would post to the team's Slack channel. The suite sends real `/chat` and `/supervision`
+Never point this at production, and never at a server with `FEEDBACK_SLACK_WEBHOOK_URL` set: the `/feedback` tests would post to the team's Slack channel. `apps/api` also reads `apps/api/.env` at start, so that file must not set it either. The suite sends real `/chat` and `/supervision`
 requests; with a real model they cost tokens. Prefer a server running `LLM_PROVIDER=mock`.
 
 | Variable | Default | What |

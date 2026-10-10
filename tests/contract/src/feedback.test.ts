@@ -1,7 +1,8 @@
 // POST /feedback: a rating of one supervision report. docs/api-contract.md
 //
-// Never run this against a server with FEEDBACK_SLACK_WEBHOOK_URL set: every 204 here
-// would post to the team's Slack channel.
+// Never run this against a server with FEEDBACK_SLACK_WEBHOOK_URL set (in its environment
+// or in apps/api/.env, which apps/api reads at start): every 204 here would post to the
+// team's Slack channel.
 import { describe, expect, it } from "vitest";
 import { env } from "./env";
 import { call, caseId, expectError } from "./http";
@@ -23,6 +24,8 @@ describe("POST /feedback: 204", () => {
     ["with a short comment", { comment: "引用很准。" }],
     ["with an empty comment", { comment: "" }],
     ["with a 500-character comment", { comment: "好".repeat(500) }],
+    // 500 characters, 1000 UTF-16 units: a server counting UTF-16 would wrongly reject it.
+    ["with a 500-emoji comment", { comment: "😀".repeat(500) }],
   ])("%s", async (_name, extra) => {
     await expect204(await call("/feedback", { body: await body(extra) }));
   });
@@ -40,6 +43,7 @@ describe("POST /feedback: 400 invalid_request", () => {
     ["rating as a number", () => body({ rating: 5 })],
     ["comment not a string", () => body({ comment: 42 })],
     ["comment of 501 characters", () => body({ comment: "好".repeat(501) })],
+    ["comment of 501 emoji", () => body({ comment: "😀".repeat(501) })],
     // The conversation is never a field.
     ["extra field: messages", () => body({ messages: [{ role: "counselor", text: "你好" }] })],
     ["extra field: transcript", () => body({ transcript: "你好" })],
