@@ -132,6 +132,7 @@
     <string name="settings_language_system">Follow system</string>
     <string name="settings_language_zh">中文</string>
     <string name="settings_language_en">English</string>
+    <string name="settings_language_note">If you set a language for this app in your phone’s settings, that one wins.</string>
     <string name="settings_invite">Invite code</string>
     <string name="settings_invite_hint">Enter invite code</string>
     <string name="settings_invite_desc">You get one from the 聆镜 (Lingjing) team. It lets the app reach our server.</string>

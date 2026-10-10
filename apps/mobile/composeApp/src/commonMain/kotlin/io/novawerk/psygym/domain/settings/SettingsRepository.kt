@@ -23,6 +23,9 @@ enum class AppLanguage(val tag: String?) {
 
 enum class StartState { Welcome, Consent, Home }
 
+/** Invite codes never contain whitespace; keyboards sometimes add some ("test code1"). */
+fun normalizeInviteCode(code: String): String = code.filterNot { it.isWhitespace() }
+
 /**
  * Bump when the O2 disclaimer changes in substance: everyone sees it again on next launch
  * (docs/product/onboarding.md, docs/safety.md §5).
@@ -76,7 +79,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
     }
 
     suspend fun setInviteCode(code: String) {
-        dataStore.edit { it[INVITE_CODE] = code.trim() }
+        dataStore.edit { it[INVITE_CODE] = normalizeInviteCode(code) }
     }
 
     suspend fun acceptDisclaimer() {

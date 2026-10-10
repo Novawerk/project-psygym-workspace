@@ -69,12 +69,15 @@ import io.novawerk.psygym.resources.settings_invite_save
 import io.novawerk.psygym.resources.settings_invite_saved
 import io.novawerk.psygym.resources.settings_language
 import io.novawerk.psygym.resources.settings_language_en
+import io.novawerk.psygym.resources.settings_language_note
 import io.novawerk.psygym.resources.settings_language_system
 import io.novawerk.psygym.resources.settings_language_zh
 import io.novawerk.psygym.resources.settings_privacy
 import io.novawerk.psygym.resources.settings_replay_onboarding
 import io.novawerk.psygym.resources.settings_version
+import io.novawerk.psygym.domain.settings.normalizeInviteCode
 import io.novawerk.psygym.ui.components.BottomBar
+import io.novawerk.psygym.ui.components.InviteCodeKeyboard
 import io.novawerk.psygym.ui.components.TopTab
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
@@ -129,6 +132,12 @@ fun MeScreen(
                 LanguageRow(AppLanguage.Zh, Res.string.settings_language_zh, language, onLanguageChange)
                 LanguageRow(AppLanguage.En, Res.string.settings_language_en, language, onLanguageChange)
             }
+            Text(
+                stringResource(Res.string.settings_language_note),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+            )
             ItemTitle(Res.string.settings_invite, top = 12.dp)
             InviteCodeField(inviteCode, onInviteCodeSave)
 
@@ -265,7 +274,7 @@ private fun LanguageRow(value: AppLanguage, label: StringResource, selected: App
 private fun InviteCodeField(saved: String, onSave: (String) -> Unit) {
     var draft by remember { mutableStateOf(saved) }
     LaunchedEffect(saved) { draft = saved }
-    val dirty = draft.trim() != saved
+    val dirty = normalizeInviteCode(draft) != saved
     Column(Modifier.padding(horizontal = 16.dp)) {
         Text(
             stringResource(Res.string.settings_invite_desc),
@@ -280,6 +289,7 @@ private fun InviteCodeField(saved: String, onSave: (String) -> Unit) {
                 singleLine = true,
                 shape = MaterialTheme.shapes.small,
                 placeholder = { Text(stringResource(Res.string.settings_invite_hint)) },
+                keyboardOptions = InviteCodeKeyboard,
                 modifier = Modifier.weight(1f),
             )
             Spacer(Modifier.width(12.dp))

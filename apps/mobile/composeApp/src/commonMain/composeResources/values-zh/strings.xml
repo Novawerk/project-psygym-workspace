@@ -123,6 +123,7 @@
     <string name="settings_language_system">跟随系统</string>
     <string name="settings_language_zh">中文</string>
     <string name="settings_language_en">English</string>
+    <string name="settings_language_note">如果在手机的系统设置里给这个 App 单独设了语言，以系统设置为准。</string>
     <string name="settings_invite">邀请码</string>
     <string name="settings_invite_hint">输入邀请码</string>
     <string name="settings_invite_desc">邀请码由聆镜团队发放，用来连接我们的服务器。</string>

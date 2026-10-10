@@ -91,6 +91,7 @@ import io.novawerk.psygym.resources.settings_language_system
 import io.novawerk.psygym.resources.settings_language_zh
 import io.novawerk.psygym.ui.components.BottomActions
 import io.novawerk.psygym.ui.components.HelpLink
+import io.novawerk.psygym.ui.components.InviteCodeKeyboard
 import io.novawerk.psygym.ui.components.LanguageToggle
 import io.novawerk.psygym.ui.components.PrimaryButton
 import io.novawerk.psygym.ui.components.SecondaryButton
@@ -354,6 +355,7 @@ fun ReadyScreen(
             singleLine = true,
             placeholder = { Text(stringResource(Res.string.onb_ready_invite_hint)) },
             shape = MaterialTheme.shapes.small,
+            keyboardOptions = InviteCodeKeyboard,
             modifier = Modifier.fillMaxWidth(),
         )
     }

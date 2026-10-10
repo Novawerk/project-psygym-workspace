@@ -52,6 +52,12 @@ class SupervisionViewModel(
 
     val done: Boolean get() = !streaming && error == null && report.isNotEmpty()
 
+    /**
+     * Leaving needs a confirm only when something would be lost: the report is still being
+     * written, or history is off so the finished report isn't kept anywhere.
+     */
+    val leaveNeedsConfirm: Boolean get() = streaming || history == null
+
     private var job: Job? = null
     private var started = false
 
