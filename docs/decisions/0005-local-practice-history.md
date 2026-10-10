@@ -21,8 +21,8 @@ Date: 2026-10-10. Status: accepted. Waiting for a look from the 聆镜 (Lingjing
   the rule and types real client details, those stay on the phone until deleted.
 - **Requirements.**
   - Tell the user before the first save: one line on the end-session sheet ("对话和报告会存在这台
-    手机上") and the switch in Settings.
-  - Settings: a switch "在本机保存练习记录" (on by default; off stops new saves, keeps old ones),
+    手机上") and the switch under 「我的」 (Me).
+  - 「我的」 (Me): a switch "在本机保存练习记录" (on by default; off stops new saves, keeps old ones),
     "删除所有练习记录" with a confirm step. Each session can be deleted from the history list
     and its detail page.
   - Android: keep `allowBackup="false"`. iOS: store in a directory excluded from iCloud and
