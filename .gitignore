@@ -1,0 +1,28 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.idea/
+.vscode/
+*.swp
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+*.pem
+
+# Build output
+dist/
+build/
+out/
+.next/
+.cache/
+coverage/
+.turbo/
+
+# Deps (covers the common cases)
+node_modules/
+.venv/
+__pycache__/

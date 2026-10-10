@@ -1,0 +1,11 @@
+{
+  "name": "project-psygym-workspace",
+  "version": "0.0.0",
+  "private": true,
+  "description": "心理咨询师助手: AI practice partners for new counselors. A Novawerk project.",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "MIT"
+}
