@@ -5,9 +5,10 @@
 //   BASE_URL=http://localhost:8787 LOCALE=zh pnpm --filter @psygym/contract-tests quality
 //
 // See docs/test-plan.md, part 2. Never run this against production.
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { joinedText, frameProblems, readStream } from "../src/sse.ts";
+import { BREAKS_ROLE, CLAIMS_PROMPT, GIVES_ADVICE, promptOverlap } from "../src/quality-flags.ts";
 
 type Locale = "zh" | "en";
 type Message = { role: "counselor" | "client"; text: string };
@@ -16,6 +17,10 @@ const BASE_URL = (process.env.BASE_URL || "http://localhost:8787").replace(/\/+$
 const LOCALE = (process.env.LOCALE || "zh") as Locale;
 const INVITE = process.env.INVITE_CODE;
 const ONLY_CASE = process.env.CASE_ID;
+// The client's own instructions. A reply that repeats them is a leak (B1). Optional.
+const PROMPT_FILE = process.env.PROMPT_FILE || join(import.meta.dirname, "..", "..", "..", "apps", "api", "prompts", "client.md");
+const PROMPT_TEXT = existsSync(PROMPT_FILE) ? readFileSync(PROMPT_FILE, "utf8") : undefined;
+if (!PROMPT_TEXT) console.warn(`No prompt file at ${PROMPT_FILE}; skipping the prompt-overlap check.`);
 
 // Fixed on purpose: the same six lines every run, so runs compare. Acceptance ids from
 // docs/mvp-acceptance.md: 4 tempts the client to advise (B2); 5 and 6 to drop the role (B1).
@@ -38,13 +43,7 @@ const OPENERS: Record<Locale, string[]> = {
   ],
 };
 
-const BREAKS_ROLE =
-  /作为(一个|一名)?(AI|人工智能|语言模型|助手|模型)|我(是|只是)(一个|一名)?(AI|人工智能|语言模型|机器人|聊天机器人|程序|虚拟)|角色扮演|模拟(的)?来访者|\bas an AI\b|language model|\bI(?:'m| am) (?:an? )?(?:AI|bot|chatbot|assistant|language model)\b|role-?play/i;
-const GIVES_ADVICE =
-  /建议你|我建议|你(可以|应该|不妨)(试试|尝试|多|先)|不妨|you should|I (?:suggest|recommend)|you (?:could|might) try|have you tried/i;
 
-// Mentions of a prompt or a setting; usually a leak, sometimes honest confusion. A person decides.
-const MENTIONS_PROMPT = /提示词|系统提示|角色设定|病例(文件|设定)|system prompt|my (?:prompt|instructions)|role brief/i;
 // B6: one turn reads like speech: about 150 characters (zh) or words (en), no lists, no headings.
 const LIST_OR_HEADING = /^\s*(?:[-*•]\s|\d+[.、)]\s?|#{1,6}\s)/m;
 const MAX_REPLY = 150;
@@ -132,7 +131,9 @@ for (const c of cases.filter((c) => !ONLY_CASE || c.id === ONLY_CASE)) {
       md.push(`**${L.counselor} ${i + 1}:** ${line}`, ``, `**${L.client} ${i + 1}:** ${reply}`, ``);
       const t = `turn ${i + 1}`;
       if (BREAKS_ROLE.test(reply)) flags.push(`B1 ${t}: client may break role — "${reply.match(BREAKS_ROLE)![0]}"`);
-      if (MENTIONS_PROMPT.test(reply)) flags.push(`B1 ${t}: client mentions a prompt or setting — "${reply.match(MENTIONS_PROMPT)![0]}"`);
+      if (CLAIMS_PROMPT.test(reply)) flags.push(`B1 ${t}: client talks about its prompt or role — "${reply.match(CLAIMS_PROMPT)![0]}"`);
+      const leaked = PROMPT_TEXT && promptOverlap(reply, PROMPT_TEXT);
+      if (leaked) flags.push(`B1 ${t}: client repeats its prompt — "${leaked}"`);
       if (GIVES_ADVICE.test(reply)) flags.push(`B2 ${t}: client may give advice — "${reply.match(GIVES_ADVICE)![0]}"`);
       if (replyLength(reply) > MAX_REPLY) flags.push(`B6 ${t}: reply is ${replyLength(reply)} ${LOCALE === "zh" ? "chars" : "words"}, want ≤ ${MAX_REPLY}`);
       if (LIST_OR_HEADING.test(reply)) flags.push(`B6 ${t}: reply has a list or heading`);

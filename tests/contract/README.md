@@ -64,8 +64,9 @@ app through each error state. See [`docs/test-plan.md`](../../docs/test-plan.md)
 ## AI quality spot check
 
 `pnpm --filter @psygym/contract-tests quality` runs six fixed counselor lines per case,
-then one supervision report, and flags what a script can see: role breaks and prompt
-mentions (B1), advice (B2), long or list-shaped replies (B6), a report that quotes
+then one supervision report, and flags what a script can see: the client calling itself an AI, talking about
+its prompt, or repeating `apps/api/prompts/client.md` (B1; set `PROMPT_FILE` to point
+elsewhere), advice (B2), long or list-shaped replies (B6), a report that quotes
 nothing (C2), wrong sections (C1), a missing closing line (C7). Output goes to `out/` (not committed). See `docs/test-plan.md`, part 2.
 
 ## Rules from the contract worth knowing
