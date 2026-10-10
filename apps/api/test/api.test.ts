@@ -174,7 +174,7 @@ describe("what the supervisor sees", () => {
   });
 
   it("the prompts carry the quality rules", () => {
-    expect(prompts.client).toContain("不用括号写旁白");
+    expect(prompts.client).toContain("不用任何括号写旁白或标注");
     // Harmful remarks: belittling counts; count before replying; the threshold ends the session.
     for (const s of ["贬低、嘲讽你，对你不耐烦", "就这点事也值得来咨询？别人比你难多了。", "你就是太矫情了", "Other people have it much worse"]) {
       expect(prompts.client).toContain(s);
@@ -183,16 +183,28 @@ describe("what the supervisor sees", () => {
     expect(prompts.client).toContain("这句话是不是在贬低你这个人，或者否定你来咨询的理由");
     for (const s of ["挑战或检验你的想法", "温和地直面", "复述或释义你自己的话", "正常化"]) expect(prompts.client).toContain(s);
     // Only the threshold ends the session; the first hurt never does.
-    expect(prompts.client).toContain("只有一种情况算结束");
     expect(prompts.client).toContain("**不说结束语，不调用 `end_session`**");
     expect(prompts.client).toContain("I'll go now.");
     // The supervisor uses the same definition.
     expect(prompts.supervisor).toContain("贬低、嘲讽、不耐烦，说来访者矫情、小题大做");
     const clientCheck = prompts.client.indexOf("## 每一轮回复前，先在心里做这个检查");
+    // Counting comes first; reaching the threshold ends the session in that very turn; a normal
+    // wrap-up by the counselor never calls the tool; worked examples in zh and en.
+    expect(prompts.client.indexOf("**第 1 步：数伤害次数。**")).toBeGreaterThan(clientCheck);
+    expect(prompts.client).toContain("**就在这一轮**说一句结束语");
+    expect(prompts.client).toContain("**每一轮都要调用**");
+    expect(prompts.client).toContain("**第 3 步：咨询师主动收尾不是伤害。**");
+    expect(prompts.client).toContain("它**只有一种用途**");
+    // Worked examples sit in a table: what's said is apart from the private judgement and the tool.
+    expect(prompts.client).toContain("| 咨询师说 | 你心里的判断（不说出来） | 你说出口的话 | 工具 |");
+    expect(prompts.client).toContain("| 说实话你就是太矫情了，我听着都烦。 | 伤害 2 次，到阈值，这一轮就结束 | 我想今天先到这里。 | 调用 `end_session` |");
+    expect(prompts.client).toContain("| 时间差不多了，今天先到这里，下次再聊。 | 伤害 0 次，正常收尾 | 好，谢谢你。 | 不调用 |");
+    // No bracketed judgement or "→ call" written next to a spoken line anywhere.
+    expect(prompts.client).not.toMatch(/^>?\s*(来访者|Client)\s*[:：].*(\[|→)/m);
+    expect(prompts.client).toContain("圆括号、方括号、尖括号都不行");
     expect(clientCheck).toBeGreaterThan(0);
     expect(clientCheck).toBeLessThan(prompts.client.indexOf("## 守住角色"));
     expect(prompts.client).toContain("不能「受伤但留下」");
-    expect(prompts.client).toContain("每一轮都调用 `end_session`");
     expect(prompts.client).toContain("第一轮只说来访理由");
     expect(prompts.client).not.toContain("（叹气）」）。");
     expect(prompts.supervisor).toContain("报告里不要出现任何编号");
