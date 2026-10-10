@@ -46,6 +46,8 @@ export interface AppDeps {
   now?: () => number;
   /** Tests inject a fake Slack here. Default: global fetch. */
   fetch?: FetchLike;
+  /** How long we wait for Slack. Default 5 s. */
+  slackTimeoutMs?: number;
   pingMs?: number;
 }
 
@@ -308,7 +310,7 @@ export function createApp(deps: AppDeps) {
       return c.body(null, 204);
     }
     try {
-      const status = await postToSlack(deps.fetch ?? fetch, config.feedbackWebhookUrl, slackMessage(body, new Date(deps.now?.() ?? Date.now())));
+      const status = await postToSlack(deps.fetch ?? fetch, config.feedbackWebhookUrl, slackMessage(body, new Date(deps.now?.() ?? Date.now())), deps.slackTimeoutMs);
       if (status >= 200 && status < 300) logger.info(log);
       else logger.error({ ...log, msg: "feedback dropped: slack error", status });
     } catch (err) {

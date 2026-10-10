@@ -120,8 +120,10 @@ The model adapters in `src/llm/` are copied from
 ## Report feedback
 
 `POST /feedback` takes a thumbs up or down on a report and an optional comment (≤ 500
-characters), never the conversation. We forward it to a private Slack channel: case id,
-language, rating, comment, time. We store nothing. The log carries the case id, language,
+characters). The conversation is never a field, though a user can paste text into the comment
+themselves. We forward it to a private Slack channel: case id, language, rating, comment (as
+plain text, so @here or links in it do nothing), time. Our server stores nothing; Slack keeps
+the message in that private channel. The log carries the case id, language,
 rating and the comment's length, never its text. If Slack fails, the app still gets `204`
 and we log `feedback dropped: slack error`.
 

@@ -1,6 +1,7 @@
 // POST /feedback: a thumbs up or down on a supervision report, with an optional comment.
-// No conversation, ever. We store nothing: the feedback goes to a private Slack channel through an
-// incoming webhook (FEEDBACK_SLACK_WEBHOOK_URL), or is dropped when that isn't set.
+// The conversation is never a field. Our server stores nothing: the feedback goes to a private Slack
+// channel through an incoming webhook (FEEDBACK_SLACK_WEBHOOK_URL), where Slack keeps the message,
+// or is dropped when that isn't set.
 import { z } from "zod";
 
 import { LocaleSchema, type Locale } from "./schema.js";
@@ -23,10 +24,14 @@ export type Feedback = z.infer<typeof FeedbackBody>;
 /** Slack reads &, < and > as markup (<!channel>, links); escape them so a comment stays text. */
 const escapeSlack = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-/** The Slack message: case id, language, rating, comment, time. Nothing else. */
+/**
+ * The Slack message: case id, language, rating, comment, time. Nothing else.
+ * The comment goes in a plain_text block: Slack shows it as typed, so @here, <!channel> or a
+ * bare link in it never pings anyone or turns into markup.
+ */
 export function slackMessage(f: Feedback & { locale: Locale }, at: Date) {
   const rating = f.rating === "up" ? "👍 up" : "👎 down";
-  const comment = f.comment ? escapeSlack(f.comment) : "_(no comment)_";
+  const comment = f.comment || "(no comment)";
   const when = at.toISOString();
   const caseId = escapeSlack(f.caseId);
   return {
@@ -41,7 +46,8 @@ export function slackMessage(f: Feedback & { locale: Locale }, at: Date) {
           { type: "mrkdwn", text: `*Time*\n${when}` },
         ],
       },
-      { type: "section", text: { type: "mrkdwn", text: `*Comment*\n${comment}` } },
+      { type: "section", text: { type: "mrkdwn", text: "*Comment*" } },
+      { type: "section", text: { type: "plain_text", text: comment, emoji: false } },
     ],
   };
 }

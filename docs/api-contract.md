@@ -66,13 +66,15 @@ Any message may come last, and a very short session still gets a report.
 ### `POST /feedback` → `204` (no body)
 
 Body: `{ caseId: string, locale: Locale, rating: "up" | "down", comment?: string }`. A rating of
-one supervision report. `comment` is at most 500 characters. No conversation: any other field
-is a 400. Same invite code and rate limit as the other endpoints (its own bucket).
+one supervision report. `comment` is at most 500 characters. The conversation is never sent as a
+field: any other field is a 400. (A user can still paste text from the session into the comment
+themselves, up to 500 characters.) Same invite code and rate limit as the other endpoints (its
+own bucket).
 
-`204` means we received it. We store nothing: the server forwards it to the team's private Slack
-channel, or drops it when that isn't set up. Delivery is best effort; the app shows "thanks"
-either way. Errors: `400 invalid_request`, `401 invite_required`, `404 case_not_found`,
-`429 rate_limited`.
+`204` means we received it. Our server stores nothing; it forwards the feedback to the team's
+private Slack channel, where Slack keeps the message (or drops it when that isn't set up).
+Delivery is best effort; the app shows "thanks" either way. Errors: `400 invalid_request`,
+`401 invite_required`, `404 case_not_found`, `429 rate_limited`.
 
 ## Stream format (both streaming endpoints)
 

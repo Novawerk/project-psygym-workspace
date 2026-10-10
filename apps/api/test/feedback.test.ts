@@ -95,10 +95,44 @@ describe("POST /feedback: delivery", () => {
     expect(all).toContain("en");
     expect(all).toContain("👎 down");
     expect(all).toContain("2026-10-17T09:30:00.000Z");
-    // The comment is there, as text: Slack markup is escaped, so <!channel> pings no one.
-    expect(all).toContain("这条评论不该出现在日志里 &lt;!channel&gt;");
-    expect(all).not.toContain("<!channel>");
+    // The comment is there as typed, in a plain_text block only: Slack shows it literally.
+    const blocks = sent[0]!.body.blocks as { text?: { type: string; text: string }; fields?: { type: string; text: string }[] }[];
+    const texts = blocks.flatMap((b) => [...(b.text ? [b.text] : []), ...(b.fields ?? [])]);
+    expect(texts.filter((t) => t.text.includes("这条评论"))).toEqual([{ type: "plain_text", text: SECRET, emoji: false }]);
     expect(lines.filter((l) => String(l.msg).startsWith("feedback"))).toEqual([{ msg: "feedback", caseId: CASE_ID, locale: "en", rating: "down", commentChars: [...SECRET].length }]);
+    expect(JSON.stringify(lines)).not.toContain("这条评论");
+  });
+
+  it("@here, <!channel> and links in a comment stay plain text", async () => {
+    const { app, sent } = makeApp({ FEEDBACK_SLACK_WEBHOOK_URL: HOOK });
+    const comment = "@here <!channel> <@U123> see https://example.com *bold*";
+    expect((await send(app, { ...ok, comment })).status).toBe(204);
+    const body = sent[0]!.body as unknown as { text: string; blocks: { text?: { type: string; text: string }; fields?: { type: string; text: string }[] }[] };
+    const parts = body.blocks.flatMap((b) => [...(b.text ? [b.text] : []), ...(b.fields ?? [])]);
+    for (const p of parts.filter((p) => p.type === "mrkdwn")) {
+      for (const bit of ["@here", "<!channel>", "<@U123>", "example.com"]) expect(p.text).not.toContain(bit);
+    }
+    expect(parts.find((p) => p.type === "plain_text")?.text).toBe(comment);
+    expect(body.text).not.toContain("@here");
+  });
+
+  it("Slack never answering → times out, still 204, dropped", async () => {
+    const lines: Record<string, unknown>[] = [];
+    const hang: FetchLike = (_url, init) =>
+      new Promise((_, reject) => init.signal?.addEventListener("abort", () => reject(init.signal?.reason), { once: true }));
+    const app = createApp({
+      config: loadConfig({ LLM_PROVIDER: "mock", FEEDBACK_SLACK_WEBHOOK_URL: HOOK }),
+      cases,
+      prompts,
+      logger: { info: (l) => lines.push(l), error: (l) => lines.push(l) },
+      fetch: hang,
+      slackTimeoutMs: 20,
+    });
+    const started = Date.now();
+    expect((await send(app, { ...ok, comment: SECRET })).status).toBe(204);
+    expect(Date.now() - started).toBeLessThan(2000);
+    const dropped = lines.find((l) => l.msg === "feedback dropped: slack error");
+    expect(dropped?.error).toMatch(/TimeoutError|DOMException/);
     expect(JSON.stringify(lines)).not.toContain("这条评论");
   });
 
