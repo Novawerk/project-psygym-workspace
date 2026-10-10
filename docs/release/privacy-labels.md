@@ -21,7 +21,7 @@
 **和文档不一致、要跟进的：**
 
 - main 上 App 还**没有**调用 `/feedback`，也还**没有**本机练习记录。下面的申报按功能上线以后的样子写。如果先发的 build 里没有这两项，申报可以少写，但不能多出代码里没有的东西。
-- `PrivacyInfo.xcprivacy` 的 `NSPrivacyCollectedDataTypes` 现在是空数组，要和下面的 Apple 申报对齐。已经告诉移动端。
+- `PrivacyInfo.xcprivacy` 在 #43 里改成申报 Other User Content，和下面的 Apple 申报一致。
 
 ## Apple · App Privacy（App Store Connect → App 隐私）
 
@@ -55,6 +55,8 @@ NSPrivacyCollectedDataTypes:
       Purposes: [NSPrivacyCollectedDataTypePurposeAppFunctionality]
 NSPrivacyAccessedAPITypes:
   - NSPrivacyAccessedAPICategoryUserDefaults: [CA92.1]   # 现有，保持
+  - NSPrivacyAccessedAPICategoryFileTimestamp: [C617.1]  # DataStore、练习记录读 App 容器内的文件时间
+  - NSPrivacyAccessedAPICategorySystemBootTime: [35F9.1] # 会谈计时用单调时钟
 ```
 
 **审核指南 5.1.2(i)：** 把个人数据发给第三方 AI 之前，要明确告诉用户并取得同意。我们第一次打开时有 O2「先说清楚」页，第 3 条说明对话会发给第三方 AI 模型服务，必须勾选才能继续。这一条满足要求，不要删。
