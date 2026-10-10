@@ -28,24 +28,24 @@ summary:
   zh: <一两句话，选病例前看到。不剧透核心信念。>
   en: <One or two sentences.>
 
-# ↓ 以下都是可选，App 的病例卡片和病例简介页会显示。不填就不显示。
+# ↓ 以下都是可选，App 的病例卡片和病例简介页会显示。不填就不显示。下面的值是示例，换成你的病例。
 # 这些都是选病例时、开始会谈前学员能看到的内容：不剧透核心信念，不剧透「不会轻易透露」的内容。
-tags:                            # 主题标签，1–3 个
+tags:                            # 主题标签，最多 3 个
   - zh: 抑郁
     en: Depression
 difficulty: intro                # intro 入门 / medium 中等 / hard 较难
 estimatedMinutes: 15             # 预计时长，分钟
 clientIntro:                     # 「来访者」卡片：化名、年龄、身份、一句来访理由。2–3 句。
-  zh: <例：小林，23 岁，毕业半年还没找到工作。家人劝来的，说「最近什么都不想做」。>
-  en: <Same in English.>
+  zh: 小林，23 岁，毕业半年还没找到工作。家人劝来的，说「最近什么都不想做」。
+  en: Xiao Lin, 23, still looking for work six months after graduating. Came because family insisted: "I don't feel like doing anything lately."
 practiceFocus:                   # 「这次练什么」：1–3 条，每条一个技术或动作
-  - zh: <例：建立关系>
-    en: <Building rapport>
-  - zh: <例：识别自动思维>
-    en: <Spotting automatic thoughts>
+  - zh: 建立关系
+    en: Building rapport
+  - zh: 识别自动思维
+    en: Spotting automatic thoughts
 contentNotes:                    # 内容提示。不填就用通用的：「可能涉及抑郁、焦虑和消极念头」
-  zh: <例：这场会谈可能涉及失业、家庭冲突和消极念头。>
-  en: <Same in English.>
+  zh: 这场会谈可能涉及失业、家庭冲突和消极念头。
+  en: This session may touch on unemployment, family conflict and dark thoughts.
 ---
 
 ## 来访者基本情况
@@ -100,7 +100,7 @@ contentNotes:                    # 内容提示。不填就用通用的：「可
 - 这些字段是学员**开始会谈前**就能看到的。只写公开信息：来访者自己第一次见面会说的事。核心信念、中间信念、「建立信任后才说」的内容都不要写进来。
 - `clientIntro` 像接案单上的一句话简介，不写诊断名，不写分析。
 - `practiceFocus` 用督导标准里「要看的点」的说法，方便和督导报告对上。
-- 英文可以先空着（写 `en: ""`），界面会显示中文。
+- 英文可以先空着（写 `en: ""`），包括 title 和 summary。空着时，App 英文界面会显示中文。
 
 **写完自查：**
 
