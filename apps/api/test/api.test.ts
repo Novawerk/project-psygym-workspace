@@ -157,12 +157,25 @@ describe("what the supervisor sees", () => {
 
   it("the prompts carry the quality rules", () => {
     expect(prompts.client).toContain("不用括号写旁白");
+    // Harmful remarks: belittling counts; count before replying; the threshold ends the session.
+    for (const s of ["贬低、嘲讽、不耐烦", "就这点事也值得来咨询？别人比你难多了。", "你就是太矫情了", "Other people have it much worse"]) {
+      expect(prompts.client).toContain(s);
+    }
+    const clientCheck = prompts.client.indexOf("## 每一轮回复前，先在心里做这个检查");
+    expect(clientCheck).toBeGreaterThan(0);
+    expect(clientCheck).toBeLessThan(prompts.client.indexOf("## 守住角色"));
+    expect(prompts.client).toContain("不能「受伤但留下」");
+    expect(prompts.client).toContain("每一轮都调用 `end_session`");
+    expect(prompts.client).toContain("第一轮只说来访理由");
     expect(prompts.client).not.toContain("（叹气）」）。");
     expect(prompts.supervisor).toContain("报告里不要出现任何编号");
     expect(prompts.supervisor).toContain("不提病例设定");
     expect(prompts.supervisor).toContain("一律用「来访者」");
     expect(prompts.supervisor).toContain("都必须是 `<transcript>` 里逐字出现过的话");
     expect(prompts.supervisor).toContain("不算引用");
+    expect(prompts.supervisor).toContain("「」/ “” 只用于逐字引用对话原话");
+    expect(prompts.supervisor).toContain("英文报告里不用「」");
+    expect(prompts.supervisor).toContain("必须**跟在「可以换成：」");
     // The risk-screening check is the first rule, before the transcript note and the structure,
     // and the structure repeats it.
     const check = prompts.supervisor.indexOf("## 第一条规则：写报告前先做风险筛查检查");
