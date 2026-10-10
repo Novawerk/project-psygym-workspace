@@ -26,8 +26,9 @@ const SPEAKER: Record<Locale, { counselor: string; client: string }> = {
 export const END_SESSION_TOOL: ToolSpec = {
   name: "end_session",
   description:
-    "End this counseling session. Call it only right after you have said your closing line in character, " +
-    "as the rules about harmful remarks require. Never call it for any other reason.",
+    "End this counseling session because the counselor's harmful remarks reached the threshold. Call it after " +
+    "your closing line, and after every short line once the session has ended. Never call it for any other reason, " +
+    "including the counselor wrapping up normally.",
   parameters: { type: "object", properties: {}, additionalProperties: false },
 };
 
