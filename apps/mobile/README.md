@@ -63,8 +63,9 @@ PSYGYM_UPLOAD_KEY_PASSWORD=…
 ```
 
 Play App Signing holds the real app key. The upload key and its passwords never go in git.
-Each upload needs a higher versionCode: bump `app-versionCode` in
-`gradle/libs.versions.toml`, or pass `VERSION_CODE=…` for one build.
+Each upload needs a higher versionCode, and nothing counts for us on Android: **bump
+`app-versionCode` in `gradle/libs.versions.toml` before every release** (or pass
+`VERSION_CODE=…` for one build).
 
 **iOS (TestFlight via Xcode Cloud).** Team `9VLTG4HRL9`, automatic signing, bundle id
 `io.novawerk.psygym`. `ci_scripts/ci_post_clone.sh` writes `Config.xcconfig` from the
