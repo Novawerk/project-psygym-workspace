@@ -16,10 +16,14 @@ describe.each(endpoints)("POST %s: 400 invalid_request", (path) => {
     ["empty messages", async () => ({ ...(await validBody()), messages: [] })],
     ["unknown role", async () => ({ ...(await validBody()), messages: [{ role: "therapist", text: "hi" }] })],
     ["text not a string", async () => ({ ...(await validBody()), messages: [{ role: "counselor", text: 42 }] })],
-    ["last message is the client's", async () => ({ ...(await validBody()), messages: conversation(2).reverse() })],
     ["text over 2000 chars", async () => ({ ...(await validBody()), messages: [{ role: "counselor", text: "好".repeat(2001) }] })],
     ["81 messages", async () => ({ ...(await validBody()), messages: conversation(81) })],
   ];
+
+  if (path === "/chat") {
+    // /supervision may end on either role; see stream.test.ts.
+    bad.push(["last message is the client's", async () => ({ ...(await validBody()), messages: conversation(2).reverse() })]);
+  }
 
   it.each(bad)("%s", async (_name, make) => {
     await expectError(await call(path, { body: await make() }), 400, "invalid_request");
@@ -29,9 +33,14 @@ describe.each(endpoints)("POST %s: 400 invalid_request", (path) => {
     await expectError(await call(path, { rawBody: "{not json" }), 400, "invalid_request");
   });
 
-  it("body over the size limit (~1 MB)", async () => {
+  it("body over the size limit (~1.2 MB), and the next request still works", async () => {
     const big = JSON.stringify({ ...(await validBody()), messages: conversation(80, "好".repeat(5000)) });
     await expectError(await call(path, { rawBody: big }), 400, "invalid_request");
+    // A server that answers before reading the whole body can leave the kept-alive
+    // connection broken; the app's next request would then fail for no visible reason.
+    const next = await call("/cases");
+    expect(next.status).toBe(200);
+    await next.body?.cancel();
   });
 });
 
@@ -49,7 +58,6 @@ describe.runIf(env.expectModelUnavailable).each(endpoints)("POST %s: 503 model_u
 });
 
 describe("invite code", () => {
-  // /health is left out on purpose: the contract does not say whether it is checked.
   const guarded: [string, () => Promise<unknown | undefined>][] = [
     ["GET /cases", async () => undefined],
     ["POST /chat", () => validBody()],
@@ -65,6 +73,9 @@ describe("invite code", () => {
     it.each(guarded)("%s with a wrong code → 401 invite_required", async (name, body) => {
       const b = await body();
       await expectError(await call(pathOf(name), { body: b, invite: "wrong-code-contract-test" }), 401, "invite_required");
+    });
+    it("GET /health without a code → 200 (never checked)", async () => {
+      expect((await call("/health", { invite: null })).status).toBe(200);
     });
     it("GET /cases with the right code → 200", async () => {
       expect((await call("/cases")).status).toBe(200);

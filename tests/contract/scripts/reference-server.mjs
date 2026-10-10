@@ -25,13 +25,18 @@ const FAULT_STATUS = {
   rate_limited: 429,
   model_unavailable: 503,
 };
+if (FAULT && !(FAULT in FAULT_STATUS) && !["stream_error", "slow", "hang"].includes(FAULT)) {
+  console.error(`unknown FAULT=${FAULT}`);
+  process.exit(1);
+}
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const CHAT_REPLY = "嗯……最近总是睡不好，早上起来也没什么力气。我也说不清楚为什么。";
 const REPORT = [
   "## 做得好的地方\n\n- 开场问题开放，给了来访者空间。\n\n",
-  "## 可以改进的地方\n\n- 你说「你应该多出去走走」，这是建议，不是探索。\n\n",
-  "## 下次练习\n\n1. 多用情感反映。\n2. 先问具体情境，再问想法。\n",
+  "## 需要改进的地方\n\n- 你说「你应该多出去走走」，这是建议，不是探索。可以换成：「出门这件事，对你来说难在哪里？」\n\n",
+  "## 下次练什么\n\n1. 多用情感反映。\n2. 先问具体情境，再问想法。\n\n",
+  "这份反馈由 AI 生成，仅供练习参考。\n",
 ].join("");
 
 const CASES = [
@@ -51,7 +56,7 @@ function json(res, status, body, headers = {}) {
 }
 const fail = (res, status, code, headers) => json(res, status, { error: { code, message: code } }, headers);
 
-function valid(b) {
+function valid(b, path) {
   if (!b || typeof b !== "object" || Array.isArray(b)) return false;
   if (typeof b.caseId !== "string" || !["zh", "en"].includes(b.locale)) return false;
   const m = b.messages;
@@ -59,7 +64,8 @@ function valid(b) {
   for (const x of m) {
     if (!x || !["counselor", "client"].includes(x.role) || typeof x.text !== "string" || x.text.length > 2000) return false;
   }
-  return m[m.length - 1].role === "counselor";
+  // Only /chat needs the counselor's line last.
+  return path !== "/chat" || m[m.length - 1].role === "counselor";
 }
 
 createServer(async (req, res) => {
@@ -97,7 +103,7 @@ createServer(async (req, res) => {
   } catch {
     return fail(res, 400, "invalid_request");
   }
-  if (!valid(body)) return fail(res, 400, "invalid_request");
+  if (!valid(body, url.pathname)) return fail(res, 400, "invalid_request");
   if (!CASES.some((c) => c.id === body.caseId)) return fail(res, 404, "case_not_found");
   if (FAULT_STATUS[FAULT]) {
     return fail(res, FAULT_STATUS[FAULT], FAULT, FAULT === "rate_limited" ? { "retry-after": "30" } : {});
@@ -125,4 +131,4 @@ createServer(async (req, res) => {
   }
   send({ type: "turn_end", usage: { inputTokens: 1, outputTokens: pieces.length } });
   res.end();
-}).listen(PORT, () => console.log(`reference server on http://localhost:${PORT}${FAULT ? ` (FAULT=${FAULT})` : ""}`));
+}).listen(PORT, "127.0.0.1", () => console.log(`reference server on http://127.0.0.1:${PORT}${FAULT ? ` (FAULT=${FAULT})` : ""}`));
