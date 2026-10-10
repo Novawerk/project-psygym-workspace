@@ -19,7 +19,7 @@
 
 TestFlight 的 Beta App Review、App Store 审核、Play 的 App access 都可以用这段。邀请码由用户在后台填，不写进这里。
 
-> **What this app is.** PSYGYM is a training tool for counseling students and new counselors. It is not a therapy or mental-health app for patients, and it gives no diagnosis or treatment. An AI plays a fictional client with depression or anxiety; the trainee practises a counseling session; afterwards an AI supervisor gives feedback on the trainee's technique.
+> **What this app is.** 聆镜 PSYGYM is a training tool for counseling students and new counselors. It is not a therapy or mental-health app for patients, and it gives no diagnosis or treatment. An AI plays a fictional client with depression or anxiety; the trainee practises a counseling session; afterwards an AI supervisor gives feedback on the trainee's technique.
 >
 > **How to test.**
 > 1. On first launch, read the "Before we start" page and tick the box. (It explains that this is not therapy, the clients are fictional, and the conversation is sent to a third-party AI model.)

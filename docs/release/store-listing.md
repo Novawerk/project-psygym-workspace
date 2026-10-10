@@ -53,7 +53,7 @@
 
 **Description · English**
 
-> PSYGYM is a practice tool for new counselors.
+> 聆镜 PSYGYM is a practice tool for new counselors.
 >
 > Practice and supervision are both hard to get. We let you hold a session with an AI client any time, and get supervision feedback right after.
 >
@@ -74,7 +74,7 @@
 > · Please don't enter real client information.
 > · The feedback is AI-generated, for practice only. It is not an assessment and not clinical advice.
 >
-> PSYGYM is made by the 聆镜 (Lingjing) team and Novawerk. The code and docs are open on GitHub under the MIT licence.
+> 聆镜 PSYGYM is made by the 聆镜 (Lingjing) team and Novawerk. The code and docs are open on GitHub under the MIT licence.
 
 **其他字段**
 

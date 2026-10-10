@@ -79,7 +79,7 @@ AI 来访者在任何情况下都不：给出伤害自己或他人的方法；�
 
 > 聆镜 PSYGYM 是给咨询师的练习工具。来访者由 AI 扮演，全部是虚构的。这不是心理治疗。
 >
-> PSYGYM is a practice tool for counselors. An AI plays the client. Every client is fictional. This is not therapy.
+> 聆镜 PSYGYM is a practice tool for counselors. An AI plays the client. Every client is fictional. This is not therapy.
 
 **第一次打开（完整版，Onboarding「先说清楚」页，需要勾选同意）**
 
