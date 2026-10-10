@@ -4,6 +4,7 @@
 //   GET  /cases        → {"cases": CaseSummary[]}
 //   POST /chat         → text/event-stream, the AI client's reply
 //   POST /supervision  → text/event-stream, one supervision report in Markdown
+//   POST /feedback     → 204, a rating of the report, forwarded to Slack (or dropped)
 //
 // Stateless. We store no transcript, and the log never carries message text.
 import { Hono, type Context } from "hono";
@@ -15,6 +16,7 @@ import type { AppConfig, Role } from "./config.js";
 import { publicSummary, type Case, type Prompts } from "./content.js";
 import { createProvider, type ModelProvider } from "./llm/index.js";
 import type { ModelRequest } from "./llm/types.js";
+import { FeedbackBody, postToSlack, slackMessage, type FetchLike } from "./feedback.js";
 import { FixedWindowLimiter, clientIp } from "./rate-limit.js";
 import { ChatBody, SupervisionBody, type ErrorCode, type Locale, type StreamEvent } from "./schema.js";
 import { FAREWELL, clientRequest, endsSession, supervisorRequest } from "./session.js";
@@ -42,6 +44,8 @@ export interface AppDeps {
   providerFor?: (role: Role) => ModelProvider;
   logger?: Logger;
   now?: () => number;
+  /** Tests inject a fake Slack here. Default: global fetch. */
+  fetch?: FetchLike;
   pingMs?: number;
 }
 
@@ -112,6 +116,8 @@ export function createApp(deps: AppDeps) {
   const logger = deps.logger ?? consoleLogger;
   const pingMs = deps.pingMs ?? PING_MS;
   const limiter = new FixedWindowLimiter(config.rateLimit.max, config.rateLimit.windowMs, deps.now);
+  // Feedback has its own bucket: rating a report never eats into chat turns.
+  const feedbackLimiter = new FixedWindowLimiter(config.rateLimit.max, config.rateLimit.windowMs, deps.now);
 
   const providers = new Map<Role, ModelProvider>();
   function providerFor(role: Role): ModelProvider | string {
@@ -156,32 +162,43 @@ export function createApp(deps: AppDeps) {
     c.json({ cases: [...cases.values()].map(publicSummary) }),
   );
 
+  /** 429 with Retry-After when this caller (invite code, else IP) is over the limit. */
+  function rateLimited(c: Context, l: FixedWindowLimiter): Response | null {
+    const key = config.inviteCodes ? `invite:${c.req.header("x-invite-code")?.trim()}` : `ip:${clientIp(c)}`;
+    const retryAfter = l.take(key);
+    if (!retryAfter) return null;
+    c.header("Retry-After", String(retryAfter));
+    return fail(c, 429, "rate_limited");
+  }
+
+  /** The body, parsed and validated; or the 400 to send back. */
+  async function readJson<T>(c: Context, schema: z.ZodType<T>): Promise<T | Response> {
+    const read = await readBody(c.req.raw);
+    if (read.tooLarge) {
+      // Drained: the keep-alive connection stays usable. Not drained: close it.
+      if (!read.drained) c.header("Connection", "close");
+      return fail(c, 400, "invalid_request", "The request body is too large.");
+    }
+    let raw: unknown;
+    try {
+      raw = JSON.parse(read.text);
+    } catch {
+      raw = undefined;
+    }
+    const parsed = schema.safeParse(raw);
+    if (!parsed.success) return fail(c, 400, "invalid_request", parsed.error.issues[0]?.message ?? MESSAGES.invalid_request);
+    return parsed.data;
+  }
+
   function streamingRoute(path: string, role: Role, schema: typeof ChatBody | typeof SupervisionBody, build: typeof clientRequest) {
     app.post(
       path,
       async (c) => {
-        const key = config.inviteCodes ? `invite:${c.req.header("x-invite-code")?.trim()}` : `ip:${clientIp(c)}`;
-        const retryAfter = limiter.take(key);
-        if (retryAfter) {
-          c.header("Retry-After", String(retryAfter));
-          return fail(c, 429, "rate_limited");
-        }
-
-        const read = await readBody(c.req.raw);
-        if (read.tooLarge) {
-          // Drained: the keep-alive connection stays usable. Not drained: close it.
-          if (!read.drained) c.header("Connection", "close");
-          return fail(c, 400, "invalid_request", "The request body is too large.");
-        }
-        let raw: unknown;
-        try {
-          raw = JSON.parse(read.text);
-        } catch {
-          raw = undefined;
-        }
-        const parsed = (schema as z.ZodType<z.infer<typeof ChatBody>>).safeParse(raw);
-        if (!parsed.success) return fail(c, 400, "invalid_request", parsed.error.issues[0]?.message ?? MESSAGES.invalid_request);
-        const { caseId, locale, messages } = parsed.data;
+        const limited = rateLimited(c, limiter);
+        if (limited) return limited;
+        const body = await readJson(c, schema as z.ZodType<z.infer<typeof ChatBody>>);
+        if (body instanceof Response) return body;
+        const { caseId, locale, messages } = body;
 
         const theCase = cases.get(caseId);
         if (!theCase) return fail(c, 404, "case_not_found");
@@ -275,6 +292,30 @@ export function createApp(deps: AppDeps) {
       }
     });
   }
+
+  // POST /feedback → 204. Delivery to Slack is best effort: the app never waits on Slack's mood.
+  // The log carries case id, language, rating and comment length, never the comment.
+  app.post("/feedback", async (c) => {
+    const limited = rateLimited(c, feedbackLimiter);
+    if (limited) return limited;
+    const body = await readJson(c, FeedbackBody);
+    if (body instanceof Response) return body;
+    if (!cases.has(body.caseId)) return fail(c, 404, "case_not_found");
+
+    const log = { msg: "feedback", caseId: body.caseId, locale: body.locale, rating: body.rating, commentChars: [...(body.comment ?? "")].length };
+    if (!config.feedbackWebhookUrl) {
+      logger.info({ ...log, msg: "feedback dropped: not configured" });
+      return c.body(null, 204);
+    }
+    try {
+      const status = await postToSlack(deps.fetch ?? fetch, config.feedbackWebhookUrl, slackMessage(body, new Date(deps.now?.() ?? Date.now())));
+      if (status >= 200 && status < 300) logger.info(log);
+      else logger.error({ ...log, msg: "feedback dropped: slack error", status });
+    } catch (err) {
+      logger.error({ ...log, msg: "feedback dropped: slack error", ...describe(err) });
+    }
+    return c.body(null, 204);
+  });
 
   streamingRoute("/chat", "client", ChatBody, clientRequest);
   streamingRoute("/supervision", "supervisor", SupervisionBody, supervisorRequest);

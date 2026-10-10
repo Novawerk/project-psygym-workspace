@@ -54,6 +54,7 @@ Blank values count as unset. `apps/api/.env` is read on start; shell variables w
 | `INVITE_CODES` | — | Comma-separated. When set, every request but `/health` needs `X-Invite-Code` with one of them. |
 | `RATE_LIMIT_MAX` | `30` | `/chat` + `/supervision` requests per key per window. Key: the invite code, else the IP. |
 | `RATE_LIMIT_WINDOW_SEC` | `60` | Window length. Over the limit → 429 `rate_limited` with `Retry-After`. |
+| `FEEDBACK_SLACK_WEBHOOK_URL` | — | Slack incoming webhook (https) for `POST /feedback`. Unset → feedback is dropped (still 204) with a `feedback dropped: not configured` log line. |
 | `PORT` | `8787` | Local server only. |
 
 A role with no provider, or no key for its provider, answers 503 `model_unavailable`. So does
@@ -115,6 +116,14 @@ versions replace them (issues #1, #2).
 
 The model adapters in `src/llm/` are copied from
 [Novawerk/agent-starter](https://github.com/Novawerk/agent-starter) (MIT); each file says so.
+
+## Report feedback
+
+`POST /feedback` takes a thumbs up or down on a report and an optional comment (≤ 500
+characters), never the conversation. We forward it to a private Slack channel: case id,
+language, rating, comment, time. We store nothing. The log carries the case id, language,
+rating and the comment's length, never its text. If Slack fails, the app still gets `204`
+and we log `feedback dropped: slack error`.
 
 ## Deploy (Vercel)
 

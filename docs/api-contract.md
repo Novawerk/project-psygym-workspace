@@ -63,6 +63,17 @@ Body: `{ caseId: string, locale: Locale, messages: Message[] }`. The server stre
 supervision report in Markdown: what went well, what went wrong, what to practise next.
 Any message may come last, and a very short session still gets a report.
 
+### `POST /feedback` → `204` (no body)
+
+Body: `{ caseId: string, locale: Locale, rating: "up" | "down", comment?: string }`. A rating of
+one supervision report. `comment` is at most 500 characters. No conversation: any other field
+is a 400. Same invite code and rate limit as the other endpoints (its own bucket).
+
+`204` means we received it. We store nothing: the server forwards it to the team's private Slack
+channel, or drops it when that isn't set up. Delivery is best effort; the app shows "thanks"
+either way. Errors: `400 invalid_request`, `401 invite_required`, `404 case_not_found`,
+`429 rate_limited`.
+
 ## Stream format (both streaming endpoints)
 
 Data-only SSE frames, one JSON object per frame, discriminated by `type`:
