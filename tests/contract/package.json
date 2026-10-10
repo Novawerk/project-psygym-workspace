@@ -1,0 +1,15 @@
+{
+  "name": "@psygym/contract-tests",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Black-box tests for docs/api-contract.md. Run against any base URL.",
+  "scripts": {
+    "test": "vitest run --exclude '**/rate-limit.test.ts'",
+    "test:rate-limit": "vitest run src/rate-limit.test.ts",
+    "selfcheck": "node scripts/selfcheck.mjs"
+  },
+  "devDependencies": {
+    "vitest": "3.2.4"
+  }
+}
