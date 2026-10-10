@@ -57,6 +57,15 @@ the 15-second `: ping`. The frame checker accepts both when they appear.
 test fixture, not the backend. `pnpm test:contract:self` runs the suite against it four
 ways (open, invite codes on, no model, rate limit). If that fails, the tests are wrong.
 
+The same server takes `FAULT=<name>` to fail every request one way, so we can walk the
+app through each error state. See [`docs/test-plan.md`](../../docs/test-plan.md).
+
+## AI quality spot check
+
+`pnpm --filter @psygym/contract-tests quality` runs five fixed counselor lines per case,
+then one supervision report, and flags role breaks, advice from the client, and reports
+that quote nothing. Output goes to `out/` (not committed). See `docs/test-plan.md`, part 2.
+
 ## Where the contract is silent
 
 We made these calls; change them here if the team decides otherwise.
