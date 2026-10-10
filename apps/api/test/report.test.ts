@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { createApp, type Logger } from "../src/app.js";
 import { loadConfig } from "../src/config.js";
 import { loadCases, loadPrompts } from "../src/content.js";
-import type { FetchLike } from "../src/feedback.js";
+import { SLACK_TEXT_MAX, fitSlack, type FetchLike } from "../src/feedback.js";
 import { REPORT_REASONS } from "../src/report.js";
 
 const cases = loadCases();
@@ -190,5 +190,37 @@ describe("POST /report: access", () => {
     });
     expect(chat.status).toBe(200);
     await chat.text();
+  });
+});
+
+describe("Slack's 3000-character section limit", () => {
+  it("2000 emoji (4000 UTF-16 units) are cut to fit, marked, never splitting an emoji", async () => {
+    const { app, sent } = makeApp({ FEEDBACK_SLACK_WEBHOOK_URL: HOOK });
+    const emoji = "😀".repeat(2000);
+    expect((await send(app, { ...ok, reportedText: emoji })).status).toBe(204);
+    const plain = sent[0]!.body.blocks.flatMap((b) => (b.text?.type === "plain_text" ? [b.text.text] : []));
+    const text = plain.find((t) => t.startsWith("😀"))!;
+    expect(text.length).toBeLessThanOrEqual(SLACK_TEXT_MAX);
+    expect(text.endsWith("…（已截断）")).toBe(true);
+    const body = text.slice(0, -"…（已截断）".length);
+    expect(body).toBe("😀".repeat(body.length / 2)); // whole emoji only, no lone surrogate
+    // Every block stays under Slack's limit.
+    for (const b of sent[0]!.body.blocks) if (b.text) expect(b.text.text.length).toBeLessThanOrEqual(3000);
+  });
+
+  it("2000 CJK characters fit as they are", async () => {
+    const { app, sent } = makeApp({ FEEDBACK_SLACK_WEBHOOK_URL: HOOK });
+    const text = "长".repeat(2000);
+    expect((await send(app, { ...ok, reportedText: text })).status).toBe(204);
+    expect(JSON.stringify(sent[0]!.body)).toContain(text);
+    expect(JSON.stringify(sent[0]!.body)).not.toContain("已截断");
+  });
+
+  it("fitSlack keeps a surrogate pair whole at the cut", () => {
+    const t = "a" + "😀".repeat(10); // the cut at an odd offset would land inside an emoji
+    const out = fitSlack(t, 12);
+    expect(out.endsWith("…（已截断）")).toBe(true);
+    expect(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/.test(out)).toBe(false);
+    expect(out.length).toBeLessThanOrEqual(12);
   });
 });

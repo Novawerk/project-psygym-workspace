@@ -52,9 +52,9 @@ Blank values count as unset. `apps/api/.env` is read on start; shell variables w
 | `CLIENT_LLM_PROVIDER` / `_MODEL` / `_BASE_URL` | — | Override for the AI client. |
 | `SUPERVISOR_LLM_PROVIDER` / `_MODEL` / `_BASE_URL` | — | Override for the AI supervisor. |
 | `INVITE_CODES` | — | Comma-separated. When set, every request but `/health` needs `X-Invite-Code` with one of them. |
-| `RATE_LIMIT_MAX` | `30` | `/chat` + `/supervision` requests per key per window. Key: the invite code, else the IP. |
+| `RATE_LIMIT_MAX` | `30` | `/chat` + `/supervision` requests per key per window; `/feedback` and `/report` each have their own bucket of the same size. Key: the invite code, else the IP. |
 | `RATE_LIMIT_WINDOW_SEC` | `60` | Window length. Over the limit → 429 `rate_limited` with `Retry-After`. |
-| `FEEDBACK_SLACK_WEBHOOK_URL` | — | Slack incoming webhook (https) for `POST /feedback` and `POST /report`. Unset → feedback is dropped (still 204) with a `feedback dropped: not configured` log line. |
+| `FEEDBACK_SLACK_WEBHOOK_URL` | — | Slack incoming webhook (https) for `POST /feedback` and `POST /report`. Unset → feedback and reports are dropped (still 204) with a `feedback dropped: not configured` / `report dropped: not configured` log line. |
 | `PORT` | `8787` | Local server only. |
 
 A role with no provider, or no key for its provider, answers 503 `model_unavailable`. So does
