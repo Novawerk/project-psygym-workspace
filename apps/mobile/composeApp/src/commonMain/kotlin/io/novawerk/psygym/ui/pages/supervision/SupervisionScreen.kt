@@ -95,8 +95,16 @@ fun SupervisionScreen(
         }
     }
     var confirmHome by rememberSaveable { mutableStateOf(false) }
-    // No back arrow; back = home, after a confirmation.
-    BackHandler { confirmHome = true }
+    // Home, after a confirmation when leaving would lose the report.
+    val leave = {
+        if (viewModel.leaveNeedsConfirm) {
+            confirmHome = true
+        } else {
+            onHome()
+        }
+    }
+    // No back arrow; back = home.
+    BackHandler { leave() }
     val scroll = rememberScrollState()
 
     Scaffold(
@@ -118,7 +126,7 @@ fun SupervisionScreen(
                     PrimaryButton(stringResource(Res.string.supervision_again), onPracticeAgain)
                     SecondaryButton(stringResource(Res.string.supervision_other_case), onOtherCase)
                 }
-                TextButton(onClick = { confirmHome = true }) {
+                TextButton(onClick = leave) {
                     Text(stringResource(Res.string.supervision_home), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }

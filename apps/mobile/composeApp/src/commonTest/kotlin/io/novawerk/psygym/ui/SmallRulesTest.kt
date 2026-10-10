@@ -18,6 +18,11 @@ class SmallRulesTest {
     }
 
     @Test
+    fun inviteCodesLoseWhitespace() {
+        assertEquals("testcode1", io.novawerk.psygym.domain.settings.normalizeInviteCode(" test code1\n"))
+    }
+
+    @Test
     fun nextPracticeTakesTheFirstItemOfThatSection() {
         val zh = "## 做得好的地方\n\n- 开放\n\n## 下次练什么\n\n1. 用苏格拉底式提问\n2. 设定议程\n"
         assertEquals("用苏格拉底式提问", nextPractice(zh))

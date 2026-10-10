@@ -123,6 +123,7 @@
     <string name="settings_language_system">跟随系统</string>
     <string name="settings_language_zh">中文</string>
     <string name="settings_language_en">English</string>
+    <string name="settings_language_note">如果在手机的系统设置里给这个 App 单独设了语言，以系统设置为准。</string>
     <string name="settings_invite">邀请码</string>
     <string name="settings_invite_hint">输入邀请码</string>
     <string name="settings_invite_desc">邀请码由聆镜团队发放，用来连接我们的服务器。</string>
@@ -131,6 +132,8 @@
     <string name="settings_help_section">帮助</string>
     <string name="settings_replay_onboarding">重新看引导</string>
     <string name="settings_privacy">隐私说明</string>
+    <string name="settings_about_app">关于聆镜 PSYGYM</string>
+    <string name="about_body">聆镜 PSYGYM 是给新手咨询师的练习工具，由聆镜团队和 Novawerk 一起做。</string>
     <string name="settings_debug">开发者</string>
     <string name="settings_fake_api">使用演示数据</string>
     <string name="settings_fake_api_desc">假病例、假回复，不需要服务器。仅调试版可见。</string>
