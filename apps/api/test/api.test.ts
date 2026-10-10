@@ -260,10 +260,12 @@ describe("public case fields", () => {
     );
     expect(c.difficulty).toBeUndefined();
     expect(c.estimatedMinutes).toBeUndefined();
-    expect(c.practiceFocus).toBeUndefined();
+    // Too many entries: the first 3 stay (same rule as tags).
+    expect(c.practiceFocus?.map((p) => p.zh)).toEqual(["一", "二", "三"]);
     expect(c.clientIntro).toBeUndefined();
     expect(c.tags).toEqual([{ zh: "抑郁", en: "Depression" }]);
     expect(warnings.map((w) => w.split(":")[1]!.trim().split(" ")[0])).toEqual(["difficulty", "estimatedMinutes", "clientIntro", "practiceFocus"]);
+    expect(warnings.at(-1)).toBe("x.md: practiceFocus has 4 entries; keeping the first 3");
   });
 
   it("a bad required field still stops the case from loading (zh is required)", () => {
@@ -285,6 +287,36 @@ describe("public case fields", () => {
     expect(c.practiceFocus).toEqual([{ zh: "建立关系", en: "建立关系" }]);
     expect(c.tags).toEqual([{ zh: "抑郁", en: "抑郁" }]);
     expect(warnings).toEqual([]);
+  });
+
+  it("a bad entry in a list is dropped on its own; the rest stay", () => {
+    const { c, warnings } = parse(
+      "tags:\n  - {zh: '', en: Empty}\n  - {zh: 抑郁}\n  - 42\n  - {zh: 焦虑}\n" +
+        "practiceFocus:\n  - {en: English only}\n  - {zh: 建立关系}\n",
+    );
+    expect(c.tags?.map((t) => t.zh)).toEqual(["抑郁", "焦虑"]);
+    expect(c.practiceFocus?.map((t) => t.zh)).toEqual(["建立关系"]);
+    expect(warnings).toEqual([
+      "x.md: tags[0] is invalid and left out",
+      "x.md: tags[2] is invalid and left out",
+      "x.md: practiceFocus[0] is invalid and left out",
+    ]);
+  });
+
+  it("a list with no good entry is left out", () => {
+    const { c, warnings } = parse("tags:\n  - {en: x}\n");
+    expect(c.tags).toBeUndefined();
+    expect(warnings).toEqual(["x.md: tags[0] is invalid and left out", "x.md: tags is invalid and left out (Too small: expected array to have >=1 items)"]);
+  });
+
+  it("estimatedMinutes takes numbers and digit strings only", () => {
+    expect(parse("estimatedMinutes: 15\n").c.estimatedMinutes).toBe(15);
+    expect(parse('estimatedMinutes: " 20 "\n').c.estimatedMinutes).toBe(20);
+    for (const bad of ["true", "'1e1'", "'15 min'", "1.5", "''"]) {
+      const { c, warnings } = parse(`estimatedMinutes: ${bad}\n`);
+      expect(c.estimatedMinutes, bad).toBeUndefined();
+      expect(warnings[0], bad).toMatch(/estimatedMinutes is invalid/);
+    }
   });
 
   it("more than 3 tags: the first 3 stay, with a warning", () => {
