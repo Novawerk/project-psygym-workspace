@@ -17,9 +17,12 @@ tags:
     en: Work stress
 difficulty: 中等
 estimatedMinutes: 20
+clientAlias:
+  zh: 阿杰
+  en: Jie
 clientIntro:
-  zh: （占位）陈先生，31 岁，程序员，组里的小组长。妻子劝他来的。
-  en: (Placeholder) Mr Chen, 31, a developer who leads a small team. His wife talked him into coming.
+  zh: （占位）阿杰，31 岁，程序员，组里的小组长。妻子劝他来的。
+  en: (Placeholder) Jie, 31, a developer who leads a small team. His wife talked him into coming.
 practiceFocus:
   - zh: 情绪识别
     en: Naming feelings
@@ -35,7 +38,7 @@ contentNotes:
 <!-- 占位病例：开发团队写的，只为跑通流程，不是临床内容。聆镜团队的正式病例到了以后替换（GitHub issue #2）。 -->
 
 ## 来访者基本情况
-- 化名：陈先生，31 岁，男，互联网公司后端工程师，组里的小组长。
+- 化名：阿杰，31 岁，男，互联网公司后端工程师，组里的小组长。
 - 已婚，没有孩子，和妻子住。
 - 妻子劝他来的。他自己觉得「可能就是累了」。
 

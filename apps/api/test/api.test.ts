@@ -148,6 +148,24 @@ describe("what the supervisor sees", () => {
     }
   });
 
+  it("the alias reaches the client (its own name), never the supervisor", async () => {
+    for (const c of cases.values()) {
+      expect(c.clientAlias, c.id).toBeDefined();
+      for (const locale of ["zh", "en"] as const) {
+        const mock = new MockProvider([
+          () => ({ text: "嗯", toolCalls: [] }),
+          () => ({ text: "ok", toolCalls: [] }),
+        ]);
+        const { app } = makeApp(undefined, { providerFor: () => mock });
+        await (await post(app, "/chat", body({ caseId: c.id, locale }))).text();
+        await (await post(app, "/supervision", body({ caseId: c.id, locale }))).text();
+        expect(mock.requests[0]!.system).toContain(c.clientAlias![locale]);
+        const sup = mock.requests[1]!.system + JSON.stringify(mock.requests[1]!.messages);
+        for (const l of ["zh", "en"] as const) expect(sup, `${c.id} ${l}`).not.toContain(c.clientAlias![l]);
+      }
+    }
+  });
+
   it("the client keeps the provider's default temperature", async () => {
     const mock = new MockProvider([() => ({ text: "嗯", toolCalls: [] })]);
     const { app } = makeApp(undefined, { providerFor: () => mock });

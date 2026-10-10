@@ -15,6 +15,9 @@ tags:
     en: Job search
 difficulty: 入门
 estimatedMinutes: 15
+clientAlias:
+  zh: 小林
+  en: Lin
 clientIntro:
   zh: （占位）小林，23 岁，去年毕业，正在找工作。自己预约的第一次咨询。
   en: (Placeholder) Xiao Lin, 23, graduated last year and is looking for work. Booked this first session herself.

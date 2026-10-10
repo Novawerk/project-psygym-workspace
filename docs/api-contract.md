@@ -31,6 +31,7 @@ type CaseSummary = {
   tags?: LocalizedText[];                       // 1–3, e.g. depression, anxiety
   difficulty?: "intro" | "medium" | "hard";
   estimatedMinutes?: number;                    // whole minutes, 1–180
+  clientAlias?: LocalizedText;                  // the client's pseudonym, e.g. 小林 / Lin
   clientIntro?: LocalizedText;                  // pseudonym, age, role, why they came; no spoilers
   practiceFocus?: LocalizedText[];              // 1–3 things to practise
   contentNotes?: LocalizedText;                 // content note; the app has a generic fallback

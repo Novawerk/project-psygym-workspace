@@ -20,7 +20,7 @@ describe("GET /cases", () => {
     expect(json.cases.length).toBeGreaterThan(0);
 
     const required = ["id", "school", "summary", "title"];
-    const optional = ["tags", "difficulty", "estimatedMinutes", "clientIntro", "practiceFocus", "contentNotes"];
+    const optional = ["tags", "difficulty", "estimatedMinutes", "clientAlias", "clientIntro", "practiceFocus", "contentNotes"];
     const localized = (v: unknown, where: string) => {
       const t = v as Record<string, unknown>;
       expect(Object.keys(t ?? {}).sort(), where).toEqual(["en", "zh"]);
@@ -49,6 +49,7 @@ describe("GET /cases", () => {
         expect(c.estimatedMinutes).toBeGreaterThanOrEqual(1);
         expect(c.estimatedMinutes).toBeLessThanOrEqual(180);
       }
+      if ("clientAlias" in c) localized(c.clientAlias, `${c.id}.clientAlias`);
       if ("clientIntro" in c) localized(c.clientIntro, `${c.id}.clientIntro`);
       if ("contentNotes" in c) localized(c.contentNotes, `${c.id}.contentNotes`);
       if ("practiceFocus" in c) {

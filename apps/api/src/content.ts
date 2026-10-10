@@ -54,6 +54,7 @@ const Optional = {
   tags: z.array(Localized).min(1),
   difficulty: z.preprocess((v) => (typeof v === "string" ? (DIFFICULTY[v.trim()] ?? v.trim()) : v), z.enum(["intro", "medium", "hard"])),
   estimatedMinutes: Minutes,
+  clientAlias: Localized,
   clientIntro: Localized,
   practiceFocus: z.array(Localized).min(1),
   contentNotes: Localized,
