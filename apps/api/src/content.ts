@@ -47,17 +47,23 @@ const DIFFICULTY: Record<string, "intro" | "medium" | "hard"> = { 入门: "intro
  * Each one is checked on its own: a bad value drops that field with a warning, and the case
  * still loads. A missing field is simply left out of the response.
  */
+/** Whole minutes; a number, or a string of digits ("20"). Never true/false or other coercions. */
+const Minutes = z.preprocess((v) => (typeof v === "string" && /^\s*\d+\s*$/.test(v) ? Number(v) : v), z.number().int().min(1).max(180));
+
 const Optional = {
   tags: z.array(Localized).min(1),
   difficulty: z.preprocess((v) => (typeof v === "string" ? (DIFFICULTY[v.trim()] ?? v.trim()) : v), z.enum(["intro", "medium", "hard"])),
-  estimatedMinutes: z.coerce.number().int().min(1).max(180),
+  estimatedMinutes: Minutes,
   clientIntro: Localized,
-  practiceFocus: z.array(Localized).min(1).max(3),
+  practiceFocus: z.array(Localized).min(1),
   contentNotes: Localized,
 } as const;
 type OptionalKey = keyof typeof Optional;
-/** More tags than this: we keep the first ones and log a warning. */
-export const MAX_TAGS = 3;
+/**
+ * List fields share one rule: a bad entry is dropped (with a warning), the rest stay; past the
+ * limit we keep the first ones (with a warning); with no good entry left the field is left out.
+ */
+const LIST_LIMITS: Partial<Record<OptionalKey, number>> = { tags: 3, practiceFocus: 3 };
 export const OPTIONAL_FIELDS = Object.keys(Optional) as OptionalKey[];
 
 export type CaseSummary = z.infer<typeof Required> & { [K in OptionalKey]?: z.infer<(typeof Optional)[K]> };
@@ -87,16 +93,20 @@ export function parseCase(file: string, raw: string, warn: Warn = consoleWarn): 
   const c: Case = { ...meta.data, brief: m[2]!.trim() };
   const fields = (yaml ?? {}) as Record<string, unknown>;
   for (const key of OPTIONAL_FIELDS) {
-    if (fields[key] === undefined || fields[key] === null) continue;
-    const parsed = Optional[key].safeParse(fields[key]);
-    if (parsed.success) {
-      let value: unknown = parsed.data;
-      if (key === "tags" && Array.isArray(value) && value.length > MAX_TAGS) {
-        warn(`${file}: tags has ${value.length} entries; keeping the first ${MAX_TAGS}`);
-        value = value.slice(0, MAX_TAGS);
-      }
-      Object.assign(c, { [key]: value });
+    let input = fields[key];
+    if (input === undefined || input === null) continue;
+    const limit = LIST_LIMITS[key];
+    if (limit !== undefined && Array.isArray(input)) {
+      const good = input.filter((item, i) => {
+        const ok = Localized.safeParse(item).success;
+        if (!ok) warn(`${file}: ${key}[${i}] is invalid and left out`);
+        return ok;
+      });
+      if (good.length > limit) warn(`${file}: ${key} has ${good.length} entries; keeping the first ${limit}`);
+      input = good.slice(0, limit);
     }
+    const parsed = Optional[key].safeParse(input);
+    if (parsed.success) Object.assign(c, { [key]: parsed.data });
     else warn(`${file}: ${key} is invalid and left out (${parsed.error.issues[0]?.message ?? "invalid"})`);
   }
   return c;
