@@ -4,7 +4,10 @@ import { createApp, type AppDeps, type Logger } from "../src/app.js";
 import { loadConfig } from "../src/config.js";
 import { loadCases, loadPrompts } from "../src/content.js";
 import { MockProvider } from "../src/llm/mock.js";
+import { AnthropicProvider } from "../src/llm/anthropic.js";
+import { OpenAICompatibleProvider } from "../src/llm/openai-compatible.js";
 import { FixedWindowLimiter } from "../src/rate-limit.js";
+import { SUPERVISOR_TEMPERATURE } from "../src/session.js";
 import type { ModelProvider, ModelRequest, ModelResponse, StreamHandlers } from "../src/llm/types.js";
 
 const cases = loadCases();
@@ -116,6 +119,63 @@ describe("model requests", () => {
     const text = (req.messages[0] as { text: string }).text;
     expect(text).toContain("[1] 咨询师：你好。");
     expect(text).toContain("[2] 来访者：嗯。");
+  });
+});
+
+describe("what the supervisor sees", () => {
+  it.each(["zh", "en"] as const)("title and summary only, never the role brief (%s)", async (locale) => {
+    const mock = new MockProvider([() => ({ text: "ok", toolCalls: [] })]);
+    const { app } = makeApp(undefined, { providerFor: () => mock });
+    await (await post(app, "/supervision", body({ locale }))).text();
+    const req = mock.requests[0]!;
+    const c = cases.get(CASE_ID)!;
+    expect(req.system).toContain(c.title[locale]);
+    expect(req.system).toContain(c.summary[locale]);
+    // No line of the brief (beyond trivial ones) reaches the supervisor.
+    for (const line of c.brief.split("\n").map((l) => l.trim()).filter((l) => l.length > 12)) {
+      expect(req.system).not.toContain(line);
+    }
+    expect(req.temperature).toBe(SUPERVISOR_TEMPERATURE);
+  });
+
+  it("the client keeps the provider's default temperature", async () => {
+    const mock = new MockProvider([() => ({ text: "嗯", toolCalls: [] })]);
+    const { app } = makeApp(undefined, { providerFor: () => mock });
+    await (await post(app, "/chat")).text();
+    expect(mock.requests[0]!.temperature).toBeUndefined();
+  });
+
+  it("the prompts carry the quality rules", () => {
+    expect(prompts.client).toContain("不用括号写旁白");
+    expect(prompts.client).not.toContain("（叹气）」）。");
+    expect(prompts.supervisor).toContain("报告里不要出现任何编号");
+    expect(prompts.supervisor).toContain("不提病例设定");
+    expect(prompts.supervisor).toContain("一律用「来访者」");
+    // The risk check comes before the report structure.
+    expect(prompts.supervisor.indexOf("## 风险评估")).toBeLessThan(prompts.supervisor.indexOf("## 报告结构"));
+  });
+});
+
+describe("temperature in the adapters", () => {
+  const llm = (provider: "deepseek" | "anthropic", model: string) => ({
+    provider,
+    model,
+    baseURL: undefined,
+    apiKey: "k",
+    maxOutputTokens: 1000,
+    anthropicEffort: "medium" as const,
+  });
+  const req = { system: "s", messages: [{ role: "user" as const, text: "hi" }], tools: [], temperature: 0.3 };
+
+  it("DeepSeek gets it", () => {
+    expect(new OpenAICompatibleProvider(llm("deepseek", "deepseek-chat")).buildRequest(req)).toMatchObject({ temperature: 0.3 });
+    expect(new OpenAICompatibleProvider(llm("deepseek", "deepseek-chat")).buildRequest({ ...req, temperature: undefined })).not.toHaveProperty("temperature");
+  });
+
+  it("Claude models that reject sampling parameters don't", () => {
+    expect(new AnthropicProvider(llm("anthropic", "claude-sonnet-5-5")).buildRequest(req)).not.toHaveProperty("temperature");
+    expect(new AnthropicProvider(llm("anthropic", "claude-opus-5-5")).buildRequest(req)).not.toHaveProperty("temperature");
+    expect(new AnthropicProvider(llm("anthropic", "claude-sonnet-4-6")).buildRequest(req)).toMatchObject({ temperature: 0.3 });
   });
 });
 

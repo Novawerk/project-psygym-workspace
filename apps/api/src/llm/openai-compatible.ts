@@ -1,5 +1,6 @@
 // Copied from Novawerk/agent-starter (MIT), apps/agent/src/llm/openai-compatible.ts at fcbd91c.
-// https://github.com/Novawerk/agent-starter — changes: import paths (.js), LlmConfig comes from ../config.js.
+// https://github.com/Novawerk/agent-starter — changes: import paths (.js), LlmConfig comes from ../config.js,
+// ModelRequest.temperature.
 // OpenAI-compatible adapter: DeepSeek, Qwen, Kimi, OpenAI, a local vLLM or Ollama… all go through here.
 // Switch with LLM_BASE_URL + LLM_MODEL.
 import OpenAI from "openai";
@@ -53,6 +54,7 @@ export class OpenAICompatibleProvider implements ModelProvider {
       max_tokens: this.maxOutputTokens,
       stream: true,
       stream_options: { include_usage: true },
+      ...(req.temperature !== undefined ? { temperature: req.temperature } : {}),
       messages: [{ role: "system", content: req.system }, ...toOpenAIMessages(req.messages)],
       ...(tools.length ? { tools } : {}),
     };
