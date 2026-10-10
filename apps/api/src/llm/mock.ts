@@ -1,6 +1,7 @@
 // Copied from Novawerk/agent-starter (MIT), apps/agent/src/llm/mock.ts at fcbd91c.
 // https://github.com/Novawerk/agent-starter — changes: import paths (.js), demo replies for 聆镜
-// (the mock report quotes the counselor's last message, to demo acceptance item C2).
+// (the mock report quotes the counselor's last message, to demo acceptance item C2;
+// "#end" in a counselor message makes the mock client end the session).
 // A fake model that needs no API key: for frontend work, tests, and demoing the whole path
 // (streamed text + tool calls + memory updates).
 import {
@@ -11,6 +12,9 @@ import {
   type ModelResponse,
   type StreamHandlers,
 } from "./types.js";
+
+/** Put this in a counselor message and the mock client ends the session. */
+export const MOCK_END_TRIGGER = "#end";
 
 /** One scripted step: given the request, return what the assistant says / which tools it calls */
 export type MockStep = (req: ModelRequest) => Pick<AssistantMessage, "text" | "toolCalls"> & { reasoning?: string };
@@ -78,6 +82,15 @@ const demoStep: MockStep = (req) => {
           "## 下次练什么\n\n- （mock）练习共情回应。\n\n" +
           "这份反馈由 AI 生成，仅供练习参考。\n",
       toolCalls: [],
+    };
+  }
+  // "#end" in the counselor's last message: the client says goodbye and ends the session,
+  // so the app and the tests can walk through session_end without a real model.
+  const last = req.messages.at(-1);
+  if (last?.role === "user" && last.text.includes(MOCK_END_TRIGGER) && req.tools.some((t) => t.name === "end_session")) {
+    return {
+      text: en ? "(mock client) …I'd like to stop here for today." : "（mock 来访者）……我想今天先到这里。",
+      toolCalls: [{ id: `mock_end_${Date.now()}`, name: "end_session", args: {} }],
     };
   }
   return {

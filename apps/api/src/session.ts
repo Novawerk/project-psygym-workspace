@@ -1,7 +1,7 @@
 // Turns a request body (case + locale + the whole conversation) into one model request.
 // Stateless: nothing here is stored.
 import type { Case, Prompts } from "./content.js";
-import type { Message as LlmMessage, ModelRequest } from "./llm/types.js";
+import type { Message as LlmMessage, ModelRequest, ToolCall, ToolSpec } from "./llm/types.js";
 import type { Locale, Message } from "./schema.js";
 
 const LANGUAGE: Record<Locale, string> = {
@@ -19,6 +19,26 @@ const SPEAKER: Record<Locale, { counselor: string; client: string }> = {
   en: { counselor: "Counselor", client: "Client" },
 };
 
+/**
+ * The AI client's only tool. It calls it after saying its closing line, when the rules in
+ * prompts/client.md say the session is over. The server turns the call into a session_end frame.
+ */
+export const END_SESSION_TOOL: ToolSpec = {
+  name: "end_session",
+  description:
+    "End this counseling session. Call it only right after you have said your closing line in character, " +
+    "as the rules about harmful remarks require. Never call it for any other reason.",
+  parameters: { type: "object", properties: {}, additionalProperties: false },
+};
+
+export const endsSession = (calls: ToolCall[]) => calls.some((c) => c.name === END_SESSION_TOOL.name);
+
+/** Said for the client when it ends the session without a closing line of its own. */
+export const FAREWELL: Record<Locale, string> = {
+  zh: "我想今天先到这里。",
+  en: "I'd like to stop here for today.",
+};
+
 /** The AI client answers the counselor's last message, in character. */
 export function clientRequest(prompts: Prompts, c: Case, locale: Locale, messages: Message[]): Omit<ModelRequest, "signal"> {
   const system = [prompts.client, "## 你扮演的来访者（病例）", c.brief, "## 语言", LANGUAGE[locale]].join("\n\n");
@@ -29,7 +49,7 @@ export function clientRequest(prompts: Prompts, c: Case, locale: Locale, message
   );
   // Some vendors want the conversation to open with a user turn.
   if (out[0]?.role === "assistant") out.unshift({ role: "user", text: locale === "zh" ? "（会谈开始）" : "(The session begins.)" });
-  return { system, messages: out, tools: [] };
+  return { system, messages: out, tools: [END_SESSION_TOOL] };
 }
 
 /** Low temperature for the report: steadier structure, fewer garbled words. The client keeps the default. */

@@ -34,5 +34,6 @@ export type ErrorCode = "invalid_request" | "invite_required" | "case_not_found"
 export type StreamEvent =
   | { type: "turn_start" }
   | { type: "text_delta"; text: string }
+  | { type: "session_end" }
   | { type: "turn_end"; usage?: { inputTokens: number; outputTokens: number } }
   | { type: "error"; code: string; message: string };

@@ -16,8 +16,8 @@ import type { Case, Prompts } from "./content.js";
 import { createProvider, type ModelProvider } from "./llm/index.js";
 import type { ModelRequest } from "./llm/types.js";
 import { FixedWindowLimiter, clientIp } from "./rate-limit.js";
-import { ChatBody, SupervisionBody, type ErrorCode, type StreamEvent } from "./schema.js";
-import { clientRequest, supervisorRequest } from "./session.js";
+import { ChatBody, SupervisionBody, type ErrorCode, type Locale, type StreamEvent } from "./schema.js";
+import { FAREWELL, clientRequest, endsSession, supervisorRequest } from "./session.js";
 
 /** Keeps proxies from closing the stream while the model thinks. */
 export const PING_MS = 15_000;
@@ -92,6 +92,13 @@ async function readBody(req: Request): Promise<BodyRead> {
   }
   if (total > MAX_BODY_BYTES) return { tooLarge: true, drained: true };
   return { tooLarge: false, text: Buffer.concat(chunks).toString("utf8") };
+}
+
+/** The model finished without any text to show. */
+class EmptyReplyError extends Error {
+  constructor(readonly stop: string) {
+    super("empty reply");
+  }
 }
 
 /** What we may log about a failure: its kind and HTTP status, never its message (it can echo input). */
@@ -193,7 +200,7 @@ export function createApp(deps: AppDeps) {
 
   function streamTurn(
     c: Context,
-    t: { path: string; caseId: string; locale: string; count: number; provider: ModelProvider; request: Omit<ModelRequest, "signal"> },
+    t: { path: string; caseId: string; locale: Locale; count: number; provider: ModelProvider; request: Omit<ModelRequest, "signal"> },
   ) {
     // Tell proxies (and Vercel) not to buffer or transform the stream.
     c.header("Cache-Control", "no-cache, no-transform");
@@ -216,14 +223,50 @@ export function createApp(deps: AppDeps) {
       const log = { route: t.path, caseId: t.caseId, locale: t.locale, messages: t.count, provider: t.provider.name, model: t.provider.model };
       send({ type: "turn_start" });
       try {
-        const res = await t.provider.stream({ ...t.request, signal: abort.signal }, { onText: (text) => text && send({ type: "text_delta", text }) });
+        let said = "";
+        const res = await t.provider.stream(
+          { ...t.request, signal: abort.signal },
+          {
+            onText: (text) => {
+              if (!text) return;
+              said += text;
+              send({ type: "text_delta", text });
+            },
+          },
+        );
+        const saidSomething = said.trim() !== "";
+        // The AI client ends the session by calling end_session (only /chat offers the tool).
+        // The tool call itself never reaches the app: it becomes one session_end frame.
+        const sessionEnd = t.request.tools.length > 0 && endsSession(res.message.toolCalls);
+        if (sessionEnd) {
+          // Some models call the tool without saying goodbye; the app still needs a last line.
+          if (!saidSomething) send({ type: "text_delta", text: FAREWELL[t.locale] });
+          send({ type: "session_end" });
+        } else if (!saidSomething) {
+          // Nothing to show (e.g. only an unknown tool call): let the app offer a retry.
+          throw new EmptyReplyError(res.stopReason);
+        }
         send({ type: "turn_end", usage: { inputTokens: res.usage.inputTokens, outputTokens: res.usage.outputTokens } });
-        logger.info({ ...log, msg: "turn", stop: res.stopReason, inputTokens: res.usage.inputTokens, outputTokens: res.usage.outputTokens, ms: Date.now() - started });
+        logger.info({
+          ...log,
+          msg: "turn",
+          stop: res.stopReason,
+          ...(sessionEnd ? { sessionEnd: true } : {}),
+          inputTokens: res.usage.inputTokens,
+          outputTokens: res.usage.outputTokens,
+          ms: Date.now() - started,
+        });
       } catch (err) {
         if (abort.signal.aborted) {
           logger.info({ ...log, msg: "turn aborted", ms: Date.now() - started });
         } else {
-          logger.error({ ...log, msg: "turn failed", ...describe(err), ms: Date.now() - started });
+          logger.error({
+            ...log,
+            msg: "turn failed",
+            ...describe(err),
+            ...(err instanceof EmptyReplyError ? { stop: err.stop } : {}),
+            ms: Date.now() - started,
+          });
           send({ type: "error", code: "model_unavailable", message: MESSAGES.model_unavailable });
         }
       } finally {
