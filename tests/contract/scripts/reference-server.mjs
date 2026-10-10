@@ -48,7 +48,7 @@ const CASES = [
   },
 ];
 
-const hits = { chat: new Map(), feedback: new Map() };
+const hits = { chat: new Map(), feedback: new Map(), report: new Map() };
 
 function json(res, status, body, headers = {}) {
   res.writeHead(status, { "content-type": "application/json; charset=utf-8", ...headers });
@@ -76,6 +76,18 @@ function validFeedback(b) {
   return b.comment === undefined || (typeof b.comment === "string" && [...b.comment].length <= 500);
 }
 
+// POST /report: exactly one passage; never the rest of the session.
+function validReport(b) {
+  if (!b || typeof b !== "object" || Array.isArray(b)) return false;
+  const keys = ["caseId", "locale", "source", "reason", "comment", "reportedText"];
+  if (Object.keys(b).some((k) => !keys.includes(k))) return false;
+  if (typeof b.caseId !== "string" || !["zh", "en"].includes(b.locale)) return false;
+  if (!["client_reply", "report"].includes(b.source)) return false;
+  if (!["harmful", "out_of_role", "unsafe_advice", "other"].includes(b.reason)) return false;
+  if (typeof b.reportedText !== "string" || [...b.reportedText].length < 1 || [...b.reportedText].length > 2000) return false;
+  return b.comment === undefined || (typeof b.comment === "string" && [...b.comment].length <= 500);
+}
+
 createServer(async (req, res) => {
   const url = new URL(req.url, "http://x");
   if (req.method === "GET" && url.pathname === "/health") return json(res, 200, { ok: true });
@@ -84,11 +96,11 @@ createServer(async (req, res) => {
 
   if (req.method === "GET" && url.pathname === "/cases") return json(res, 200, { cases: CASES });
 
-  if (req.method !== "POST" || !["/chat", "/supervision", "/feedback"].includes(url.pathname)) return fail(res, 404, "not_found");
+  if (req.method !== "POST" || !["/chat", "/supervision", "/feedback", "/report"].includes(url.pathname)) return fail(res, 404, "not_found");
 
   if (RATE_LIMIT) {
-    // /feedback has its own bucket; /chat and /supervision share one.
-    const bucket = hits[url.pathname === "/feedback" ? "feedback" : "chat"];
+    // /feedback and /report have their own buckets; /chat and /supervision share one.
+    const bucket = hits[url.pathname === "/feedback" ? "feedback" : url.pathname === "/report" ? "report" : "chat"];
     const ip = req.socket.remoteAddress;
     const now = Date.now();
     const recent = (bucket.get(ip) ?? []).filter((t) => now - t < 60_000);
@@ -115,6 +127,12 @@ createServer(async (req, res) => {
   }
   if (url.pathname === "/feedback") {
     if (!validFeedback(body)) return fail(res, 400, "invalid_request");
+    if (!CASES.some((c) => c.id === body.caseId)) return fail(res, 404, "case_not_found");
+    res.writeHead(204);
+    return res.end();
+  }
+  if (url.pathname === "/report") {
+    if (!validReport(body)) return fail(res, 400, "invalid_request");
     if (!CASES.some((c) => c.id === body.caseId)) return fail(res, 404, "case_not_found");
     res.writeHead(204);
     return res.end();

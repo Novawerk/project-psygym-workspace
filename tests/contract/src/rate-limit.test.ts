@@ -45,3 +45,21 @@ it("POST /feedback has its own bucket: still 204 while /chat is limited, then 42
   expect(retryAfterMs(limited!.headers.get("retry-after"))).toBeDefined();
   await expectError(limited!, 429, "rate_limited");
 });
+
+it("POST /report has its own bucket: still 204 while /chat and /feedback are limited, then 429 on its own", async () => {
+  // Both are limited by the tests above (same window).
+  for (const [path, b] of [["/chat", await validBody()], ["/feedback", { caseId: (await validBody()).caseId, locale: "zh", rating: "up" }]] as const) {
+    const r = await call(path, { body: b, retryOn429: false });
+    await r.body?.cancel();
+    expect(r.status, `${path} should still be limited here`).toBe(429);
+  }
+  const rb = { caseId: (await validBody()).caseId, locale: "zh", source: "client_reply", reason: "other", reportedText: "（契约测试）" };
+  const first = await call("/report", { body: rb, retryOn429: false });
+  expect(first.status, "/report must not share a bucket").toBe(204);
+  await first.body?.cancel();
+
+  const { limited, sent } = await burst("/report", rb);
+  expect(limited, `no 429 on /report after ${sent} requests`).toBeDefined();
+  expect(retryAfterMs(limited!.headers.get("retry-after"))).toBeDefined();
+  await expectError(limited!, 429, "rate_limited");
+});
