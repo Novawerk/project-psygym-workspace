@@ -100,6 +100,8 @@ describe("C2/C3 quote check", () => {
       "可以换成：「我们先一起看看最卡住你的事，好吗？」",
       "The client said “Mornings are the worst.” Try instead: “What is a morning like for you?”",
       "The client said “I can’t really get myself to do anything.”",
+      "The client said「Mornings are the worst,」and then went quiet.",
+      "换成把注意力放回来访者身上：「你刚才说早上最难熬，能说说吗？」",
     ].join("\n");
     expect(unverifiedQuotes(report, convo)).toEqual([]);
   });
@@ -109,12 +111,14 @@ describe("C2/C3 quote check", () => {
       "来访者说「我也不知道……我还想问你呢」。",
       "你问「你觉得我该怎么做」。",
       "The client said “nothing feels interesting any more”.",
+      "2. 练「先理解再干预」。",
     ].join("\n");
     expect(unverifiedQuotes(report, convo)).toEqual([
       "对什么都提不起兴趣",
       "我也不知道……我还想问你呢",
       "你觉得我该怎么做",
       "nothing feels interesting any more",
+      "先理解再干预",
     ]);
   });
 });

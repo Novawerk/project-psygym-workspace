@@ -52,7 +52,8 @@ export function promptOverlap(reply: string, promptText: string, window = 14): s
   return undefined;
 }
 
-const ALTERNATIVE = /(?:可以换成|换成|Try instead)\s*[:：]\s*$/i;
+// "可以换成：「", "换成把注意力放回来访者身上：「", "Try instead: “"
+const ALTERNATIVE = /(?:可以换成|换成|Try instead)[^「」“”\n]{0,24}[:：]\s*$/i;
 const squash = (s: string) => s.replace(/\s+/g, "").replace(/[‘’]/g, "'").replace(/[“”]/g, '"');
 
 /**
@@ -65,9 +66,10 @@ export function unverifiedQuotes(report: string, conversation: string[]): string
   const out: string[] = [];
   for (const m of report.matchAll(/「([^」]+)」|“([^”]+)”/g)) {
     const quote = m[1] ?? m[2];
-    const before = report.slice(Math.max(0, m.index! - 16), m.index);
+    const before = report.slice(Math.max(0, m.index! - 40), m.index);
     if (ALTERNATIVE.test(before)) continue;
-    const q = squash(quote);
+    // English puts the comma or full stop inside the quote marks: “I haven't been sleeping,”
+    const q = squash(quote).replace(/[,，.。]+$/, "");
     if (!said.some((t) => t.includes(q))) out.push(quote);
   }
   return out;
