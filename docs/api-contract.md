@@ -41,6 +41,10 @@ Only what the picker shows. The full case (the AI's role brief) stays on the ser
 Body: `{ caseId: string, locale: Locale, messages: Message[] }`. The last message must be
 the counselor's (else 400). The server answers as the client, in character.
 
+The stream may carry one `session_end` frame (see below): the client ended the session in
+character. The app then locks the input and leaves only "End and see supervision". The server
+stays stateless: if the app sends another message anyway, it answers as usual.
+
 ### `POST /supervision` → `text/event-stream`
 
 Body: `{ caseId: string, locale: Locale, messages: Message[] }`. The server streams one
@@ -54,13 +58,18 @@ Data-only SSE frames, one JSON object per frame, discriminated by `type`:
 ```
 data: {"type":"turn_start"}
 data: {"type":"text_delta","text":"…"}
+data: {"type":"session_end"}
 data: {"type":"turn_end","usage":{"inputTokens":0,"outputTokens":0}}
 data: {"type":"error","code":"model_unavailable","message":"…"}
 : ping
 ```
 
 - `text_delta` arrives zero or more times; the app appends `text` in order.
+- `session_end` (`/chat` only) arrives at most once, after the last `text_delta` and right
+  before `turn_end`; nothing but `turn_end` follows it. It means the AI client ended the
+  session in character (see [`safety.md`](./safety.md) §3). The app locks the input.
 - Exactly one of `turn_end` or `error` ends the stream. `usage` is optional.
+- The app ignores any frame `type` it doesn't know, so we can add frames later.
 - `: ping` comments arrive every ~15 s; the app ignores them.
 
 ## Errors before the stream starts

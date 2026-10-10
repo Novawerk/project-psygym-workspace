@@ -19,6 +19,8 @@ pnpm --filter api dev                    # http://localhost:8787
 ```
 
 No key at hand? `LLM_PROVIDER=mock pnpm --filter api dev` runs the whole flow with canned replies.
+Put `#end` in a counselor message and the mock client says goodbye and ends the session
+(`session_end`), so you can walk through the locked-input state.
 
 Try it:
 
@@ -85,7 +87,12 @@ you set `CLIENT_LLM_MODEL` / `SUPERVISOR_LLM_MODEL` (and `_BASE_URL`).
 ## What the model sees
 
 - AI client: [`prompts/client.md`](./prompts/client.md) + the case brief + a language line.
-  The counselor's messages go in as user turns, the client's as assistant turns.
+  The counselor's messages go in as user turns, the client's as assistant turns. It has one
+  tool, `end_session` (no arguments). When the rules say the session is over (harmful remarks,
+  second time), it says its closing line and calls the tool. We turn the call into one
+  `session_end` frame before `turn_end`; the call itself never reaches the app. If the model
+  calls it without a closing line, we send one ("我想今天先到这里。" / "I'd like to stop here
+  for today.").
 - AI supervisor: [`prompts/supervisor.md`](./prompts/supervisor.md) + the rubric
   (`content/rubrics/<school>.md`) + the case title and summary (never the role brief, so the
   report rests only on what was said) + a language line. The whole transcript goes in as one
