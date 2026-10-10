@@ -6,9 +6,10 @@ import io.novawerk.psygym.di.AppComponent
 import io.novawerk.psygym.di.create
 import kotlinx.cinterop.ExperimentalForeignApi
 import okio.Path.Companion.toPath
-import platform.Foundation.NSDocumentDirectory
+import platform.Foundation.NSApplicationSupportDirectory
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSURL
+import platform.Foundation.NSURLIsExcludedFromBackupKey
 import platform.Foundation.NSUserDomainMask
 
 private const val DATA_STORE_FILE_NAME = "psygym.preferences_pb"
@@ -22,14 +23,19 @@ private val component: AppComponent by lazy {
 
 fun MainViewController() = ComposeUIViewController { App(component) }
 
+// Application Support, not Documents: Documents is user-visible and backed up to iCloud.
+// The file is also excluded from backup; it holds only the language and invite code.
 @OptIn(ExperimentalForeignApi::class)
 private fun dataStorePath(fileName: String): String {
-    val documents: NSURL? = NSFileManager.defaultManager.URLForDirectory(
-        directory = NSDocumentDirectory,
-        inDomain = NSUserDomainMask,
-        appropriateForURL = null,
-        create = false,
-        error = null,
+    val dir: NSURL = requireNotNull(
+        NSFileManager.defaultManager.URLForDirectory(
+            directory = NSApplicationSupportDirectory,
+            inDomain = NSUserDomainMask,
+            appropriateForURL = null,
+            create = true,
+            error = null,
+        ),
     )
-    return requireNotNull(documents).path + "/$fileName"
+    dir.setResourceValue(true, forKey = NSURLIsExcludedFromBackupKey, error = null)
+    return requireNotNull(dir.path) + "/$fileName"
 }

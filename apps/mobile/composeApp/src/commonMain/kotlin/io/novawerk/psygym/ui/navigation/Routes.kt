@@ -12,3 +12,6 @@ import kotlinx.serialization.Serializable
 @Serializable data object SupervisionRoute
 
 @Serializable data object SettingsRoute
+
+/** The case and the full notice before every practice. */
+@Serializable data object BriefingRoute

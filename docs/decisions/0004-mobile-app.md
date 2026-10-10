@@ -1,4 +1,4 @@
-# 0002 — Mobile app scaffold
+# 0004 — Mobile app scaffold
 
 Date: 2026-10-10. Status: accepted.
 
@@ -12,10 +12,18 @@ Date: 2026-10-10. Status: accepted.
   is built with our Kotlin 2.3.21. Move up when the other apps move.
 - **Targets:** `iosArm64` and `iosSimulatorArm64`. No `iosX64`: the markdown library
   doesn't publish it, and we have no Intel Macs to serve.
-- **Backend switch:** BuildKonfig picks the base URL at build time. Release (an Android
-  `*Release` task or Xcode `CONFIGURATION=Release`) gets `https://psygym-api.novawerk.io`;
-  debug gets the local backend. Debug builds can use `FakePsygymApi` (demo data) and
-  show a Settings switch; release can't.
+- **Debug vs release:** decided by the binary, never by Gradle task names or flags.
+  `AppConfig` reads `BuildConfig.DEBUG` (Android variant) and `Platform.isDebugBinary`
+  (iOS). Release is fixed to `https://psygym-api.novawerk.io` in code and doesn't build
+  the fake API at all. Debug uses the local backend and can switch to `FakePsygymApi`
+  (demo data). Cleartext HTTP is allowed only by the debug variant's network security
+  config.
+- **Stream rules:** 30 s without any event (pings and `turn_start` count) is a timeout;
+  a stream that ends without `turn_end` or `error` is a network error; unknown frame
+  types are ignored, so new ones (like `session_end`) don't break older apps.
+- **Before every practice:** a page with the case and the full notice from
+  `docs/safety.md` §5; only "I understand" opens the session. A page, not a dialog, so it
+  can become the case intro page.
 - **Invite code, no login:** first launch asks once (skippable); a 401
   `invite_required` points to Settings.
 - **Nothing kept:** the transcript lives in memory (`PracticeSession`) and is cleared

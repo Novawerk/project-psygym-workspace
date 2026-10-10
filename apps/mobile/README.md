@@ -3,12 +3,12 @@
 Kotlin Multiplatform + Compose Multiplatform, Android and iOS. One module,
 `composeApp`; `iosApp` is the Xcode shell. Same stack and layout as Novawerk's
 YIMA and Berlin Chinese Food Map. See [docs/decisions/0001-stack.md](../../docs/decisions/0001-stack.md)
-and [0002-mobile-app.md](../../docs/decisions/0002-mobile-app.md).
+and [0004-mobile-app.md](../../docs/decisions/0004-mobile-app.md).
 
 The app only talks to our backend ([docs/api-contract.md](../../docs/api-contract.md)).
 No AI SDK, no model keys on the device. It stores two things locally: the language
 choice and the invite code. Conversations live in memory and are gone when the
-practice ends.
+practice ends. On iOS the settings file sits in Application Support, excluded from backup.
 
 ## Run it
 
@@ -23,12 +23,17 @@ no server needed. Turn it off in Settings → Developer to use a backend.
 
 | Build | Backend | Demo data |
 |-------|---------|-----------|
-| Android debug | `http://10.0.2.2:8787` (your laptop, from the emulator) | on, switchable |
-| iOS debug | `http://localhost:8787` | on, switchable |
-| Release (Android `*Release`, Xcode Release) | `https://psygym-api.novawerk.io` | off, no switch |
+| Android debug variant | `http://10.0.2.2:8787` (your laptop, from the emulator) | on, switchable |
+| iOS Debug configuration | `http://localhost:8787` | on, switchable |
+| Android release variant, iOS Release | `https://psygym-api.novawerk.io` | impossible |
 
-Overrides: `-Ppsygym.apiBaseUrl=http://192.168.1.20:8787` (a phone on your Wi-Fi)
-and `-Ppsygym.fakeApi=false`.
+The build decides, not a flag: `AppConfig` reads `BuildConfig.DEBUG` on Android and
+`Platform.isDebugBinary` on iOS. Release is fixed to production in code and never builds
+the fake API. Plain HTTP is allowed only in the debug variant
+(`src/androidDebug/res/xml/network_security_config.xml`).
+
+Debug-only overrides: `-Ppsygym.apiBaseUrl=http://192.168.1.20:8787` (a phone on your
+Wi-Fi) and `-Ppsygym.fakeApi=false`.
 
 Local backend, from the repo root: `LLM_PROVIDER=mock pnpm --filter api dev`.
 
@@ -51,19 +56,21 @@ the shared code with:
 
 `commonTest` covers `/cases` and error mapping with Ktor's MockEngine.
 `androidUnitTest` runs the real SSE path: the OkHttp engine against a small local
-JDK HTTP server (MockEngine has no SSE support).
+JDK HTTP server (MockEngine has no SSE support): deltas, pings, unknown frame types,
+error frames, missing `turn_end`, the 30 s idle timeout, `Retry-After`.
 
 ## Where things are
 
 ```
 composeApp/src/commonMain/kotlin/io/novawerk/psygym/
 ├── App.kt                    # NavHost, language, theme
+├── AppConfig.kt              # debug vs release, backend URL
 ├── data/api/                 # PsygymApi, KtorPsygymApi (SSE), FakePsygymApi, SwitchingPsygymApi
 ├── domain/model/             # Contract shapes (docs/api-contract.md)
 ├── domain/settings/          # DataStore: language, invite code
 ├── domain/practice/          # In-memory transcript for the supervision screen
 ├── di/                       # kotlin-inject AppComponent
-└── ui/                       # theme, locale, components, pages/{home,cases,practice,supervision,settings}
+└── ui/                       # theme, locale, components, pages/{home,cases,briefing,practice,supervision,settings}
 composeApp/src/commonMain/composeResources/values{,-zh}/strings.xml
 ```
 

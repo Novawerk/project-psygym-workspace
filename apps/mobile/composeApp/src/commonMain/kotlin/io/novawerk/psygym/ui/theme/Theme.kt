@@ -49,6 +49,10 @@ private val LightColors = lightColorScheme(
     surfaceContainerHighest = Color(0xFFDDD5BD),
     outline = Color(0xFF7B7766),
     outlineVariant = Color(0xFFCFC7B0),
+    error = Color(0xFFB3261E),
+    onError = Color.White,
+    errorContainer = Color(0xFFF6DCD6),
+    onErrorContainer = Color(0xFF5C1610),
 )
 
 private val DarkColors = darkColorScheme(
@@ -73,6 +77,11 @@ private val DarkColors = darkColorScheme(
     surfaceContainerHighest = Color(0xFF333731),
     outline = Color(0xFF8C9087),
     outlineVariant = Color(0xFF42463F),
+    // Muted on purpose: a bright red banner on a dark screen is hard to read.
+    error = Color(0xFFF2B8B0),
+    onError = Color(0xFF5C1610),
+    errorContainer = Color(0xFF4A2420),
+    onErrorContainer = Color(0xFFF6DCD6),
 )
 
 @Composable

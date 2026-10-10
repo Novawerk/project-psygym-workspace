@@ -2,7 +2,7 @@ package io.novawerk.psygym.di
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import io.novawerk.psygym.BuildKonfig
+import io.novawerk.psygym.AppConfig
 import io.novawerk.psygym.data.api.FakePsygymApi
 import io.novawerk.psygym.data.api.KtorPsygymApi
 import io.novawerk.psygym.data.api.PsygymApi
@@ -33,11 +33,12 @@ abstract class AppComponent(
 
     @AppScope
     @Provides
-    protected fun api(settings: SettingsRepository): PsygymApi = SwitchingPsygymApi(
-        real = KtorPsygymApi(baseUrl = BuildKonfig.API_BASE_URL, inviteCode = settings::currentInviteCode),
-        fake = FakePsygymApi(),
-        useFake = settings::currentUseFakeApi,
-    )
+    protected fun api(settings: SettingsRepository): PsygymApi {
+        val real = KtorPsygymApi(baseUrl = AppConfig.apiBaseUrl, inviteCode = settings::currentInviteCode)
+        // Release never sees demo data: no fake API is even built.
+        if (!AppConfig.isDebug) return real
+        return SwitchingPsygymApi(real = real, fake = FakePsygymApi(), useFake = settings::currentUseFakeApi)
+    }
 
     companion object
 }

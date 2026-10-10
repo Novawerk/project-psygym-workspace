@@ -8,22 +8,20 @@ val appVersionName: String = System.getenv("VERSION_NAME") ?: libs.versions.app.
 val appVersionCode: Int = System.getenv("VERSION_CODE")?.toIntOrNull()
     ?: libs.versions.app.versionCode.get().toInt()
 
-// Release = an Android *Release task, or Xcode building the Release configuration.
-// BuildKonfig is generated per build, not per Android build type, so we decide here.
-val isRelease: Boolean = gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) } ||
-    System.getenv("CONFIGURATION") == "Release"
+// Debug vs release is decided by the build itself, not here: Android reads its
+// variant's BuildConfig.DEBUG, iOS reads Platform.isDebugBinary (Xcode Debug vs
+// Release). Release always talks to production and can never use demo data; the
+// values below only feed debug builds.
+//
+// Override the dev backend with -Ppsygym.apiBaseUrl=http://192.168.x.x:8787 to test on
+// a real phone against a laptop. Android emulator reaches the host at 10.0.2.2; the iOS
+// simulator at localhost.
+val devApiBaseUrlOverride = providers.gradleProperty("psygym.apiBaseUrl").orNull
+val androidDevApiBaseUrl = devApiBaseUrlOverride ?: "http://10.0.2.2:8787"
+val iosDevApiBaseUrl = devApiBaseUrlOverride ?: "http://localhost:8787"
 
-// Backend base URL. Override with -Ppsygym.apiBaseUrl=http://192.168.x.x:8787 to test
-// on a real device against a laptop. Android emulator reaches the host at 10.0.2.2;
-// the iOS simulator at localhost.
-val prodApiBaseUrl = "https://psygym-api.novawerk.io"
-val apiBaseUrlOverride = providers.gradleProperty("psygym.apiBaseUrl").orNull
-val androidApiBaseUrl = apiBaseUrlOverride ?: if (isRelease) prodApiBaseUrl else "http://10.0.2.2:8787"
-val iosApiBaseUrl = apiBaseUrlOverride ?: if (isRelease) prodApiBaseUrl else "http://localhost:8787"
-
-// Until the backend is live, debug builds start on demo data (FakeApi). A debug-only
-// switch in Settings flips it at runtime. Release never uses demo data.
-val useFakeApiByDefault = providers.gradleProperty("psygym.fakeApi").orNull?.toBoolean() ?: !isRelease
+// Debug builds start on demo data (FakeApi) until told otherwise. Debug only.
+val devFakeApiDefault = providers.gradleProperty("psygym.fakeApi").orNull?.toBoolean() ?: true
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -72,6 +70,7 @@ kotlin {
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(libs.navigation.compose)
+            implementation(libs.compose.ui.backhandler)
             implementation(libs.datastore.preferences)
             implementation(libs.kotlin.inject.runtime)
             implementation(libs.kotlinx.coroutines.core)
@@ -109,6 +108,9 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+    buildFeatures {
+        buildConfig = true
+    }
     buildTypes {
         getByName("release") {
             isMinifyEnabled = false
@@ -125,14 +127,14 @@ buildkonfig {
     defaultConfigs {
         buildConfigField(STRING, "VERSION_NAME", appVersionName)
         buildConfigField(INT, "VERSION_CODE", appVersionCode.toString())
-        buildConfigField(BOOLEAN, "IS_DEBUG", (!isRelease).toString())
-        buildConfigField(BOOLEAN, "USE_FAKE_API", useFakeApiByDefault.toString())
-        buildConfigField(STRING, "API_BASE_URL", androidApiBaseUrl)
+        // Only read when the binary is a debug build (see AppConfig).
+        buildConfigField(BOOLEAN, "DEV_FAKE_API_DEFAULT", devFakeApiDefault.toString())
+        buildConfigField(STRING, "DEV_API_BASE_URL", androidDevApiBaseUrl)
     }
     targetConfigs {
         listOf("iosArm64", "iosSimulatorArm64").forEach { target ->
             create(target) {
-                buildConfigField(STRING, "API_BASE_URL", iosApiBaseUrl)
+                buildConfigField(STRING, "DEV_API_BASE_URL", iosDevApiBaseUrl)
             }
         }
     }

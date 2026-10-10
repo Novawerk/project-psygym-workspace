@@ -22,10 +22,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -36,6 +41,7 @@ import io.novawerk.psygym.resources.back
 import io.novawerk.psygym.resources.cases_empty
 import io.novawerk.psygym.resources.cases_school_cbt
 import io.novawerk.psygym.resources.cases_title
+import io.novawerk.psygym.resources.practice_interrupted
 import io.novawerk.psygym.ui.components.DemoBadge
 import io.novawerk.psygym.ui.components.ErrorCard
 import io.novawerk.psygym.ui.locale.rememberApiLocale
@@ -46,12 +52,24 @@ import org.jetbrains.compose.resources.stringResource
 fun CasesScreen(
     viewModel: CasesViewModel,
     demoData: Boolean,
+    interrupted: Boolean,
+    onInterruptedShown: () -> Unit,
     onBack: () -> Unit,
     onPick: (CaseSummary) -> Unit,
     onOpenSettings: () -> Unit,
 ) {
     val locale = rememberApiLocale()
+    val snackbar = remember { SnackbarHostState() }
+    val interruptedText = stringResource(Res.string.practice_interrupted)
+    LaunchedEffect(interrupted) {
+        if (interrupted) {
+            // Clear the flag only after showing: clearing first would cancel this effect.
+            snackbar.showSnackbar(interruptedText, withDismissAction = true, duration = SnackbarDuration.Long)
+            onInterruptedShown()
+        }
+    }
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(Res.string.cases_title)) },
@@ -70,7 +88,7 @@ fun CasesScreen(
             val error = viewModel.error
             when {
                 error != null -> ErrorCard(
-                    code = error,
+                    error = error,
                     onRetry = viewModel::load,
                     onOpenSettings = onOpenSettings,
                     modifier = Modifier.padding(16.dp),

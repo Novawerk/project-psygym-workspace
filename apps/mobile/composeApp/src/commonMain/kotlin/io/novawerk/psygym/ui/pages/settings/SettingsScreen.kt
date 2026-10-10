@@ -40,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import io.novawerk.psygym.AppConfig
 import io.novawerk.psygym.BuildKonfig
 import io.novawerk.psygym.domain.settings.AppLanguage
 import io.novawerk.psygym.resources.Res
@@ -104,7 +105,7 @@ fun SettingsScreen(
             SectionTitle(Res.string.settings_invite)
             InviteCodeField(inviteCode, onInviteCodeSave)
 
-            if (BuildKonfig.IS_DEBUG) {
+            if (AppConfig.isDebug) {
                 HorizontalDivider(Modifier.padding(vertical = 8.dp))
                 SectionTitle(Res.string.settings_debug)
                 ListItem(
@@ -119,7 +120,7 @@ fun SettingsScreen(
                     ),
                 )
                 Text(
-                    BuildKonfig.API_BASE_URL,
+                    AppConfig.apiBaseUrl,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 16.dp),

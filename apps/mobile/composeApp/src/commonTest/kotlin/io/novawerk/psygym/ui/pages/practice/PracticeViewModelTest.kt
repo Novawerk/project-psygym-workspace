@@ -1,0 +1,83 @@
+package io.novawerk.psygym.ui.pages.practice
+
+import io.novawerk.psygym.data.api.ApiErrorCode
+import io.novawerk.psygym.data.api.ApiException
+import io.novawerk.psygym.data.api.PsygymApi
+import io.novawerk.psygym.domain.model.ApiLocale
+import io.novawerk.psygym.domain.model.CaseSummary
+import io.novawerk.psygym.domain.model.LocalizedText
+import io.novawerk.psygym.domain.model.Message
+import io.novawerk.psygym.domain.model.Role
+import io.novawerk.psygym.domain.model.TurnRequest
+import io.novawerk.psygym.domain.practice.PracticeSession
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class PracticeViewModelTest {
+
+    private val demoCase = CaseSummary("c1", "cbt", LocalizedText("甲", "A"), LocalizedText("s", "s"))
+    private val requests = mutableListOf<TurnRequest>()
+    private var replies = ArrayDeque<Flow<String>>()
+
+    private val api = object : PsygymApi {
+        override suspend fun cases() = listOf(demoCase)
+        override fun chat(request: TurnRequest): Flow<String> {
+            requests += request
+            return replies.removeFirst()
+        }
+        override fun supervision(request: TurnRequest): Flow<String> = flow { }
+    }
+
+    private fun viewModel() = PracticeViewModel(api, PracticeSession().apply { start(demoCase) })
+
+    @BeforeTest
+    fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
+
+    @AfterTest
+    fun tearDown() = Dispatchers.resetMain()
+
+    @Test
+    fun halfReplyIsKeptMarkedAndNeverSentBack() = runTest {
+        replies += flow {
+            emit("我也")
+            throw ApiException(ApiErrorCode.ModelUnavailable)
+        }
+        replies += flow { emit("我也不知道。") }
+        val vm = viewModel()
+
+        vm.send("你好", ApiLocale.Zh)
+        assertEquals(ApiErrorCode.ModelUnavailable, vm.error?.code)
+        assertEquals(listOf(false, true), vm.items.map { it.incomplete })
+        assertEquals("我也", vm.items.last().message.text)
+        assertFalse(vm.canEnd)
+
+        vm.retry(ApiLocale.Zh)
+        // The retry asks for the whole turn: the broken half is not in the request.
+        assertEquals(listOf(Message(Role.Counselor, "你好")), requests.last().messages)
+        assertEquals(listOf(Message(Role.Counselor, "你好"), Message(Role.Client, "我也不知道。")), vm.items.map { it.message })
+        assertTrue(vm.items.none { it.incomplete })
+        assertTrue(vm.canEnd)
+    }
+
+    @Test
+    fun nothingArrivedLeavesNoBubble() = runTest {
+        replies += flow { throw ApiException(ApiErrorCode.Network) }
+        val vm = viewModel()
+        vm.send("你好", ApiLocale.Zh)
+        assertEquals(ApiErrorCode.Network, vm.error?.code)
+        assertEquals(listOf(Role.Counselor), vm.items.map { it.message.role })
+    }
+}

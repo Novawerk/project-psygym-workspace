@@ -3,6 +3,7 @@ package io.novawerk.psygym.data.api
 import io.novawerk.psygym.domain.model.ApiLocale
 import io.novawerk.psygym.domain.model.CaseSummary
 import io.novawerk.psygym.domain.model.LocalizedText
+import io.novawerk.psygym.domain.model.Role
 import io.novawerk.psygym.domain.model.TurnRequest
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -30,7 +31,9 @@ class FakePsygymApi(
     }
 
     override fun supervision(request: TurnRequest): Flow<String> {
-        val report = if (request.locale == ApiLocale.Zh) REPORT_ZH else REPORT_EN
+        // Same shape as the real report (acceptance C1, C2, C7), so switching doesn't jump.
+        val quote = request.messages.firstOrNull { it.role == Role.Counselor }?.text?.take(40) ?: "…"
+        val report = (if (request.locale == ApiLocale.Zh) REPORT_ZH else REPORT_EN).replace("{quote}", quote)
         return typeOut(report, chunk = 4)
     }
 
@@ -78,39 +81,37 @@ class FakePsygymApi(
         )
 
         val REPORT_ZH = """
-            ## 演示报告
+            ## 做得好的地方
 
-            > 这是演示数据，不是真实督导意见。
+            - 你说「{quote}」：开场开放，给了来访者空间。（演示数据）
 
-            ### 做得好的
-            - 开场开放，给了来访者空间。
-            - 有共情的回应。
+            ## 需要改进的地方
 
-            ### 可以改进的
-            - 过早给建议，没有先澄清来访者的自动化思维。
-            - 没有和来访者一起设定本次会谈目标。
+            - 你还没有和来访者一起设定这次会谈的目标。可以换成：「今天我们先聊聊最困扰你的一件事，好吗？」（演示数据）
 
-            ### 下次练习
+            ## 下次练什么
+
             1. 用苏格拉底式提问探索一个具体情境。
             2. 会谈开始时先共同设定议程。
+
+            这份反馈由 AI 生成，仅供练习参考。
         """.trimIndent()
 
         val REPORT_EN = """
-            ## Demo report
+            ## What went well
 
-            > This is demo data, not real supervision.
+            - You said "{quote}": an open start that gave the client room. (Demo data)
 
-            ### What went well
-            - An open start that gave the client room.
-            - Empathic responses.
+            ## What to improve
 
-            ### What to improve
-            - Advice came early, before exploring the client's automatic thoughts.
-            - No shared goal for the session.
+            - You haven't set a goal for the session together. Try: "Shall we start with the thing that troubles you most today?" (Demo data)
 
-            ### Practise next
+            ## What to practise next
+
             1. Use Socratic questions to explore one concrete situation.
             2. Set an agenda together at the start.
+
+            This feedback is AI-generated, for practice only.
         """.trimIndent()
     }
 }

@@ -47,10 +47,14 @@ fun SupervisionScreen(
     demoData: Boolean,
     onHome: () -> Unit,
     onPracticeAgain: () -> Unit,
+    onSessionLost: () -> Unit,
     onOpenSettings: () -> Unit,
 ) {
     val locale = rememberApiLocale()
-    LaunchedEffect(Unit) { viewModel.start(locale) }
+    LaunchedEffect(Unit) {
+        // The app was restarted and the practice is gone: nothing to report on.
+        if (viewModel.hasPractice) viewModel.start(locale) else onSessionLost()
+    }
     val scroll = rememberScrollState()
 
     Scaffold(
@@ -119,9 +123,14 @@ fun SupervisionScreen(
                     )
                 }
             }
-            viewModel.error?.let { code ->
+            viewModel.error?.let { error ->
                 Spacer(Modifier.height(12.dp))
-                ErrorCard(code = code, onRetry = { viewModel.load(locale) }, onOpenSettings = onOpenSettings)
+                ErrorCard(
+                    error = error,
+                    onRetry = { viewModel.load(locale) },
+                    onOpenSettings = onOpenSettings,
+                    onBackToCases = onPracticeAgain,
+                )
             }
             Spacer(Modifier.height(24.dp))
         }

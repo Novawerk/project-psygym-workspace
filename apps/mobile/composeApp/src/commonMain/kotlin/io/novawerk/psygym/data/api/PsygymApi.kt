@@ -24,8 +24,11 @@ enum class ApiErrorCode(val wire: String?) {
     RateLimited("rate_limited"),
     ModelUnavailable("model_unavailable"),
 
-    /** No connection, timeout, or the stream broke. */
+    /** No connection, or the stream broke off. */
     Network(null),
+
+    /** Nothing arrived for 30 seconds (pings and turn_start count as something). */
+    Timeout(null),
 
     /** Anything we don't recognise. */
     Unknown(null),
@@ -49,4 +52,11 @@ class ApiException(
     val code: ApiErrorCode,
     message: String? = null,
     cause: Throwable? = null,
+    /** From `Retry-After` on 429, when the server sends whole seconds. */
+    val retryAfterSeconds: Int? = null,
 ) : Exception(message ?: code.name, cause)
+
+/** What the UI keeps of a failure. */
+data class ApiError(val code: ApiErrorCode, val retryAfterSeconds: Int? = null)
+
+fun ApiException.toError() = ApiError(code, retryAfterSeconds)

@@ -5,7 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import io.novawerk.psygym.BuildKonfig
+import io.novawerk.psygym.AppConfig
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -31,9 +31,9 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
     /** True once we've asked for an invite code on first launch (saved or skipped). */
     val invitePrompted: Flow<Boolean> = dataStore.data.map { it[INVITE_PROMPTED] ?: false }
 
-    /** Demo data instead of the backend. Only debug builds can change it. */
+    /** Demo data instead of the backend. Debug builds only; always false in release. */
     val useFakeApi: Flow<Boolean> = dataStore.data.map {
-        if (BuildKonfig.IS_DEBUG) it[USE_FAKE_API] ?: BuildKonfig.USE_FAKE_API else BuildKonfig.USE_FAKE_API
+        AppConfig.isDebug && (it[USE_FAKE_API] ?: AppConfig.fakeApiDefault)
     }
 
     suspend fun currentInviteCode(): String = inviteCode.first()

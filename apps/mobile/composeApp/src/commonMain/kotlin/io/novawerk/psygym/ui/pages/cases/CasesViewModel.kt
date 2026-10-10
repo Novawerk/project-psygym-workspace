@@ -5,16 +5,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.novawerk.psygym.data.api.ApiErrorCode
+import io.novawerk.psygym.data.api.ApiError
 import io.novawerk.psygym.data.api.ApiException
 import io.novawerk.psygym.data.api.PsygymApi
+import io.novawerk.psygym.data.api.toError
 import io.novawerk.psygym.domain.model.CaseSummary
 import kotlinx.coroutines.launch
 
 class CasesViewModel(private val api: PsygymApi) : ViewModel() {
     var cases by mutableStateOf<List<CaseSummary>?>(null)
         private set
-    var error by mutableStateOf<ApiErrorCode?>(null)
+    var error by mutableStateOf<ApiError?>(null)
         private set
     var loading by mutableStateOf(false)
         private set
@@ -31,7 +32,7 @@ class CasesViewModel(private val api: PsygymApi) : ViewModel() {
             try {
                 cases = api.cases()
             } catch (e: ApiException) {
-                error = e.code
+                error = e.toError()
             } finally {
                 loading = false
             }

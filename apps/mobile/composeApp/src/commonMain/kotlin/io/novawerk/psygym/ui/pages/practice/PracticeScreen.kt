@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -35,22 +36,26 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.novawerk.psygym.domain.model.ContractLimits
-import io.novawerk.psygym.domain.model.Message
 import io.novawerk.psygym.domain.model.Role
 import io.novawerk.psygym.resources.Res
 import io.novawerk.psygym.resources.back
 import io.novawerk.psygym.resources.practice_empty
 import io.novawerk.psygym.resources.practice_end
+import io.novawerk.psygym.resources.practice_chars_left
+import io.novawerk.psygym.resources.practice_help
+import io.novawerk.psygym.resources.practice_incomplete
 import io.novawerk.psygym.resources.practice_input_hint
 import io.novawerk.psygym.resources.practice_leave_body
 import io.novawerk.psygym.resources.practice_leave_cancel
@@ -61,31 +66,39 @@ import io.novawerk.psygym.resources.practice_role_client
 import io.novawerk.psygym.resources.practice_role_counselor
 import io.novawerk.psygym.resources.practice_send
 import io.novawerk.psygym.ui.components.ErrorCard
+import io.novawerk.psygym.ui.components.HelpDialog
 import io.novawerk.psygym.ui.locale.rememberApiLocale
 import org.jetbrains.compose.resources.stringResource
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun PracticeScreen(
     viewModel: PracticeViewModel,
     onLeave: () -> Unit,
+    onSessionLost: () -> Unit,
     onEnd: () -> Unit,
     onOpenSettings: () -> Unit,
 ) {
     val locale = rememberApiLocale()
     var input by rememberSaveable { mutableStateOf("") }
     var confirmLeave by rememberSaveable { mutableStateOf(false) }
+    var showHelp by rememberSaveable { mutableStateOf(false) }
     val listState = rememberLazyListState()
-    val messages = viewModel.messages
-    val lastText = messages.lastOrNull()?.text
+    val items = viewModel.items
+    val lastText = items.lastOrNull()?.message?.text
+
+    // The app was restarted and the in-memory practice is gone: back to the case list.
+    LaunchedEffect(Unit) { if (viewModel.case == null) onSessionLost() }
 
     // Follow the conversation, including each new piece of a streaming reply.
-    LaunchedEffect(messages.size, lastText?.length, viewModel.error) {
+    LaunchedEffect(items.size, lastText?.length, viewModel.error) {
         val count = listState.layoutInfo.totalItemsCount
         if (count > 0) listState.animateScrollToItem(count - 1)
     }
 
-    val leave = { if (messages.isEmpty()) onLeave() else confirmLeave = true }
+    val leave = { if (items.isEmpty()) onLeave() else confirmLeave = true }
+    // System back asks too: the conversation isn't saved anywhere.
+    BackHandler(enabled = items.isNotEmpty()) { confirmLeave = true }
 
     Scaffold(
         topBar = {
@@ -112,6 +125,7 @@ fun PracticeScreen(
         },
         bottomBar = {
             Composer(
+                onHelp = { showHelp = true },
                 value = input,
                 onValueChange = { input = it.take(ContractLimits.MAX_MESSAGE_CHARS) },
                 enabled = viewModel.canSend,
@@ -129,7 +143,7 @@ fun PracticeScreen(
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            if (messages.isEmpty()) {
+            if (items.isEmpty()) {
                 item {
                     Text(
                         stringResource(Res.string.practice_empty),
@@ -139,16 +153,17 @@ fun PracticeScreen(
                     )
                 }
             }
-            itemsIndexed(messages) { _, message -> Bubble(message) }
-            if (viewModel.streaming && messages.lastOrNull()?.role == Role.Counselor) {
+            itemsIndexed(items) { _, item -> Bubble(item) }
+            if (viewModel.streaming && items.lastOrNull()?.message?.role == Role.Counselor) {
                 item { TypingBubble() }
             }
-            viewModel.error?.let { code ->
+            viewModel.error?.let { error ->
                 item {
                     ErrorCard(
-                        code = code,
+                        error = error,
                         onRetry = { viewModel.retry(locale) },
                         onOpenSettings = onOpenSettings,
+                        onBackToCases = onLeave,
                     )
                 }
             }
@@ -164,6 +179,8 @@ fun PracticeScreen(
             }
         }
     }
+
+    if (showHelp) HelpDialog(onClose = { showHelp = false })
 
     if (confirmLeave) {
         AlertDialog(
@@ -184,7 +201,8 @@ fun PracticeScreen(
 }
 
 @Composable
-private fun Bubble(message: Message) {
+private fun Bubble(item: ChatItem) {
+    val message = item.message
     val mine = message.role == Role.Counselor
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -213,6 +231,14 @@ private fun Bubble(message: Message) {
                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
             )
         }
+        if (item.incomplete) {
+            Text(
+                stringResource(Res.string.practice_incomplete),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+            )
+        }
     }
 }
 
@@ -232,6 +258,7 @@ private fun TypingBubble() {
 
 @Composable
 private fun Composer(
+    onHelp: () -> Unit,
     value: String,
     onValueChange: (String) -> Unit,
     enabled: Boolean,
@@ -239,31 +266,44 @@ private fun Composer(
     onSend: () -> Unit,
 ) {
     Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .imePadding()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            OutlinedTextField(
-                value = value,
-                onValueChange = onValueChange,
-                enabled = enabled,
-                placeholder = { Text(stringResource(Res.string.practice_input_hint)) },
-                maxLines = 5,
-                shape = RoundedCornerShape(24.dp),
-                modifier = Modifier.weight(1f),
-            )
-            Spacer(Modifier.size(8.dp))
-            FilledIconButton(onClick = onSend, enabled = enabled && value.isNotBlank()) {
-                if (sending) {
-                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                } else {
-                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = stringResource(Res.string.practice_send))
+        Column(Modifier.fillMaxWidth().navigationBarsPadding().imePadding()) {
+            // Always there during a session (acceptance E3).
+            TextButton(
+                onClick = onHelp,
+                modifier = Modifier.padding(start = 4.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+            ) {
+                Icon(Icons.AutoMirrored.Outlined.HelpOutline, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.size(6.dp))
+                Text(stringResource(Res.string.practice_help), style = MaterialTheme.typography.labelLarge)
+            }
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(start = 12.dp, end = 12.dp, bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                OutlinedTextField(
+                    value = value,
+                    onValueChange = onValueChange,
+                    enabled = enabled,
+                    placeholder = { Text(stringResource(Res.string.practice_input_hint)) },
+                    maxLines = 5,
+                    shape = RoundedCornerShape(24.dp),
+                    modifier = Modifier.weight(1f),
+                )
+                Spacer(Modifier.size(8.dp))
+                FilledIconButton(onClick = onSend, enabled = enabled && value.isNotBlank()) {
+                    if (sending) {
+                        CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    } else {
+                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = stringResource(Res.string.practice_send))
+                    }
                 }
             }
         }
     }
 }
+
+/** Show the remaining characters once fewer than this are left. */
+private const val CHARS_LEFT_FROM = 200
