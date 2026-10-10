@@ -10,7 +10,8 @@ Date: 2026-10-10. Status: accepted.
   before `turn_end` ([`api-contract.md`](../api-contract.md)). The tool call never reaches the app.
 - **Still stateless.** The server doesn't remember that a session ended. If the app sends another
   message anyway, the model sees the whole conversation, answers in one short line and calls
-  `end_session` again, so that stream carries `session_end` too.
+  `end_session` again, so that stream carries `session_end` too. This repeat is best effort: real
+  DeepSeek runs miss it now and then (2026-10-10). The app goes by the first `session_end`.
 - **Never an empty turn.** A tool call without a closing line gets one from the server. A turn
   with no text and no `end_session` (e.g. only an unknown tool call) ends with an `error` frame,
   so the app offers a retry instead of showing an empty bubble.

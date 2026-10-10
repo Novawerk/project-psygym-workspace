@@ -214,6 +214,14 @@ describe("what the supervisor sees", () => {
     expect(prompts.supervisor).toContain("不算引用");
     expect(prompts.supervisor).toContain("「」/ “” 只用于逐字引用对话原话");
     expect(prompts.supervisor).toContain("英文报告里不用「」");
+    // The quote rule sits up front, second only to the risk check, with a wrong/right table.
+    const quoteRule = prompts.supervisor.indexOf("## 第二条规则：引号只给原话");
+    expect(quoteRule).toBeGreaterThan(prompts.supervisor.indexOf("## 第一条规则"));
+    expect(quoteRule).toBeLessThan(prompts.supervisor.indexOf("## 报告结构"));
+    expect(prompts.supervisor).toContain("一个字都不改，不省略，不拼接");
+    expect(prompts.supervisor).toContain("| 错 | 对 |");
+    expect(prompts.supervisor).toContain("| 你没有「留在来访者身上」 | 你没有留在来访者身上 |");
+    expect(prompts.supervisor).toContain("**包括风险筛查那一条**");
     expect(prompts.supervisor).toContain("必须**跟在「可以换成：」");
     // The risk-screening check is the first rule, before the transcript note and the structure,
     // and the structure repeats it.
