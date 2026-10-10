@@ -57,7 +57,8 @@ the counselor's (else 400). The server answers as the client, in character.
 The stream may carry a `session_end` frame (see below): the client ended the session in
 character. The app then locks the input and leaves only "End and see supervision". The server
 stays stateless: if the app sends another message after that anyway, the client answers with
-one short line and that stream carries `session_end` again.
+one short line and that stream should carry `session_end` again. That repeat is best effort
+(it depends on the model); the app goes by the first `session_end` and keeps the input locked.
 
 ### `POST /supervision` → `text/event-stream`
 
