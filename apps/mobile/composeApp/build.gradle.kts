@@ -8,6 +8,16 @@ val appVersionName: String = System.getenv("VERSION_NAME") ?: libs.versions.app.
 val appVersionCode: Int = System.getenv("VERSION_CODE")?.toIntOrNull()
     ?: libs.versions.app.versionCode.get().toInt()
 
+// Play upload key: read from ~/.gradle/gradle.properties or the environment, never from
+// the repo. Without all four, release builds are left unsigned so anyone can still build.
+fun releaseSecret(name: String): String? =
+    providers.gradleProperty(name).orNull ?: providers.environmentVariable(name).orNull
+val uploadStoreFile = releaseSecret("PSYGYM_UPLOAD_STORE_FILE")
+val uploadStorePassword = releaseSecret("PSYGYM_UPLOAD_STORE_PASSWORD")
+val uploadKeyAlias = releaseSecret("PSYGYM_UPLOAD_KEY_ALIAS")
+val uploadKeyPassword = releaseSecret("PSYGYM_UPLOAD_KEY_PASSWORD")
+val hasUploadKey = listOf(uploadStoreFile, uploadStorePassword, uploadKeyAlias, uploadKeyPassword).all { !it.isNullOrBlank() }
+
 // Debug vs release is decided by the build itself, not here: Android reads its
 // variant's BuildConfig.DEBUG, iOS reads Platform.isDebugBinary (Xcode Debug vs
 // Release). Release always talks to production and can never use demo data; the
@@ -111,9 +121,21 @@ android {
     buildFeatures {
         buildConfig = true
     }
+    signingConfigs {
+        if (hasUploadKey) {
+            create("upload") {
+                storeFile = file(uploadStoreFile!!)
+                storePassword = uploadStorePassword
+                keyAlias = uploadKeyAlias
+                keyPassword = uploadKeyPassword
+            }
+        }
+    }
     buildTypes {
         getByName("release") {
             isMinifyEnabled = false
+            // Play App Signing re-signs for the store; this is only the upload key.
+            if (hasUploadKey) signingConfig = signingConfigs.getByName("upload")
         }
     }
     compileOptions {
