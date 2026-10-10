@@ -94,6 +94,7 @@ key 沿用 App 现有命名（`home_*`、`cases_*`、`practice_*`、`supervision
 | practice_end_confirm | 新 | 结束并查看督导 | End and see supervision |
 | practice_end_cancel | 新 | 继续会谈 | Keep going |
 | practice_end_note | 新 | 我们不保存这次对话。结束后可以看报告，离开报告页就没有了。 | We don't store this session. You can read the report; once you leave it, it's gone. |
+| practice_end_note_saved | 新（🟠 D3，替代上一条） | 对话和报告会存在这台手机上。可以在设置里关掉。 | The session and report are saved on this phone. You can turn this off in Settings. |
 | practice_leave_title | 不变 | 离开这次练习？ | Leave this practice? |
 | practice_leave_confirm | 不变 | 离开 | Leave |
 | practice_leave_cancel | 不变 | 留下 | Stay |
@@ -118,6 +119,14 @@ key 沿用 App 现有命名（`home_*`、`cases_*`、`practice_*`、`supervision
 | supervision_home | 不变 | 回到首页 | Back to home |
 | supervision_leave_title | 新 | 离开报告页？ | Leave the report? |
 | supervision_leave_body | 新 | 离开后这份报告就没有了。 | Once you leave, this report is gone. |
+| supervision_feedback_q | 新（🟠 D7） | 这份反馈有帮助吗？ | Was this feedback helpful? |
+| supervision_feedback_up_cd | 新（读屏） | 有帮助 | Helpful |
+| supervision_feedback_down_cd | 新（读屏） | 没帮助 | Not helpful |
+| supervision_feedback_hint | 新 | 想说一句吗？（可选） | Anything to add? (optional) |
+| supervision_feedback_send | 新 | 发送 | Send |
+| supervision_feedback_note | 新 | 我们只收你的评价和这一句话，不收对话内容。 | We only receive your rating and this one line, not the conversation. |
+| supervision_feedback_thanks | 新 | 谢谢，我们收到了。 | Thanks, we got it. |
+| supervision_feedback_failed | 新 | 没发出去 | Didn't send |
 | supervision_leave_writing | 新 | 报告还没写完，离开就看不到了。 | The report isn't finished. If you leave, you won't see it. |
 
 ### 需要帮助？
@@ -136,6 +145,12 @@ key 沿用 App 现有命名（`home_*`、`cases_*`、`practice_*`、`supervision
 
 | key | 中文 | English |
 |-----|------|---------|
+| settings_history_section | 练习记录 | Practice history |
+| settings_history_toggle | 在本机保存练习记录 | Save practice history on this phone |
+| settings_history_toggle_desc | 关掉后不再保存新的练习，已有的保留。 | When off, new sessions aren't saved. Saved ones stay. |
+| settings_history_delete_all | 删除所有练习记录 | Delete all practice history |
+| settings_history_delete_confirm | 删除后不能恢复。 | This can't be undone. |
+| settings_history_delete_action | 删除 | Delete |
 | settings_help_section | 帮助 | Help |
 | settings_replay_onboarding | 重新看引导 | Replay the intro |
 | settings_privacy | 隐私说明 | Privacy |
@@ -156,6 +171,9 @@ key 沿用 App 现有命名（`home_*`、`cases_*`、`practice_*`、`supervision
 | privacy_a_vendor | 按它们自己的政策处理。 | It follows its own policy. |
 | privacy_q_device | 手机上存吗？ | Is it stored on my phone? |
 | privacy_a_device | 现在不存。离开报告页，这场对话和报告就没有了。 | Not now. Once you leave the report, the session and report are gone. |
+| privacy_a_device_saved | （🟠 D3，替代上一条）存。每场练习的对话和报告存在这台手机上 App 自己的空间里，不上传、不进云备份。可以在设置里关掉，也可以删除一场或全部。卸载 App 就全部删除。 | Yes. Each session and its report are saved in the app's own space on this phone. Nothing is uploaded or backed up to the cloud. Turn it off or delete one or all sessions in Settings. Uninstalling the app deletes everything. |
+| privacy_q_feedback | 你们收到我的评价吗？ | Do you receive my ratings? |
+| privacy_a_feedback | 只有你在报告页点了 👍 / 👎 时，我们收到这个评价和你写的一句话（如果写了）。不收对话内容。 | Only when you tap 👍 / 👎 on a report. We receive that rating and the one line you write, if any. Never the conversation. |
 | privacy_q_collect | 你们收集什么？ | What do you collect? |
 | privacy_a_collect | 邀请码（用来连服务器）和你选的语言，只存在这台手机上。没有账号，不收集姓名、手机号、位置。 | Your invite code (to reach our server) and your language, kept on this phone only. No account. We don't collect your name, phone number or location. |
 | privacy_q_real | 我能输入真实来访者的信息吗？ | Can I enter real client information? |
