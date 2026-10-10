@@ -21,6 +21,22 @@ export const FeedbackBody = z.strictObject({
 });
 export type Feedback = z.infer<typeof FeedbackBody>;
 
+/** Slack rejects a section text over 3000 characters (counted in UTF-16 units); stay under it. */
+export const SLACK_TEXT_MAX = 2900;
+const TRUNCATED = "…（已截断）";
+
+/**
+ * Fits a text into one Slack section: past SLACK_TEXT_MAX UTF-16 units it's cut (never inside a
+ * surrogate pair, so an emoji is never split) and marked as truncated.
+ */
+export function fitSlack(text: string, max = SLACK_TEXT_MAX): string {
+  if (text.length <= max) return text;
+  let end = max - TRUNCATED.length;
+  const code = text.charCodeAt(end - 1);
+  if (code >= 0xd800 && code <= 0xdbff) end--; // a high surrogate: keep the pair whole
+  return text.slice(0, end) + TRUNCATED;
+}
+
 /** Slack reads &, < and > as markup (<!channel>, links); escape them so a comment stays text. */
 export const escapeSlack = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
@@ -47,7 +63,7 @@ export function slackMessage(f: Feedback & { locale: Locale }, at: Date) {
         ],
       },
       { type: "section", text: { type: "mrkdwn", text: "*Comment*" } },
-      { type: "section", text: { type: "plain_text", text: comment, emoji: false } },
+      { type: "section", text: { type: "plain_text", text: fitSlack(comment), emoji: false } },
     ],
   };
 }

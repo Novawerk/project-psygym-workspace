@@ -5,7 +5,7 @@
 // before sending. See docs/decisions/0006-report.md.
 import { z } from "zod";
 
-import { MAX_COMMENT_CHARS, escapeSlack } from "./feedback.js";
+import { MAX_COMMENT_CHARS, escapeSlack, fitSlack } from "./feedback.js";
 import { MAX_MESSAGE_CHARS, LocaleSchema } from "./schema.js";
 
 /** Keys match the product copy (report_reason_*). */
@@ -65,9 +65,9 @@ export function reportSlackMessage(r: Report, at: Date) {
         ],
       },
       { type: "section", text: { type: "mrkdwn", text: "*Reported text*" } },
-      { type: "section", text: { type: "plain_text", text: r.reportedText, emoji: false } },
+      { type: "section", text: { type: "plain_text", text: fitSlack(r.reportedText), emoji: false } },
       { type: "section", text: { type: "mrkdwn", text: "*Note*" } },
-      { type: "section", text: { type: "plain_text", text: r.comment || "(no note)", emoji: false } },
+      { type: "section", text: { type: "plain_text", text: fitSlack(r.comment || "(no note)"), emoji: false } },
     ],
   };
 }
