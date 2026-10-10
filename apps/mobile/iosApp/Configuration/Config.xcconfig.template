@@ -1,0 +1,10 @@
+// Copy to Config.xcconfig (gitignored) and fill TEAM_ID for device builds.
+TEAM_ID=
+
+PRODUCT_NAME=PSYGYM
+PRODUCT_BUNDLE_IDENTIFIER=io.novawerk.psygym
+
+// CURRENT_PROJECT_VERSION = Android versionCode; MARKETING_VERSION = versionName.
+// Keep in step with apps/mobile/gradle/libs.versions.toml.
+CURRENT_PROJECT_VERSION=1
+MARKETING_VERSION=0.1.0

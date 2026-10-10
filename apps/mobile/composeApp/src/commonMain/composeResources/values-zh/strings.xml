@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">聆镜 PSYGYM</string>
+    <string name="api_locale" translatable="false">zh</string>
+
+    <string name="back">返回</string>
+    <string name="retry">重试</string>
+    <string name="demo_badge">演示数据</string>
+
+    <string name="home_tagline">和 AI 来访者练习咨询。</string>
+    <string name="home_intro">和 AI 扮演的来访者进行一次认知行为疗法（CBT）会谈，结束后拿到一份督导报告：哪里做得好，哪里有问题，下次练什么。</string>
+    <string name="home_safety_title">这是给咨询师的训练工具</string>
+    <string name="home_safety_body">它不是心理治疗，也不是给来访者或患者用的。所有会谈都是模拟的，来访者由 AI 扮演。请不要输入真实来访者的信息。</string>
+    <string name="home_start">开始练习</string>
+    <string name="home_settings">设置</string>
+
+    <string name="cases_title">选择病例</string>
+    <string name="cases_empty">还没有病例。</string>
+    <string name="cases_school_cbt">CBT</string>
+
+    <string name="practice_input_hint">以咨询师身份说点什么…</string>
+    <string name="practice_send">发送</string>
+    <string name="practice_end">结束练习</string>
+    <string name="practice_empty">你是咨询师。准备好了就开始会谈吧。</string>
+    <string name="practice_role_counselor">你</string>
+    <string name="practice_role_client">来访者</string>
+    <string name="practice_limit_reached">这次会谈已经够长了。结束练习，看看督导报告吧。</string>
+    <string name="practice_leave_title">离开这次练习？</string>
+    <string name="practice_leave_body">对话不会保存在任何地方，离开后就没有了。</string>
+    <string name="practice_leave_confirm">离开</string>
+    <string name="practice_leave_cancel">留下</string>
+
+    <string name="supervision_title">督导报告</string>
+    <string name="supervision_generating">督导正在写报告…</string>
+    <string name="supervision_note">AI 生成的训练反馈。建议和真人督导一起讨论。</string>
+    <string name="supervision_home">回到首页</string>
+    <string name="supervision_again">再练一次</string>
+
+    <string name="settings_title">设置</string>
+    <string name="settings_language">语言</string>
+    <string name="settings_language_system">跟随系统</string>
+    <string name="settings_language_zh">中文</string>
+    <string name="settings_language_en">English</string>
+    <string name="settings_invite">邀请码</string>
+    <string name="settings_invite_hint">输入邀请码</string>
+    <string name="settings_invite_desc">邀请码由聆镜团队发放，用来连接我们的服务器。</string>
+    <string name="settings_invite_save">保存</string>
+    <string name="settings_invite_saved">已保存</string>
+    <string name="settings_debug">开发者</string>
+    <string name="settings_fake_api">使用演示数据</string>
+    <string name="settings_fake_api_desc">假病例、假回复，不需要服务器。仅调试版可见。</string>
+    <string name="settings_about">关于</string>
+    <string name="settings_version">版本 %1$s</string>
+
+    <string name="invite_dialog_title">有邀请码吗？</string>
+    <string name="invite_dialog_body">聆镜目前只对受邀用户开放。也可以稍后在设置里填写。</string>
+    <string name="invite_dialog_save">保存</string>
+    <string name="invite_dialog_skip">跳过</string>
+
+    <string name="error_invalid_request">这条消息没能发出去。试试短一点的内容。</string>
+    <string name="error_invite_required">需要有效的邀请码，请到设置里填写。</string>
+    <string name="error_case_not_found">这个病例已经不可用了，请换一个。</string>
+    <string name="error_rate_limited">请求太频繁了，请稍等一分钟再试。</string>
+    <string name="error_model_unavailable">AI 暂时不可用，请过几分钟再试。</string>
+    <string name="error_network">连不上服务器，请检查网络后重试。</string>
+    <string name="error_unknown">出了点问题，请重试。</string>
+    <string name="error_open_settings">去设置</string>
+</resources>

@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PSYGYM</string>
+    <!-- The language the backend should answer in. Must be "zh" or "en". -->
+    <string name="api_locale" translatable="false">en</string>
+
+    <string name="back">Back</string>
+    <string name="retry">Try again</string>
+    <string name="demo_badge">Demo data</string>
+
+    <string name="home_tagline">Practise counseling with an AI client.</string>
+    <string name="home_intro">Hold a CBT session with an AI client, then get a supervision report: what went well, what went wrong, what to practise next.</string>
+    <string name="home_safety_title">A training tool for counselors</string>
+    <string name="home_safety_body">This is not therapy, and it is not for patients. Every session is simulated: the client is an AI. Don’t enter real client information.</string>
+    <string name="home_start">Start practice</string>
+    <string name="home_settings">Settings</string>
+
+    <string name="cases_title">Choose a case</string>
+    <string name="cases_empty">No cases yet.</string>
+    <string name="cases_school_cbt">CBT</string>
+
+    <string name="practice_input_hint">Say something as the counselor…</string>
+    <string name="practice_send">Send</string>
+    <string name="practice_end">End practice</string>
+    <string name="practice_empty">You are the counselor. Open the session when you’re ready.</string>
+    <string name="practice_role_counselor">You</string>
+    <string name="practice_role_client">Client</string>
+    <string name="practice_limit_reached">This session is long enough. End it to get your supervision report.</string>
+    <string name="practice_leave_title">Leave this practice?</string>
+    <string name="practice_leave_body">The conversation isn’t saved anywhere. If you leave, it’s gone.</string>
+    <string name="practice_leave_confirm">Leave</string>
+    <string name="practice_leave_cancel">Stay</string>
+
+    <string name="supervision_title">Supervision report</string>
+    <string name="supervision_generating">Your supervisor is writing…</string>
+    <string name="supervision_note">AI feedback for training. Talk it over with a human supervisor.</string>
+    <string name="supervision_home">Back to home</string>
+    <string name="supervision_again">Practise again</string>
+
+    <string name="settings_title">Settings</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_language_system">Follow system</string>
+    <string name="settings_language_zh">中文</string>
+    <string name="settings_language_en">English</string>
+    <string name="settings_invite">Invite code</string>
+    <string name="settings_invite_hint">Enter your invite code</string>
+    <string name="settings_invite_desc">You get one from the PSYGYM team. It lets the app reach our server.</string>
+    <string name="settings_invite_save">Save</string>
+    <string name="settings_invite_saved">Saved</string>
+    <string name="settings_debug">Developer</string>
+    <string name="settings_fake_api">Use demo data</string>
+    <string name="settings_fake_api_desc">Fake cases and replies, no server needed. Debug builds only.</string>
+    <string name="settings_about">About</string>
+    <string name="settings_version">Version %1$s</string>
+
+    <string name="invite_dialog_title">Do you have an invite code?</string>
+    <string name="invite_dialog_body">PSYGYM is invite-only for now. You can also add the code later in Settings.</string>
+    <string name="invite_dialog_save">Save</string>
+    <string name="invite_dialog_skip">Skip</string>
+
+    <string name="error_invalid_request">Something in that message didn’t go through. Try a shorter message.</string>
+    <string name="error_invite_required">You need a valid invite code. Add it in Settings.</string>
+    <string name="error_case_not_found">This case isn’t available any more. Pick another one.</string>
+    <string name="error_rate_limited">Too many requests right now. Wait a minute and try again.</string>
+    <string name="error_model_unavailable">The AI is unavailable right now. Try again in a few minutes.</string>
+    <string name="error_network">Can’t reach the server. Check your connection and try again.</string>
+    <string name="error_unknown">Something went wrong. Try again.</string>
+    <string name="error_open_settings">Open Settings</string>
+</resources>
