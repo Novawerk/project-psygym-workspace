@@ -15,5 +15,5 @@ Date: 2026-10-10. Status: accepted (board D8 = A).
   marked as a report, text in plain_text blocks so nothing in it pings anyone. Our server stores
   nothing; Slack keeps the message. Unset webhook or a Slack failure: dropped, `204` anyway.
 - **Logs.** Ids, enums and lengths only. Never the passage, the note or the webhook URL.
-- **Open.** Who reads reports, how fast, and how they turn into prompt changes: to settle with
-  聆镜 and write down in `docs/`.
+- **Who reads them.** Two members we name, within a week (see `safety.md` §1 and board D8). How
+  a report turns into a prompt change is still to settle with 聆镜.
