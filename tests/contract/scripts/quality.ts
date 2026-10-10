@@ -8,7 +8,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { joinedText, frameProblems, readStream } from "../src/sse.ts";
-import { BREAKS_ROLE, CLAIMS_PROMPT, GIVES_ADVICE, promptOverlap } from "../src/quality-flags.ts";
+import { BREAKS_ROLE, CLAIMS_PROMPT, GIVES_ADVICE, promptOverlap, unverifiedQuotes } from "../src/quality-flags.ts";
 
 type Locale = "zh" | "en";
 type Message = { role: "counselor" | "client"; text: string };
@@ -147,6 +147,7 @@ for (const c of cases.filter((c) => !ONLY_CASE || c.id === ONLY_CASE)) {
     const quoted = quotedLines(report, messages.filter((m) => m.role === "counselor").map((m) => m.text));
     if (quoted.length === 0) flags.push("C2: report quotes no counselor line");
     flags.push(...reportFlags(report));
+    for (const q of unverifiedQuotes(report, messages.map((m) => m.text))) flags.push(`C2/C3: quote not in the conversation word for word — 「${q}」`);
     md.push(`---`, ``, `## ${L.report}`, ``, report, ``, `---`, ``, `${L.quoted}: ${quoted.length}/${OPENERS[LOCALE].length + 1}`, ``);
   } catch (e) {
     flags.push(`run failed: ${(e as Error).message}`);
