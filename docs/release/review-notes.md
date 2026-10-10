@@ -10,7 +10,7 @@
 | 个人开发者提交受监管领域的 App | Apple 5.1.1(ix) | 说明我们是教育培训，不提供医疗服务 | 正式上架前定上架主体，见 [README](./README.md) |
 | 把数据发给第三方 AI 没有事先告知 | Apple 5.1.2(i) | O2 第 3 条说明并要求勾选；隐私说明页写了服务商名称 | 保持。服务商改了要同步改文案 |
 | 危机情况下用户没地方求助 | Apple 1.4.1 的精神；Play 对心理类内容的审查 | 会谈页常驻「需要帮助？」，不需要网络 | 热线号码**还没核实**（待聆镜确认）。正式版前最好有核实过的号码，至少要有几个主要地区的 |
-| AI 输出冒犯性内容 | Apple 1.1、1.2；**Play AI-Generated Content 政策要求 App 里能举报或标记冒犯性的 AI 内容，而且不用离开 App** | 提示词有安全边界（[safety.md](../safety.md) §3、§4）；报告页的 👎 和一句话（D7） | **要补：会谈中对单条 AI 回复也能举报**，比如长按气泡出现「举报这条回复」，走 `/feedback` 或新接口。已提给团队 |
+| AI 输出冒犯性内容 | Apple 1.1、1.2；**Play AI-Generated Content 政策要求 App 里能举报或标记冒犯性的 AI 内容，而且不用离开 App** | 提示词有安全边界（[safety.md](../safety.md) §3、§4）；报告页的 👎 和一句话（D7）；**举报单条 AI 内容**（D8：来访者回复或报告里的一段，`POST /report`，服务端见 #47） | App 端做好后，提交前在真机上试一遍举报流程 |
 | 未成年人使用 | 两边的分级 | 分级定 18+，目标受众选 18+ | |
 | 功能太少，或者审核员进不去 | Apple 2.1、4.2 | 给审核员一个专用邀请码；后端在审核期间必须在线 | 审核期间不改 `INVITE_CODES`，不停服务 |
 | 隐私标签和实际不符 | Apple 5.1.1、5.1.2；Play User Data 政策 | [privacy-labels.md](./privacy-labels.md) 按代码写 | 每次发版前核一遍 |
@@ -41,4 +41,4 @@ TestFlight 的 Beta App Review、App Store 审核、Play 的 App access 都可�
 - [ ] 后端 `https://psygym-api.novawerk.io` 在线，生产环境配了模型服务的 key
 - [ ] 隐私政策链接能打开
 - [ ] 隐私标签和 `PrivacyInfo.xcprivacy` 一致
-- [ ] Play 的 AI 内容举报入口已经做好（正式版前）
+- [ ] Play 的 AI 内容举报入口（D8）在当前 build 里能用
