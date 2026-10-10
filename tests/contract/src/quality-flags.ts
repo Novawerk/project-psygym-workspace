@@ -51,3 +51,24 @@ export function promptOverlap(reply: string, promptText: string, window = 14): s
   }
   return undefined;
 }
+
+const ALTERNATIVE = /(?:可以换成|换成|Try instead)\s*[:：]\s*$/i;
+const squash = (s: string) => s.replace(/\s+/g, "").replace(/[‘’]/g, "'").replace(/[“”]/g, '"');
+
+/**
+ * C2/C3: quotes in the report (「…」 or “…”) that do not appear word for word in the
+ * conversation. A quote right after 可以换成： / Try instead: is a suggested line, not a
+ * quote, and is skipped. Whitespace and curly apostrophes are ignored; nothing else is.
+ */
+export function unverifiedQuotes(report: string, conversation: string[]): string[] {
+  const said = conversation.map(squash);
+  const out: string[] = [];
+  for (const m of report.matchAll(/「([^」]+)」|“([^”]+)”/g)) {
+    const quote = m[1] ?? m[2];
+    const before = report.slice(Math.max(0, m.index! - 16), m.index);
+    if (ALTERNATIVE.test(before)) continue;
+    const q = squash(quote);
+    if (!said.some((t) => t.includes(q))) out.push(quote);
+  }
+  return out;
+}
