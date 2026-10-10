@@ -20,7 +20,7 @@ clientAlias:
   en: Lin
 clientIntro:
   zh: （占位）小林，23 岁，去年毕业，正在找工作。自己预约的第一次咨询。
-  en: (Placeholder) Xiao Lin, 23, graduated last year and is looking for work. Booked this first session herself.
+  en: (Placeholder) Lin, 23, graduated last year and is looking for work. Booked this first session herself.
 practiceFocus:
   - zh: 建立关系
     en: Building rapport

@@ -183,16 +183,24 @@ describe("what the supervisor sees", () => {
     expect(prompts.client).toContain("这句话是不是在贬低你这个人，或者否定你来咨询的理由");
     for (const s of ["挑战或检验你的想法", "温和地直面", "复述或释义你自己的话", "正常化"]) expect(prompts.client).toContain(s);
     // Only the threshold ends the session; the first hurt never does.
-    expect(prompts.client).toContain("只有一种情况算结束");
     expect(prompts.client).toContain("**不说结束语，不调用 `end_session`**");
     expect(prompts.client).toContain("I'll go now.");
     // The supervisor uses the same definition.
     expect(prompts.supervisor).toContain("贬低、嘲讽、不耐烦，说来访者矫情、小题大做");
     const clientCheck = prompts.client.indexOf("## 每一轮回复前，先在心里做这个检查");
+    // Counting comes first; reaching the threshold ends the session in that very turn; a normal
+    // wrap-up by the counselor never calls the tool; worked examples in zh and en.
+    expect(prompts.client.indexOf("**第 1 步：数伤害次数。**")).toBeGreaterThan(clientCheck);
+    expect(prompts.client).toContain("**就在这一轮**说一句结束语");
+    expect(prompts.client).toContain("**每一轮都要调用**");
+    expect(prompts.client).toContain("**第 3 步：咨询师主动收尾不是伤害。**");
+    expect(prompts.client).toContain("它**只有一种用途**");
+    expect(prompts.client).toContain("[伤害 2 次，到阈值：这一轮就结束]");
+    expect(prompts.client).toContain("[harm 2, threshold reached: end now]");
+    expect(prompts.client).toContain("[伤害 0 次，这是正常收尾] 好，谢谢你。 → 不调用");
     expect(clientCheck).toBeGreaterThan(0);
     expect(clientCheck).toBeLessThan(prompts.client.indexOf("## 守住角色"));
     expect(prompts.client).toContain("不能「受伤但留下」");
-    expect(prompts.client).toContain("每一轮都调用 `end_session`");
     expect(prompts.client).toContain("第一轮只说来访理由");
     expect(prompts.client).not.toContain("（叹气）」）。");
     expect(prompts.supervisor).toContain("报告里不要出现任何编号");
