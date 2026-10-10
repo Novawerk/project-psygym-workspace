@@ -22,9 +22,20 @@ class CaseStore(private val api: PsygymApi) {
     var loading by mutableStateOf(false)
         private set
 
-    /** Loads unless we already have the list. [force] reloads, e.g. after switching demo data. */
+    /** A forced reload asked for while a request was running (e.g. a new invite code). */
+    private var reloadPending = false
+
+    /**
+     * Loads unless we already have the list. [force] reloads, e.g. after switching demo
+     * data or saving an invite code; if a request is already running, it reloads again
+     * once that one ends, so the new code is never lost.
+     */
     suspend fun load(force: Boolean = false) {
-        if (loading || (!force && cases != null)) return
+        if (loading) {
+            if (force) reloadPending = true
+            return
+        }
+        if (!force && cases != null) return
         loading = true
         error = null
         if (force) cases = null
@@ -34,6 +45,10 @@ class CaseStore(private val api: PsygymApi) {
             error = e.toError()
         } finally {
             loading = false
+        }
+        if (reloadPending) {
+            reloadPending = false
+            load(force = true)
         }
     }
 }

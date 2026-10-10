@@ -152,7 +152,8 @@ fun MeScreen(
 
             Divider()
             SectionTitle(Res.string.settings_help_section)
-            LinkRow(Res.string.settings_replay_onboarding, onReplayOnboarding)
+            // Not on top of a session or report: finishing the intro clears the back stack.
+            if (onBack == null) LinkRow(Res.string.settings_replay_onboarding, onReplayOnboarding)
             LinkRow(Res.string.help_link, onHelp)
             LinkRow(Res.string.settings_privacy, onPrivacy)
 
