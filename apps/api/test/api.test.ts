@@ -151,8 +151,17 @@ describe("what the supervisor sees", () => {
     expect(prompts.supervisor).toContain("报告里不要出现任何编号");
     expect(prompts.supervisor).toContain("不提病例设定");
     expect(prompts.supervisor).toContain("一律用「来访者」");
-    // The risk check comes before the report structure.
-    expect(prompts.supervisor.indexOf("## 风险评估")).toBeLessThan(prompts.supervisor.indexOf("## 报告结构"));
+    // The risk-screening check is the first rule, before the transcript note and the structure,
+    // and the structure repeats it.
+    const check = prompts.supervisor.indexOf("## 第一条规则：写报告前先做风险筛查检查");
+    expect(check).toBeGreaterThan(0);
+    expect(check).toBeLessThan(prompts.supervisor.indexOf("## 转写是资料"));
+    expect(prompts.supervisor).toContain("如果上面的风险筛查检查成立，第 1 条就是它");
+    for (const cue of ["觉得自己没用", "睡眠明显改变", "提不起劲"]) expect(prompts.supervisor).toContain(cue);
+    // Every improvement carries one alternative wording, with the lead-in written once.
+    expect(prompts.supervisor).toContain("替代说法每条都要有");
+    expect(prompts.supervisor).toContain("Try instead: “…”");
+    expect(prompts.supervisor).not.toContain("（「可以换成：……」");
   });
 });
 
@@ -175,7 +184,19 @@ describe("temperature in the adapters", () => {
   it("Claude models that reject sampling parameters don't", () => {
     expect(new AnthropicProvider(llm("anthropic", "claude-sonnet-5-5")).buildRequest(req)).not.toHaveProperty("temperature");
     expect(new AnthropicProvider(llm("anthropic", "claude-opus-5-5")).buildRequest(req)).not.toHaveProperty("temperature");
-    expect(new AnthropicProvider(llm("anthropic", "claude-sonnet-4-6")).buildRequest(req)).toMatchObject({ temperature: 0.3 });
+    expect(new AnthropicProvider(llm("anthropic", "claude-haiku-5-5")).buildRequest(req)).not.toHaveProperty("temperature");
+  });
+
+  it("Claude models with adaptive thinking don't (thinking + temperature is a 400)", () => {
+    const sonnet46 = new AnthropicProvider(llm("anthropic", "claude-sonnet-4-6")).buildRequest(req);
+    expect(sonnet46).toHaveProperty("thinking");
+    expect(sonnet46).not.toHaveProperty("temperature");
+  });
+
+  it("older Claude models without thinking do", () => {
+    const sonnet45 = new AnthropicProvider(llm("anthropic", "claude-sonnet-4-5")).buildRequest(req);
+    expect(sonnet45).not.toHaveProperty("thinking");
+    expect(sonnet45).toMatchObject({ temperature: 0.3 });
   });
 });
 
