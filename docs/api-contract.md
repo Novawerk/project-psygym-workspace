@@ -156,13 +156,13 @@ UTC). The app reads the current mode from `GET /health`.
 - A request that carries `Authorization` is judged by the token alone: a bad, expired,
   signed-out or deleted-account token is `401 session_expired`. An invite code next to it
   doesn't help. The app then signs in again.
-- The move: the signed-in app ships with the server in `optional`; we set `AUTH_REQUIRED_FROM`
-  about 14 days later, looking at how many requests still come with only an invite code (a
-  count, `auth` with dim `session` or `invite`, no ids). We announce the date. From then on, a
-  request without a token is `426 update_required`. Old apps don't know that code and show
+- The move has no grace period (two testers, decided 2026-10-11). The server runs `optional` only
+  while a build without sign-in is still in store review or in testers' hands; once the signed-in
+  build has replaced it in both stores, we set `AUTH_REQUIRED_FROM` to that moment. From then on,
+  a request without a token is `426 update_required`. Old apps don't know that code and show
   their generic error; new apps never send such a request.
-- A new app: if `/health` says `optional` or `required`, it signs in and sends the token on
-  every request, and no `X-Invite-Code`.
+- The signed-in app always signs in: it doesn't read `/health` to decide. It sends the token on
+  every request, and no `X-Invite-Code`. (`/health` still reports the mode, for us.)
 
 ### `POST /auth/start` → `202` (no body)
 

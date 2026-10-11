@@ -185,13 +185,15 @@ curl -s localhost:8790/auth/verify -H 'Content-Type: application/json' -d '{"ema
 2. Set (Production): `AUTH_SECRET` and `METRICS_ID_SECRET` (each `openssl rand -hex 32`),
    `RESEND_API_KEY`, `ADMIN_TOKEN`; new sign-up invite codes in `INVITE_CODES` (12+ random
    characters, `code:batch`), next to the old ones.
-3. With the signed-in app: `AUTH_MODE=on`, redeploy. The start-up log says
-   `{"msg":"sign-in","enabled":true}`; `/health` says `"auth":"optional"`.
-4. About 14 days later, watching the `auth` counts (`session` vs `invite`): set
-   `AUTH_REQUIRED_FROM`, announce it, and remove the old 6-character codes before that time.
-5. Store review: set `REVIEW_LOGIN_EMAIL` and a new `REVIEW_LOGIN_CODE` per submission; **clear
-   both the moment the review is over** (the fixed code has no try limit, only the per-IP one).
-   The reviewer's requests are never counted.
+3. When the signed-in build goes to store review: `AUTH_MODE=on` and `REVIEW_LOGIN_EMAIL` with a
+   new `REVIEW_LOGIN_CODE`; redeploy. The start-up log says `{"msg":"sign-in","enabled":true}`;
+   `/health` says `"auth":"optional"`. Keep the old codes: builds without sign-in still in
+   review or with testers use them.
+4. No grace period: once the signed-in build has passed review and replaced the old one in both
+   stores, set `AUTH_REQUIRED_FROM` to that moment and remove the old 6-character codes. Not
+   earlier, or an old build in review gets `426` and its reviewer is locked out.
+5. **Clear `REVIEW_LOGIN_EMAIL` and `REVIEW_LOGIN_CODE` the moment the review is over** (the fixed
+   code has no try limit, only the per-IP one). The reviewer's requests are never counted.
 
 ## Anonymous counts
 

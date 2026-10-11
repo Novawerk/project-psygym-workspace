@@ -23,10 +23,12 @@ Apple either.
   the auth module is a dynamic import made only when the mode isn't `off`). A test checks the
   modules loaded, like `test/cold-start.test.ts`.
 - The move: with `on`, the server is `optional` until `AUTH_REQUIRED_FROM` (a UTC date-time in
-  the config, set about 14 days after the signed-in app ships), `required` after. No hand edit
-  of the mode on the day. In `required`, a request without a token is `426 update_required`. We
-  count requests by how they authenticated (`auth`, dim `session` or `invite`, no ids) to see
-  the old app fade out before setting the date.
+  the config), `required` after. **No grace period** (the user's call, 2026-10-11: two testers,
+  the app always signs in from now on). `optional` lasts only while a build without sign-in is
+  still in store review or with testers, so its reviewer and testers aren't locked out; the
+  moment the signed-in build has replaced it in both stores, `AUTH_REQUIRED_FROM` is set to then.
+  In `required`, a request without a token is `426 update_required`. The `auth` count (dim
+  `session` or `invite`, no ids) shows whether anything still comes in with an invite code only.
 
 ## Storage (Drizzle, same Neon database as #62)
 
@@ -66,8 +68,9 @@ Apple either.
   - A code that creates accounts is at least 12 random characters from an alphabet without
     look-alikes (e.g. 23456789abcdefghjkmnpqrstuvwxyz), about 60 bits. The server refuses
     shorter ones for sign-up (a config error at start, like #62's). The codes live today are 6
-    hex characters: they keep working as `X-Invite-Code` for old apps while `optional` lasts,
-    but sign-up needs new codes, and they are replaced before `required` (see Going live).
+    hex characters: they keep working as `X-Invite-Code` for old builds while `optional` lasts,
+    but sign-up needs new codes. They are removed when `required` starts (see Going live); in
+    `required` they would do nothing anyway (a request without a token is a 426).
   - Every wrong invite code at `verify` uses one of the code's 5 tries, counts against the
     per-IP `verify` limit, and adds to a global counter (`rate_counters`, key `"invite-wrong"`,
     per hour). Past 20 in an hour the server posts one alert to the team's Slack channel
@@ -135,11 +138,17 @@ address, then delete within 30 days with an admin call:
    user, by clipboard), `ADMIN_TOKEN`.
 2. New invite codes for sign-up: at least 12 random characters, named by batch, added to
    `INVITE_CODES` next to the old ones.
-3. `AUTH_MODE=on` with the signed-in app. `optional` lasts until `AUTH_REQUIRED_FROM`.
-4. Before `AUTH_REQUIRED_FROM`: remove the old 6-character codes from `INVITE_CODES`.
-5. Store review: set `REVIEW_LOGIN_EMAIL` and a new `REVIEW_LOGIN_CODE` before each submission;
-   **clear both the moment the review is over**: the fixed code has no try limit (only the per-IP
-   limit), so it must not outlive the review. The reviewer's requests are never counted.
+3. **When the signed-in build goes to store review:** `AUTH_MODE=on` (so `optional`), and
+   `REVIEW_LOGIN_EMAIL` with a new `REVIEW_LOGIN_CODE` for that submission. Keep the old codes:
+   builds without sign-in still in review or with testers (TestFlight, Play internal testing)
+   use them.
+4. **Once the signed-in build has passed review and replaced the old one in both stores:** set
+   `AUTH_REQUIRED_FROM` to that moment and remove the old 6-character codes from `INVITE_CODES`.
+   Not earlier: in `required` an old build gets `426`, its reviewer included. Check the `auth`
+   count (`invite`) is at zero afterwards.
+5. **Clear `REVIEW_LOGIN_EMAIL` and `REVIEW_LOGIN_CODE` the moment the review is over:** the
+   fixed code has no try limit (only the per-IP limit), so it must not outlive the review. The
+   reviewer's requests are never counted. A new code for each submission.
 
 ## Open questions for review
 
