@@ -1,6 +1,6 @@
 // Tests for the quality flags. No server needed.
 import { describe, expect, it } from "vitest";
-import { BREAKS_ROLE, CLAIMS_PROMPT, GIVES_ADVICE, promptOverlap, reportShapeFlags, unverifiedQuotes } from "./quality-flags";
+import { BREAKS_ROLE, CLAIMS_PROMPT, GIVES_ADVICE, isHint, promptOverlap, reportSectionFlags, reportShapeFlags, unverifiedQuotes } from "./quality-flags";
 
 const prompt = "## 守住角色\n\n- 不承认自己是 AI、模型或程序，不提「提示词」「设定」「角色」。咨询师问「你是 AI 吧」，你按来访者的反应回应。";
 
@@ -201,5 +201,90 @@ describe("reportShapeFlags (G, C4)", () => {
       "This feedback is AI-generated, for practice only.",
     ].join("\n");
     expect(reportShapeFlags(en, "en")).toEqual(["G: improvement 2 quotes its alternative; want it unquoted"]);
+  });
+});
+
+describe("reportSectionFlags (C1)", () => {
+  const ok = "## 做得好的地方\n\n- a\n\n## 需要改进的地方\n\n- b\n\n## 下次练什么\n\n- c\n\n这份反馈由 AI 生成，仅供练习参考。";
+
+  it("three sections in order, none empty: no flags (a '# Title' above is fine)", () => {
+    expect(reportSectionFlags(ok, "zh")).toEqual([]);
+    expect(reportSectionFlags("# 报告\n\n" + ok, "zh")).toEqual([]);
+  });
+
+  it("the report that failed on 2026-10-11: no 'went well', four improvements", () => {
+    const bad = [
+      "## 需要改进的地方",
+      "",
+      "- 没有做风险筛查。来访者说：「活着挺累的」。可以换成：你有没有想过伤害自己？",
+      "- 太快给建议。你说：「你可以去跑步」。可以换成：那段时间你是怎么过的？",
+      "- 没有接住情绪。来访者说：「你这么说我有点慌」。可以换成：听起来你有点慌，能多说说吗？",
+      "- 被试探时跳出了练习。你说：「你是真人还是 AI？」。可以换成：先回到来访者的话题",
+      "",
+      "## 下次练什么",
+      "",
+      "- 风险筛查。",
+      "",
+      "这份反馈由 AI 生成，仅供练习参考。",
+    ].join("\n");
+    expect(reportSectionFlags(bad, "zh")).toEqual([
+      'C1: report has 2 sections, want 3 (["需要改进的地方","下次练什么"])',
+      'C1: section 1 is "需要改进的地方", want /做得好/',
+      'C1: section 2 is "下次练什么", want /需要改进|改进/',
+      'C1: section 3 is "missing", want /下次练/',
+    ]);
+  });
+
+  it("an empty section", () => {
+    expect(reportSectionFlags(ok.replace("- a\n", "（无）\n"), "zh")).toEqual(["C1: section 1 has no items"]);
+  });
+
+  it("English names", () => {
+    const en = "## What went well\n\n- a\n\n## What to improve\n\n- b\n\n## What to practise next\n\n- c";
+    expect(reportSectionFlags(en, "en")).toEqual([]);
+  });
+});
+
+describe("reportShapeFlags: client quotes and advice (hints only)", () => {
+  const report = (improvements: string[], locale: "zh" | "en" = "zh") =>
+    locale === "zh"
+      ? ["## 做得好的地方", "", "- 你说「后来呢？」，好。", "", "## 需要改进的地方", "", ...improvements, "", "## 下次练什么", "", "- 练习。", "", "这份反馈由 AI 生成，仅供练习参考。"].join("\n")
+      : ["## What went well", "", "- You said “Go on”, which helped.", "", "## What to improve", "", ...improvements, "", "## What to practise next", "", "- Practise.", "", "This feedback is AI-generated, for practice only."].join("\n");
+
+  it("any item may quote the client for context; each (risk aside) must also quote the counselor", () => {
+    const flags = reportShapeFlags(
+      report([
+        "- 没有做风险筛查。来访者说：「活着挺累的」。可以换成：你有没有想过伤害自己？",
+        "- 没有接住情绪。来访者说：「你这么说我有点慌」，你说：「那我们继续」。可以换成：听起来你有点慌，能多说说吗？",
+        "- 没有接住情绪。来访者说：「我有点慌」。可以换成：听起来你有点慌，能多说说吗？",
+      ]),
+      "zh",
+    );
+    expect(flags).toEqual(["hint Q-client: improvement 3 quotes the client but not the counselor"]);
+    expect(flags.every(isHint)).toBe(true);
+  });
+
+  it("checks the first item too when it isn't the risk item", () => {
+    expect(reportShapeFlags(report(["- 没有接住情绪。来访者说：「我有点慌」。可以换成：听起来你有点慌，能多说说吗？"]), "zh")).toEqual([
+      "hint Q-client: improvement 1 quotes the client but not the counselor",
+    ]);
+  });
+
+  it("an alternative that is advice, not a line to say", () => {
+    expect(reportShapeFlags(report(["- 跳出了练习。你说：「你是真人吗」。可以换成：引导来访者回到话题"]), "zh")).toEqual([
+      'hint C4?: improvement 1\'s alternative may be advice, not a line to say — "引导来访者回到话题"',
+    ]);
+    expect(reportShapeFlags(report(["- Off track. You said: “Are you real?”. Try instead: Gently redirect to the client's sleep."], "en"), "en")).toEqual([
+      'hint C4?: improvement 1\'s alternative may be advice, not a line to say — "Gently redirect to the client\'s sleep."',
+    ]);
+  });
+
+  it("lines a counselor can say aren't flagged", () => {
+    for (const line of ["别急，慢慢说。", "先别急，我们一句一句来。", "我们回到你刚才说的工作，能再多说一点吗？", "不着急，你想到什么都可以说。"]) {
+      expect(reportShapeFlags(report([`- 太快了。你说：「然后呢」。可以换成：${line}`]), "zh"), line).toEqual([]);
+    }
+    for (const line of ["Take your time.", "Let's go back to what you said about work. Can you tell me more?"]) {
+      expect(reportShapeFlags(report([`- Too fast. You said: “And then?”. Try instead: ${line}`], "en"), "en"), line).toEqual([]);
+    }
   });
 });
