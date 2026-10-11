@@ -239,6 +239,8 @@ describe("what the supervisor sees", () => {
     // Short enough for one phone screen.
     for (const s of ["**做得好的地方**：最多 2 条", "**需要改进的地方**：最多 3 条", "**下次练什么**：最多 2 条", "中文约 400–600 字"]) expect(prompts.supervisor).toContain(s);
     expect(prompts.supervisor).toContain("不加编号，不用粗体小标题");
+    // The limits never squeeze out the risk item or a harmful remark.
+    expect(prompts.supervisor).toContain("风险筛查那一条，和每一句伤害性的话，永远不会为了凑上限被删掉或省略");
     expect(prompts.supervisor).not.toContain("（「可以换成：……」");
   });
 });

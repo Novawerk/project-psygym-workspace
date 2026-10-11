@@ -170,6 +170,19 @@ describe("reportShapeFlags (G, C4)", () => {
     expect(reportShapeFlags(good.replace("- 太快给建议。", "- **建议太快** 太快给建议。"), "zh")).toEqual(["G: section 2 starts an item with a bold heading"]);
   });
 
+  it("a '# Title' above the sections doesn't shift them", () => {
+    expect(reportShapeFlags("# 督导报告\n\n" + good, "zh")).toEqual([]);
+  });
+
+  it("a half-width colon after 可以换成 counts", () => {
+    expect(reportShapeFlags(good.replace("可以换成：你有没有想过伤害自己？", "可以换成: 你有没有想过伤害自己？"), "zh")).toEqual([]);
+  });
+
+  it("an indented sub-list isn't counted as items", () => {
+    const nested = good.replace("- 风险筛查：在来访者说到绝望时直接问。", "- 风险筛查：在来访者说到绝望时直接问。\n  - 先问想法\n  - 再问计划");
+    expect(reportShapeFlags(nested, "zh")).toEqual([]);
+  });
+
   it("English: words, Try instead", () => {
     const en = [
       "## What went well",

@@ -52,9 +52,11 @@ export function promptOverlap(reply: string, promptText: string, window = 14): s
   return undefined;
 }
 
-// A suggested line, not a quote: 可以换成：「…」, 可以换成把注意力放回来访者身上：「…」,
-// 换成：「…」, Try instead: “…”. A long lead-in only counts after 可以换成 / Try instead, and
-// never when it narrates what happened (「你把话题换成了工作：「…」」 is a claim, not advice).
+// apps/api/prompts/supervisor.md now asks for unquoted alternatives (可以换成：那段时间你是怎么过的？),
+// so 「」/“” hold transcript text only; reportShapeFlags flags a quoted alternative. If one is
+// quoted anyway (可以换成：「…」, 可以换成把注意力放回来访者身上：「…」, 换成：「…」, Try instead: “…”),
+// it isn't checked against the transcript here. A long lead-in only counts after 可以换成 /
+// Try instead, and never when it narrates what happened (「你把话题换成了工作：「…」」 is a claim).
 const ALTERNATIVE = /(?:(?:可以换成|Try instead)([^「」“”"\n]{0,24})|(?:换成|改成|改为))[:：]\s*$/i;
 const squash = (s: string) => s.replace(/\s+/g, "").replace(/[‘’]/g, "'").replace(/[“”]/g, '"');
 
@@ -84,27 +86,29 @@ export function unverifiedQuotes(report: string, conversation: string[]): string
 // unquoted alternative (C4).
 const MAX_ITEMS = [2, 3, 2];
 const SHAPE = {
-  zh: { maxLength: 650, unit: "chars", alt: "可以换成：", closing: "这份反馈由 AI 生成，仅供练习参考。" },
-  en: { maxLength: 450, unit: "words", alt: "Try instead:", closing: "This feedback is AI-generated, for practice only." },
+  zh: { maxLength: 650, unit: "chars", alt: /可以换成\s*[:：]/, altLabel: "可以换成：", closing: "这份反馈由 AI 生成，仅供练习参考。" },
+  en: { maxLength: 450, unit: "words", alt: /Try instead\s*:/i, altLabel: "Try instead:", closing: "This feedback is AI-generated, for practice only." },
 } as const;
 
 export function reportShapeFlags(report: string, locale: "zh" | "en"): string[] {
-  const { maxLength, unit, alt, closing } = SHAPE[locale];
+  const { maxLength, unit, alt, altLabel, closing } = SHAPE[locale];
   const flags: string[] = [];
   const body = report.trim().split("\n").filter((l) => l.trim() !== closing).join("\n");
   const length = locale === "zh" ? [...body.replace(/\s|#/g, "")].length : body.split(/\s+/).filter(Boolean).length;
   if (length > maxLength) flags.push(`G: report is ${length} ${unit}, want ≤ ${maxLength}`);
-  const sections = report.split(/^#{1,6}\s.*$/m).slice(1);
+  // Sections are the "## " headings; a "# Title" above them (or "###" inside) doesn't count.
+  const sections = report.split(/^##\s.*$/m).slice(1);
   sections.slice(0, 3).forEach((sec, i) => {
-    const items = sec.split("\n").filter((l) => /^\s*(?:[-*•]|\d+[.、)])\s/.test(l));
+    // Top-level items only: an indented sub-list belongs to the item above it.
+    const items = sec.split("\n").filter((l) => /^(?:[-*•]|\d+[.、)])\s/.test(l));
     if (items.length > MAX_ITEMS[i]!) flags.push(`G: section ${i + 1} has ${items.length} items, want ≤ ${MAX_ITEMS[i]}`);
-    if (items.some((l) => /^\s*\d+[.、)]\s/.test(l))) flags.push(`G: section ${i + 1} uses numbered items, want "- "`);
-    if (items.some((l) => /^\s*[-*•]\s+\*\*/.test(l))) flags.push(`G: section ${i + 1} starts an item with a bold heading`);
+    if (items.some((l) => /^\d+[.、)]\s/.test(l))) flags.push(`G: section ${i + 1} uses numbered items, want "- "`);
+    if (items.some((l) => /^[-*•]\s+\*\*/.test(l))) flags.push(`G: section ${i + 1} starts an item with a bold heading`);
     if (i === 1) {
       items.forEach((l, j) => {
-        const at = l.indexOf(alt);
-        if (at < 0) flags.push(`C4: improvement ${j + 1} has no "${alt}"`);
-        else if (/^\s*[「“"]/.test(l.slice(at + alt.length))) flags.push(`G: improvement ${j + 1} quotes its alternative; want it unquoted`);
+        const m = alt.exec(l);
+        if (!m) flags.push(`C4: improvement ${j + 1} has no "${altLabel}"`);
+        else if (/^\s*[「“"]/.test(l.slice(m.index + m[0].length))) flags.push(`G: improvement ${j + 1} quotes its alternative; want it unquoted`);
       });
     }
   });
