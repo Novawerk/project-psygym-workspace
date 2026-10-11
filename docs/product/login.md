@@ -384,8 +384,12 @@ O1 欢迎 → O2 先说清楚（勾选同意）→ O3 准备开始（只选语�
 
 - `privacy_a_collect` 现在写的是「没有账号」，改成：
   > 你的邮箱（用来登录）、注册时间、你注册时用的邀请码批次，和登录会话。你选的界面语言每次请求会带上。不收集姓名、手机号、位置。
+  >
+  > Your email (to sign in), your sign-up date, the invite batch you signed up with, and your sessions. Your interface language is sent with each request. We don't collect your name, phone number or location.
 - `privacy_a_stats` 改成：
   > 我们在服务器上按天统计次数，按病例和界面语言分开（开始了几场、来访者主动结束了几场、写了几份报告、每场几轮、一场多长、出了几次错、收到几次 👍/👎 和举报）。活跃人数用每天、每周轮换的假名统计，不用邮箱，明细很快就汇总后删掉。不含对话。
+  >
+  > On our server we count numbers per day, split by case and interface language: sessions started, sessions the client ended, reports written, turns per session, how long a session lasts, errors, and 👍/👎 ratings and reports. Active users are counted with pseudonyms that change every day and every week, never with your email, and the details are summed up and deleted soon after. No conversation.
 - 新增两问：
 
 | key | 中文 | English |
