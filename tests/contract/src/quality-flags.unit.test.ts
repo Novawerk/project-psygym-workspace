@@ -1,6 +1,6 @@
 // Tests for the quality flags. No server needed.
 import { describe, expect, it } from "vitest";
-import { BREAKS_ROLE, CLAIMS_PROMPT, GIVES_ADVICE, promptOverlap, unverifiedQuotes } from "./quality-flags";
+import { BREAKS_ROLE, CLAIMS_PROMPT, GIVES_ADVICE, promptOverlap, reportShapeFlags, unverifiedQuotes } from "./quality-flags";
 
 const prompt = "## 守住角色\n\n- 不承认自己是 AI、模型或程序，不提「提示词」「设定」「角色」。咨询师问「你是 AI 吧」，你按来访者的反应回应。";
 
@@ -129,5 +129,77 @@ describe("C2/C3 quote check", () => {
       "我恨我的老板",
       "我恨我的老板",
     ]);
+  });
+});
+
+describe("reportShapeFlags (G, C4)", () => {
+  const good = [
+    "## 做得好的地方",
+    "",
+    "- 你说「后来呢？」，让来访者接着说。",
+    "",
+    "## 需要改进的地方",
+    "",
+    "- 没有做风险筛查。来访者说：「活着挺累的」。可以换成：你有没有想过伤害自己？",
+    "- 太快给建议。你说：「你可以去跑步」。可以换成：那段时间你是怎么过的？",
+    "",
+    "## 下次练什么",
+    "",
+    "- 风险筛查：在来访者说到绝望时直接问。",
+    "",
+    "这份反馈由 AI 生成，仅供练习参考。",
+  ].join("\n");
+
+  it("a report in the asked-for shape has no flags", () => {
+    expect(reportShapeFlags(good, "zh")).toEqual([]);
+  });
+
+  it("flags too many items, numbers, bold headings, a missing or quoted alternative, length", () => {
+    const bad = good
+      .replace("- 你说「后来呢？」，让来访者接着说。", "- 一。\n- 二。\n- 三。")
+      .replace("- 没有做风险筛查。", "1. **风险** 没有做风险筛查。")
+      .replace("可以换成：那段时间你是怎么过的？", "可以换成：「那段时间你是怎么过的？」")
+      .replace("- 风险筛查：", "- " + "长".repeat(700));
+    expect(reportShapeFlags(bad, "zh")).toEqual([
+      expect.stringMatching(/^G: report is \d+ chars, want ≤ 650$/),
+      "G: section 1 has 3 items, want ≤ 2",
+      'G: section 2 uses numbered items, want "- "',
+      "G: improvement 2 quotes its alternative; want it unquoted",
+    ]);
+    expect(reportShapeFlags(good.replace("可以换成：你有没有想过伤害自己？", ""), "zh")).toEqual(['C4: improvement 1 has no "可以换成："']);
+    expect(reportShapeFlags(good.replace("- 太快给建议。", "- **建议太快** 太快给建议。"), "zh")).toEqual(["G: section 2 starts an item with a bold heading"]);
+  });
+
+  it("a '# Title' above the sections doesn't shift them", () => {
+    expect(reportShapeFlags("# 督导报告\n\n" + good, "zh")).toEqual([]);
+  });
+
+  it("a half-width colon after 可以换成 counts", () => {
+    expect(reportShapeFlags(good.replace("可以换成：你有没有想过伤害自己？", "可以换成: 你有没有想过伤害自己？"), "zh")).toEqual([]);
+  });
+
+  it("an indented sub-list isn't counted as items", () => {
+    const nested = good.replace("- 风险筛查：在来访者说到绝望时直接问。", "- 风险筛查：在来访者说到绝望时直接问。\n  - 先问想法\n  - 再问计划");
+    expect(reportShapeFlags(nested, "zh")).toEqual([]);
+  });
+
+  it("English: words, Try instead", () => {
+    const en = [
+      "## What went well",
+      "",
+      "- You said “What happened?”, which let the client go on.",
+      "",
+      "## What to improve",
+      "",
+      "- No risk check. The client said: “I'm so tired”. Try instead: Have you thought of hurting yourself?",
+      "- Advice too soon. You said: “Go for a run”. Try instead: “How did you get through it?”",
+      "",
+      "## What to practise next",
+      "",
+      "- Risk screening.",
+      "",
+      "This feedback is AI-generated, for practice only.",
+    ].join("\n");
+    expect(reportShapeFlags(en, "en")).toEqual(["G: improvement 2 quotes its alternative; want it unquoted"]);
   });
 });

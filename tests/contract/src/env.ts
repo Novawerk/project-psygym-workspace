@@ -3,8 +3,17 @@
 const num = (v: string | undefined, fallback: number) =>
   v === undefined || v === "" ? fallback : Number(v);
 
+// No default on purpose: port 8787 is often another project's dev server. `pnpm test` stops
+// earlier (scripts/require-base-url.mjs); this catches a bare `vitest run`.
+const baseUrl = process.env.CONTRACT_BASE_URL?.trim();
+if (!baseUrl) {
+  throw new Error(
+    "请设置 BASE_URL，例如 BASE_URL=http://localhost:8790（本机 8787 常被别的项目占着，我们不设默认值）。 / Set BASE_URL, e.g. BASE_URL=http://localhost:8790.",
+  );
+}
+
 export const env = {
-  baseUrl: (process.env.CONTRACT_BASE_URL || "http://localhost:8787").replace(/\/+$/, ""),
+  baseUrl: baseUrl.replace(/\/+$/, ""),
   // A valid code from the server's INVITE_CODES. Set it when the server checks codes;
   // the invite tests then expect 401 for missing or wrong codes.
   inviteCode: process.env.INVITE_CODE || undefined,

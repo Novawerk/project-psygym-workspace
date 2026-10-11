@@ -150,8 +150,10 @@ E-08 跑不了 — 原因: ……
 ### 怎么跑
 
 ```bash
-BASE_URL=http://localhost:8787 LOCALE=zh pnpm --filter @psygym/contract-tests quality
+BASE_URL=http://localhost:8790 LOCALE=zh pnpm --filter @psygym/contract-tests quality
 ```
+
+`BASE_URL` 必须设，没有默认值；不设会直接退出，提示「请设置 BASE_URL」。被测的后端起在一个空闲端口上（例：`PORT=8790 pnpm --filter api dev`）。本机 8787 常被别的项目占着，别指过去。
 
 可选 `CASE_ID`（只跑一个病例）、`INVITE_CODE`。结果写到 `tests/contract/out/quality-<时间>-<语言>/`：每个病例一份完整对话 + 报告，一份 `SUMMARY.md`。有自动标记时退出码是 1。
 
@@ -169,7 +171,7 @@ BASE_URL=http://localhost:8787 LOCALE=zh pnpm --filter @psygym/contract-tests qu
 | B4 / B5 | 符合病例、分层透露 | — | 主诉和说话风格符合病例；第 1–3 句不一次倒出核心信念 | 心理师判断 |
 | B6 | 一次说一段 | 超过 150 字（英文 150 词）；出现列表或标题 | 读起来像说话 | 经常超长；任何列表或标题 |
 | C1 | 三个部分 | 标题不是正好 3 个，或不是「做得好的地方 / 需要改进的地方 / 下次练什么」（英文按关键词） | 标题语言跟界面一致 | 缺或多一部分 |
-| C2 / C3 | 引用原话、不编造 | 报告里没有任何一句咨询师原话（中文按连续 6 个字匹配）；报告里任何「…」/ “…” 不能逐字在对话里找到（「可以换成：」/ Try instead: 后面的替代说法除外） | 逐字核对每条引用确实出现过；没有编造的事 | 0 处引用；任何编造 |
+| C2 / C3 | 引用原话、不编造 | 报告里没有任何一句咨询师原话（中文按连续 6 个字匹配）；报告里任何「…」/ “…” 不能逐字在对话里找到（替代说法写在「可以换成：」/ Try instead: 后面、不加引号；加了引号的替代说法另标 G，不当作引用核对） | 逐字核对每条引用确实出现过；没有编造的事 | 0 处引用；任何编造 |
 | C7 | 末尾声明 | 最后一行不是「这份反馈由 AI 生成，仅供练习参考。」（英文：`This feedback is AI-generated, for practice only.`） | — | 缺失或改了字 |
 | — | 安全 | — | 不出现真实人名、机构 | 任何一次 |
 

@@ -17,6 +17,9 @@ export type StreamResult = {
   badJson: string[];
   frames: Record<string, unknown>[];
   timedOut: boolean;
+  /** With `startedAt`: ms from then to the first text_delta (undefined if none) and to the end. */
+  firstTextMs?: number;
+  totalMs?: number;
 };
 
 /** Parse a complete SSE body (or a prefix of one). Exported for the unit test. */
@@ -47,12 +50,13 @@ export function parseSse(raw: string): { events: SseEvent[]; comments: string[];
   return { events, comments, rest };
 }
 
-export async function readStream(res: Response, timeoutMs: number): Promise<StreamResult> {
+export async function readStream(res: Response, timeoutMs: number, opts: { startedAt?: number } = {}): Promise<StreamResult> {
   if (!res.body) throw new Error("response has no body");
   const reader = res.body.getReader();
   const decoder = new TextDecoder("utf-8");
   let buf = "";
   let timedOut = false;
+  let firstTextMs: number | undefined;
   const timer = setTimeout(() => {
     timedOut = true;
     reader.cancel().catch(() => {});
@@ -62,6 +66,9 @@ export async function readStream(res: Response, timeoutMs: number): Promise<Stre
       const { value, done } = await reader.read();
       if (done) break;
       buf += decoder.decode(value, { stream: true });
+      if (opts.startedAt !== undefined && firstTextMs === undefined && buf.includes('"type":"text_delta"')) {
+        firstTextMs = Date.now() - opts.startedAt;
+      }
     }
   } catch (e) {
     if (!timedOut) throw e;
@@ -80,7 +87,8 @@ export async function readStream(res: Response, timeoutMs: number): Promise<Stre
       badJson.push(e.data);
     }
   }
-  return { events, comments, badJson, frames, timedOut };
+  const timing = opts.startedAt === undefined ? {} : { firstTextMs, totalMs: Date.now() - opts.startedAt };
+  return { events, comments, badJson, frames, timedOut, ...timing };
 }
 
 /**

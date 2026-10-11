@@ -71,15 +71,23 @@ const demoStep: MockStep = (req) => {
   const en = /Speak English|Write the report in English/.test(req.system);
   if (req.system.includes("<!-- psygym:supervisor -->")) {
     const quote = lastCounselorLine(req);
+    // Same shape as prompts/supervisor.md asks for: problem → quote → alternative, the
+    // alternative unquoted, quotes verbatim only.
+    const said = (zh: string, enText: string) => {
+      if (!quote) return "";
+      // No second full stop when the quote already ends a sentence: 「…谢谢你。」 not 「…谢谢你。」。
+      const ends = /[。？！?!.]$/.test(quote);
+      return en ? `${enText} “${quote}”${ends ? "" : "."} ` : `${zh}「${quote}」${ends ? "" : "。"}`;
+    };
     return {
       text: en
-        ? "## What went well\n\n- (mock) You asked an open question.\n\n" +
-          `## What to improve\n\n- (mock) ${quote ? `You said “${quote}”. ` : ""}Try instead: “What was that like for you?”\n\n` +
-          "## What to practise next\n\n- (mock) Practise empathic reflections.\n\n" +
+        ? "## What went well\n\n- (mock) You let the client set the pace.\n\n" +
+          `## What to improve\n\n- (mock) The question moved on before the feeling was named. ${said("", "You said:")}Try instead: What was that like for you?\n\n` +
+          "## What to practise next\n\n- (mock) Practise empathic reflections: name the feeling before the next question.\n\n" +
           "This feedback is AI-generated, for practice only.\n"
-        : "## 做得好的地方\n\n- （mock）你用了开放式提问。\n\n" +
-          `## 需要改进的地方\n\n- （mock）${quote ? `你说：「${quote}」。` : ""}可以换成：「那对你来说是什么感觉？」\n\n` +
-          "## 下次练什么\n\n- （mock）练习共情回应。\n\n" +
+        : "## 做得好的地方\n\n- （mock）你让来访者按自己的节奏说。\n\n" +
+          `## 需要改进的地方\n\n- （mock）情绪还没被说出来，问题就往下走了。${said("你说：", "")}可以换成：那对你来说是什么感觉？\n\n` +
+          "## 下次练什么\n\n- （mock）练习共情回应：先说出对方的感受，再问下一个问题。\n\n" +
           "这份反馈由 AI 生成，仅供练习参考。\n",
       toolCalls: [],
     };
@@ -102,14 +110,19 @@ const demoStep: MockStep = (req) => {
 };
 
 /**
- * The first line of the counselor's last message, read back from the transcript that
+ * The first sentence of the counselor's last message, read back from the transcript that
  * src/session.ts builds ("[n] 咨询师：…" / "[n] Counselor：…"), so the mock can quote it verbatim.
  */
 function lastCounselorLine(req: ModelRequest): string | undefined {
   const first = req.messages[0];
   const transcript = first?.role === "user" ? first.text : "";
   const lines = [...transcript.matchAll(/^\[\d+\] (?:咨询师|Counselor)：(.*)$/gm)];
-  return lines.at(-1)?.[1]?.trim() || undefined;
+  const line = lines.at(-1)?.[1]?.trim();
+  if (!line) return undefined;
+  // A quote must be verbatim and continuous, so no "…": take the first sentence, or the first
+  // 80 characters of a long one.
+  const sentence = line.match(/^.+?(?:[。？！]|[?!.](?=\s|$))/u)?.[0] ?? line;
+  return [...sentence].slice(0, 80).join("");
 }
 
 function* chunk(text: string, size = 6) {
