@@ -195,7 +195,7 @@ type Session = { token: string; expiresAt: string /* ISO 8601 */; me: Me };
     left (5 per code). One code for all on purpose; the app says the code is wrong or no longer
     valid and offers to type it again or send a new one.
   - `403 invite_required`, `403 invite_invalid` (above).
-  - `400 invalid_request`, `429 rate_limited`.
+  - `400 invalid_request`, `429 rate_limited` (30 per IP per hour, with `Retry-After`).
 
 ### `GET /me` → `200 Me`
 
@@ -214,8 +214,9 @@ totalled stay (they hold no account). Feedback and reports already sent to our S
 never carried the email either. Needs the token; same `401` errors as `GET /me`. Afterwards
 the account's other devices get `401 session_expired`.
 
-Without the app (Google Play asks for this): a deletion request by email to
-`info@novawerk.io`, from the account's address. We delete within 30 days (ADR 0008).
+Without the app (Google Play asks for this): the page `novawerk.io/psygym/delete-account`
+explains it; the request goes by email to `info@novawerk.io`, from the account's address. We
+delete within 30 days (ADR 0008).
 
 ### App review
 

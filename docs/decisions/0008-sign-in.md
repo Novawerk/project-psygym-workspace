@@ -46,14 +46,32 @@ Apple either.
   server key (`AUTH_SECRET`), so a leaked table doesn't give codes away by trying all 10⁶.
   `verify` without an invite code for a new email doesn't use a try or the code (the app shows
   L3 and sends the same code again); a wrong invite code uses a try.
-- **Limits on `start`:** one per email per 60 s and 5 per email per hour (from `login_codes`,
-  so they hold across instances); 20 per IP per hour (in memory, per warm instance, like today).
+- **Limits, all counted in the database** (so they hold across Vercel instances; the in-memory
+  limiter of today stays for `/chat` and the rest):
+  - `start`: one per email per 60 s and 5 per email per hour (from `login_codes`); 20 per IP per
+    hour.
+  - `verify`: 30 per IP per hour, on top of the 5 tries per code.
+  - Table `rate_counters(key_mac, window_start, count)`: `key_mac` = HMAC(`AUTH_SECRET`,
+    `"ip:" + ip` or `"verify-ip:" + ip`), one row per key and hour, deleted when its hour is
+    over (swept on the next write). No IP is stored in the clear.
 - **Timing:** `start` answers `202` before it looks anything up that depends on the account, and
-  sends the email after the answer (`waitUntil`), so the response time doesn't tell whether the
-  email has an account. A failed send is a log line; the user taps "send again".
-- **Invite batches:** `INVITE_CODES` may name batches (`code:batch`, e.g. `x7k2:lingjing-pilot-1`).
-  A new account stores the batch name, never the code. A code without a name gets batch
-  `default`. The same codes keep working for old apps during the move.
+  sends the email after the answer with `waitUntil` from `@vercel/functions` (as the counts in
+  #62 do), so the response time doesn't tell whether the email has an account. A failed send is
+  a log line; the user taps "send again".
+- **Invite codes against guessing:**
+  - A code that creates accounts is at least 12 random characters from an alphabet without
+    look-alikes (e.g. 23456789abcdefghjkmnpqrstuvwxyz), about 60 bits. The server refuses
+    shorter ones for sign-up (a config error at start, like #62's). The codes live today are 6
+    hex characters: they keep working as `X-Invite-Code` for old apps while `optional` lasts,
+    but sign-up needs new codes, and they are replaced before `required` (see Going live).
+  - Every wrong invite code at `verify` uses one of the code's 5 tries, counts against the
+    per-IP `verify` limit, and adds to a global counter (`rate_counters`, key `"invite-wrong"`,
+    per hour). Past 20 in an hour the server posts one alert to the team's Slack channel
+    (`FEEDBACK_SLACK_WEBHOOK_URL`, the #psygym-feedback channel): "N wrong invite codes in the
+    last hour". At most one alert per hour. No email, no IP, no code in it.
+- **Invite batches:** `INVITE_CODES` may name batches (`code:batch`, e.g.
+  `k7m2q9x4h8wd:lingjing-pilot-1`). A new account stores the batch name, never the code. A code
+  without a name gets batch `default`. The batch is only on the account; it isn't used in counts.
 - **Email:** Resend's HTTP API with `fetch` (no SDK), `RESEND_API_KEY`, 5 s timeout, the text in
   `product/login.md` §3 (no links, no images, code in the subject). The log never has the
   address or the code: only "sent", "failed" and the error kind.
@@ -69,46 +87,54 @@ ordinary one and gets real codes. A new code before each store submission.
 
 ## Active accounts, pseudonymously
 
-The product wants daily and weekly active accounts, also per invite batch. One request counts:
-the first `/chat` of the day.
+The product wants daily and weekly active accounts (overall only; no per-batch counts). An
+account is active on a day when one of its `/chat` or `/supervision` requests that day ends
+well (`turn_end`).
 
 - **Two keys that rotate.** From `METRICS_ID_SECRET`:
   `dayKey = HMAC(secret, "day:" + date)` and `weekKey = HMAC(secret, "week:" + ISO week)`.
-  The pseudonym is `HMAC(dayKey, user_id)` in `active_day(day, pid, invite_batch)` and
-  `HMAC(weekKey, user_id)` in `active_week(week, pid, invite_batch)`, each inserted with "on
+  The pseudonym is `HMAC(dayKey, user_id)` in `active_day(day, pid)` and
+  `HMAC(weekKey, user_id)` in `active_week(week, pid)`, each inserted with "on
   conflict do nothing". The same account gets an unrelated pseudonym every day and every week:
   rows of different days, or of different weeks, can't be joined, and none can be tied to an
   account without the secret. A day row and a week row of the same account can't be joined
   either (different keys).
 - **Rolled up, then deleted.** A finished day becomes `active_day` counts in `daily_counts`
-  (overall, dim `""`, and per batch, dim = batch name), and its `active_day` rows are deleted.
+  (one number, dim `""`), and its `active_day` rows are deleted.
   A finished ISO week becomes `active_week` counts (on the week's Sunday), and its rows are
   deleted. Raw rows live at most until the next request after their day or week ends. The
   roll-up runs on the first request of a new day and from `GET /admin/stats`.
 - **Weekly means the ISO week** (Monday to Sunday), not a rolling 7 days: a rolling window would
   need to link days, which the rotating key prevents on purpose.
 - `daily_counts` never holds a pseudonym, an account id, an email or an invite code.
-- **Small numbers:** `<5` hiding and the rest of ADR 0007 apply to every cell, overall and per
-  batch; a small batch shows `<5`.
+- **Small numbers:** `<5` hiding and the rest of ADR 0007 apply.
 - **Deleting an account:** we compute today's and this week's pseudonyms and delete those rows.
   Earlier rows are already gone; totals stay.
 - **Not counted:** the reviewer account. `METRICS_ID_SECRET` unset: no active counts at all.
 
 ## Deleting an account without the app
 
-Google Play asks for a way to request deletion on the web. For the demo and the first
-submission: the privacy policy (`docs/release/privacy-policy.md`) gets a section "Delete your
-account": email `info@novawerk.io` from the account's address. We confirm by replying to that
+Google Play asks for a way to request deletion on the web: the page
+`novawerk.io/psygym/delete-account` (as in `product/login.md`; built in `apps/web` of the
+Novawerk site, assigned by the lead). It says: delete in the app (Me → Delete account); if you
+can't, email `info@novawerk.io` from the account's address. We confirm by replying to that
 address, then delete within 30 days with an admin call:
 
 - `POST /admin/accounts/delete { email }`, `Authorization: Bearer <ADMIN_TOKEN>` (a token of its
   own, not the stats token). It does exactly what `DELETE /me` does. It answers `204` whether or
   not the email had an account. The log keeps the email's hash, not the email.
 
-Before the public release a page on novawerk.io replaces the email (to confirm with release).
+## Going live (operations)
+
+1. Migrate (by hand, as in #62), set `AUTH_SECRET`, `METRICS_ID_SECRET`, `RESEND_API_KEY` (the
+   user, by clipboard), `ADMIN_TOKEN`.
+2. New invite codes for sign-up: at least 12 random characters, named by batch, added to
+   `INVITE_CODES` next to the old ones.
+3. `AUTH_MODE=on` with the signed-in app. `optional` lasts until `AUTH_REQUIRED_FROM`.
+4. Before `AUTH_REQUIRED_FROM`: remove the old 6-character codes from `INVITE_CODES`.
+5. Store review: set `REVIEW_LOGIN_EMAIL` and a new `REVIEW_LOGIN_CODE` before each submission;
+   **clear both when the review is over**, so the reviewer address is an ordinary one again.
 
 ## Open questions for review
 
-1. Per-batch active counts: is `<5` hiding enough for a batch of one class, or should small
-   batches be merged into "other"?
-2. The web deletion page: who builds it on novawerk.io, and when.
+1. The threshold for the wrong-invite alert (20 an hour) and whether it should also pause sign-up.
