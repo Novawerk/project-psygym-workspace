@@ -8,5 +8,5 @@ PRODUCT_BUNDLE_IDENTIFIER=io.novawerk.psygym
 // MARKETING_VERSION = versionName in apps/mobile/gradle/libs.versions.toml.
 // CURRENT_PROJECT_VERSION = the build number. Xcode Cloud sets it from CI_BUILD_NUMBER
 // (ci_post_clone.sh), so every TestFlight upload is higher than the last.
-CURRENT_PROJECT_VERSION=1
-MARKETING_VERSION=0.1.0
+CURRENT_PROJECT_VERSION=2
+MARKETING_VERSION=0.2.0
