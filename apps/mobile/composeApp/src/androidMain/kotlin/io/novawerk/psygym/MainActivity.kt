@@ -20,7 +20,8 @@ import okio.Path.Companion.toPath
 private const val DATA_STORE_FILE_NAME = "psygym.preferences_pb"
 
 // One component per process: DataStore must be a singleton, and the in-memory
-// practice session should survive Activity re-creation.
+// practice session should survive Activity re-creation. This also caches store-screenshot
+// mode (debug builds): it stays on until the process is force-stopped.
 @Volatile private var sharedComponent: AppComponent? = null
 private val componentLock = Any()
 

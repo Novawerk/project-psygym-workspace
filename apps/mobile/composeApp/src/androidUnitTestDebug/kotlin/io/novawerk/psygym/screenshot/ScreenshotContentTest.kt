@@ -26,6 +26,9 @@ class ScreenshotContentTest {
         quotes.forEach { assertTrue(counselor.contains(it), "not word for word: $it") }
         headings.forEach { assertTrue(report.contains("## $it"), "missing section: $it") }
         assertEquals(closing, report.lines().last { it.isNotBlank() })
+        // House rule: the report says "the client", never he/she.
+        val pronoun = Regex("\\b(he|she|her|him|his)\\b|他|她", RegexOption.IGNORE_CASE)
+        assertTrue(pronoun.find(report) == null, "pronoun in report: ${pronoun.find(report)?.value}")
     }
 
     @Test

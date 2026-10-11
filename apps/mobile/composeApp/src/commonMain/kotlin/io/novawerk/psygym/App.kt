@@ -256,7 +256,8 @@ fun App(component: AppComponent) {
                             viewModel = vm,
                             elapsed = { session.elapsed },
                             showRealInfoHint = !realInfoHintSeen && shot == null,
-                            saveHistory = saveHistory,
+                            // Screenshot mode never saves; the end sheet must say so.
+                            saveHistory = saveHistory && shot == null,
                             onLeave = {
                                 // Nothing kept: coming back starts a fresh session (timer, messages).
                                 session.finish()
@@ -274,7 +275,7 @@ fun App(component: AppComponent) {
                         SupervisionScreen(
                             viewModel = vm,
                             demoData = demoBadge,
-                            onShown = { scope.launch { settings.markRealInfoHintSeen() } },
+                            onShown = { if (shot == null) scope.launch { settings.markRealInfoHintSeen() } },
                             onHome = {
                                 vm.finish()
                                 goHome()
