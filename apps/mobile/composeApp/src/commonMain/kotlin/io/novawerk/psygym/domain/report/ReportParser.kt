@@ -70,10 +70,15 @@ object ReportParser {
      * order): then the app shows it as plain Markdown, as before. Works on a report that is
      * still streaming: a cut-off last item just doesn't parse yet.
      */
-    fun parse(report: String): ParsedReport? = try {
-        read(report)
-    } catch (e: Exception) {
-        // Whatever the model wrote, the page must not crash: fall back to plain Markdown.
+    fun parse(report: String): ParsedReport? = parseWith(report, ::read)
+
+    /**
+     * Whatever the model wrote, the page must not crash: any failure, an [Error] included
+     * (a missing platform method is a NoSuchMethodError), falls back to plain Markdown.
+     */
+    internal fun parseWith(report: String, reader: (String) -> ParsedReport?): ParsedReport? = try {
+        reader(report)
+    } catch (e: Throwable) {
         null
     }
 
@@ -108,7 +113,8 @@ object ReportParser {
                     }
                     // A line right under a list item continues it.
                     !afterBlank && raws.lastOrNull()?.second == true -> {
-                        val (text, _) = raws.removeLast()
+                        // Not removeLast(): on Android it becomes Java's List.removeLast(), API 35+.
+                        val (text, _) = raws.removeAt(raws.lastIndex)
                         raws += "$text\n${line.trim()}" to true
                     }
                     // A paragraph of its own: the AI line after the last section, otherwise
@@ -144,7 +150,8 @@ object ReportParser {
         matches.forEach { m ->
             val speaker = if (m.groupValues[1].startsWith("你") || m.groupValues[1].equals("you said", ignoreCase = true)) Speaker.Counselor else Speaker.Client
             val said = m.groupValues.drop(2).first { it.isNotEmpty() }
-            quotes += Quote(speaker, said.trim().plain())
+            // The words as said, exactly: no Markdown clean-up here.
+            quotes += Quote(speaker, said.trim())
         }
         if (quotes.isEmpty() && tryInstead == null) return ReportItem.Plain(raw)
         // A "try instead" with nothing after it is a cut-off item (still streaming): plain.

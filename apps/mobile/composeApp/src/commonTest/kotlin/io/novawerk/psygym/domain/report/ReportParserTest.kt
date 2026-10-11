@@ -172,7 +172,15 @@ class ReportParserTest {
         val item = ReportParser.parse(reportWithImprove("**过早给建议**。你说：「**早点睡**」。可以换成：**怎么了？**"))!!
             .items(ReportSection.Improve).single() as ReportItem.Parsed
         assertEquals("过早给建议。", item.note)
-        assertEquals("早点睡", item.quotes.single().text)
+        // Quotes stay word for word, marks and all.
+        assertEquals("**早点睡**", item.quotes.single().text)
         assertEquals("怎么了？", item.tryInstead)
+    }
+
+    @Test
+    fun anyFailureWhileParsingFallsBackToPlainMarkdown() {
+        // An Error, not an Exception: what a missing platform method throws.
+        assertNull(ReportParser.parseWith(zh) { throw NotImplementedError("boom") })
+        assertNull(ReportParser.parseWith(zh) { throw IllegalStateException("boom") })
     }
 }
