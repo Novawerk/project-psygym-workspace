@@ -88,6 +88,31 @@ export function supervisorRequest(prompts: Prompts, c: Case, locale: Locale, mes
   };
 }
 
+/**
+ * Mid-session notes (mode "live"): the same transcript, read so far, with prompts/supervisor-live.md.
+ * No case text either. A few lines, no headings, no AI line (the app writes that).
+ */
+export function liveSupervisorRequest(prompts: Prompts, c: Case, locale: Locale, messages: Message[]): Omit<ModelRequest, "signal"> {
+  const system = [prompts.supervisorLive, "## 督导标准", prompts.rubrics[c.school], "## 语言", LIVE_LANGUAGE[locale]].join("\n\n");
+  const names = SPEAKER[locale];
+  const transcript = messages.map((m, i) => `[${i + 1}] ${names[m.role]}：${escapeTranscript(m.text)}`).join("\n\n");
+  const intro =
+    locale === "zh"
+      ? "以下是这场练习到目前为止的记录，会谈还在进行。请给几句中途提示。"
+      : "Here is the practice session so far; it is still going on. Give a few mid-session notes.";
+  return {
+    system,
+    messages: [{ role: "user", text: `${intro}\n\n<transcript>\n${transcript}\n</transcript>` }],
+    tools: [],
+    temperature: SUPERVISOR_TEMPERATURE,
+  };
+}
+
+const LIVE_LANGUAGE: Record<Locale, string> = {
+  zh: "用简体中文写。引用原话用「」，保留原文。不要写 [7] 这样的消息编号。",
+  en: "Write in English. Quote the counselor's words as they were said, in “”. Never write message numbers such as [7].",
+};
+
 /** Message text can't open or close the <transcript> block: the tags are escaped. */
 export function escapeTranscript(text: string): string {
   return text.replace(/<(\s*\/?\s*transcript\b[^>]*)>/gi, "&lt;$1&gt;");

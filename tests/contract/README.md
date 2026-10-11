@@ -45,6 +45,8 @@ limiter slows the suite down instead of failing it.
 - `GET /cases` → `{"cases": CaseSummary[]}`, non-empty, unique ids, `school: "cbt"`,
   `zh` and `en` text present, only the contract's public fields (the role brief stays on the
   server), and each optional field well-formed when present.
+- `POST /supervision` with `mode`: `final` and `live` both stream a report (`live`: short notes);
+  any other value is `400 invalid_request`.
 - `POST /supervision` with `durationSec`: a whole number in 0–7200 is taken, anything else is
   ignored; `200` and a full report either way, never `400`.
 - `POST /chat`, `POST /supervision`, in `zh` and `en`: `200`, `text/event-stream`, frames

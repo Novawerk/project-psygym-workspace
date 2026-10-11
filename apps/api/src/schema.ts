@@ -31,6 +31,8 @@ export const MAX_DURATION_SEC = 7200;
 // durationSec (optional) only feeds the anonymous counts; anything that isn't a whole number
 // of seconds in 0–7200 is ignored, never a 400.
 export const SupervisionBody = base.extend({
+  // "final" (default): the full report. "live": short notes mid-session. Anything else is a 400.
+  mode: z.enum(["final", "live"]).optional().default("final"),
   durationSec: z
     .unknown()
     .optional()

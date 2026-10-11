@@ -39,6 +39,9 @@ const REPORT = [
   "这份反馈由 AI 生成，仅供练习参考。\n",
 ].join("");
 
+// Mid-session notes (/supervision mode "live"): no headings, at most 3 items, no AI line.
+const LIVE_NOTES = "- 你的开场问题很开放，给了来访者空间。\n- 接下来可以先说出对方的感受。可以换成：那对你来说是什么感觉？\n";
+
 const CASES = [
   {
     id: "cbt-depression",
@@ -64,6 +67,8 @@ function valid(b, path) {
   for (const x of m) {
     if (!x || !["counselor", "client"].includes(x.role) || typeof x.text !== "string" || x.text.length > 2000) return false;
   }
+  // /supervision: mode is "final" (default) or "live"; anything else is a 400.
+  if (path === "/supervision" && "mode" in b && !["final", "live"].includes(b.mode)) return false;
   // Only /chat needs the counselor's line last.
   return path !== "/chat" || m[m.length - 1].role === "counselor";
 }
@@ -148,7 +153,7 @@ createServer(async (req, res) => {
   const send = (o) => res.write(`data: ${JSON.stringify(o)}\n\n`);
   send({ type: "turn_start" });
   res.write(": ping\n\n");
-  const text = url.pathname === "/chat" ? CHAT_REPLY : REPORT;
+  const text = url.pathname === "/chat" ? CHAT_REPLY : body.mode === "live" ? LIVE_NOTES : REPORT;
   if (FAULT === "hang") return; // leave the stream open
   // Like apps/api's mock: "#end" in the counselor's last line ends the session (/chat only).
   const last = body.messages[body.messages.length - 1];

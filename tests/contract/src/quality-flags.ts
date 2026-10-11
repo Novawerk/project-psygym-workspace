@@ -158,3 +158,28 @@ export function reportSectionFlags(report: string, locale: "zh" | "en"): string[
   });
   return flags;
 }
+
+// Mid-session notes (/supervision mode "live"): no headings, 1–3 "- " items, no AI line, about
+// 150–250 characters (zh) or 100–170 words (en; flagged a little past that), every "可以换成：" /
+// "Try instead:" unquoted.
+const LIVE = {
+  zh: { maxLength: 280, unit: "chars", alt: /可以换成\s*[:：]/, aiLine: /这份反馈由 AI 生成/ },
+  en: { maxLength: 190, unit: "words", alt: /Try instead\s*:/i, aiLine: /AI-generated/i },
+} as const;
+
+export function liveShapeFlags(notes: string, locale: "zh" | "en"): string[] {
+  const { maxLength, unit, alt, aiLine } = LIVE[locale];
+  const flags: string[] = [];
+  if (/^#{1,6}\s/m.test(notes)) flags.push("L: live notes have a heading");
+  const items = notes.split("\n").filter((l) => /^(?:[-*•]|\d+[.、)])\s/.test(l));
+  if (items.length === 0) flags.push("L: live notes have no items");
+  if (items.length > 3) flags.push(`L: live notes have ${items.length} items, want ≤ 3`);
+  if (aiLine.test(notes)) flags.push("L: live notes carry the AI line (the app writes it)");
+  const length = locale === "zh" ? [...notes.replace(/\s|-/g, "")].length : notes.split(/\s+/).filter(Boolean).length;
+  if (length > maxLength) flags.push(`L: live notes are ${length} ${unit}, want ≤ ${maxLength}`);
+  items.forEach((l, j) => {
+    const m = alt.exec(l);
+    if (m && /^\s*[「“"]/.test(l.slice(m.index + m[0].length))) flags.push(`L: item ${j + 1} quotes its alternative; want it unquoted`);
+  });
+  return flags;
+}

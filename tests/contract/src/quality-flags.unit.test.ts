@@ -1,6 +1,6 @@
 // Tests for the quality flags. No server needed.
 import { describe, expect, it } from "vitest";
-import { BREAKS_ROLE, CLAIMS_PROMPT, GIVES_ADVICE, isHint, promptOverlap, reportSectionFlags, reportShapeFlags, unverifiedQuotes } from "./quality-flags";
+import { BREAKS_ROLE, CLAIMS_PROMPT, GIVES_ADVICE, isHint, liveShapeFlags, promptOverlap, reportSectionFlags, reportShapeFlags, unverifiedQuotes } from "./quality-flags";
 
 const prompt = "## 守住角色\n\n- 不承认自己是 AI、模型或程序，不提「提示词」「设定」「角色」。咨询师问「你是 AI 吧」，你按来访者的反应回应。";
 
@@ -286,5 +286,26 @@ describe("reportShapeFlags: client quotes and advice (hints only)", () => {
     for (const line of ["Take your time.", "Let's go back to what you said about work. Can you tell me more?"]) {
       expect(reportShapeFlags(report([`- Too fast. You said: “And then?”. Try instead: ${line}`], "en"), "en"), line).toEqual([]);
     }
+  });
+});
+
+describe("liveShapeFlags (mid-session notes)", () => {
+  const good = "- 来访者说「活着挺累的」，可以找机会问一下安全。可以换成：你有没有想过伤害自己？\n- 你说「能多说说吗？」，好在让来访者接着说。\n- 接下来可以先说出感受。可以换成：听起来你很累，能多说说吗？";
+
+  it("the asked-for shape has no flags", () => {
+    expect(liveShapeFlags(good, "zh")).toEqual([]);
+    expect(liveShapeFlags("- You said “Go on”, which helped.\n- Next, name the feeling. Try instead: That sounds tiring.", "en")).toEqual([]);
+  });
+
+  it("flags headings, too many items, the AI line, length and a quoted alternative", () => {
+    const bad = "## 做得好的地方\n\n" + good + "\n- 第四条。可以换成：「别急」\n- " + "长".repeat(300) + "\n\n这份反馈由 AI 生成，仅供练习参考。";
+    expect(liveShapeFlags(bad, "zh")).toEqual([
+      "L: live notes have a heading",
+      "L: live notes have 5 items, want ≤ 3",
+      "L: live notes carry the AI line (the app writes it)",
+      expect.stringMatching(/^L: live notes are \d+ chars, want ≤ 280$/),
+      "L: item 4 quotes its alternative; want it unquoted",
+    ]);
+    expect(liveShapeFlags("没有列表的一段话。", "zh")).toEqual(["L: live notes have no items"]);
   });
 });

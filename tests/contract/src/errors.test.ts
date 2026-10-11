@@ -49,6 +49,12 @@ describe.each(endpoints)("POST %s: 400 invalid_request", (path) => {
   });
 });
 
+describe("POST /supervision: 400 invalid_request for an unknown mode", () => {
+  it.each([["summary"], [""], [1], [null]])("mode %j", async (mode) => {
+    await expectError(await call("/supervision", { body: { ...(await validBody("zh", conversation(3))), mode } }), 400, "invalid_request");
+  });
+});
+
 describe.each(endpoints)("POST %s: 404 case_not_found", (path) => {
   it("unknown caseId", async () => {
     const body = { ...(await validBody()), caseId: "no-such-case-contract-test" };
