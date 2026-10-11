@@ -20,6 +20,7 @@ import { publicSummary, type Case, type Prompts } from "./content.js";
 import { createProvider, type ModelProvider } from "./llm/index.js";
 import type { ModelRequest } from "./llm/types.js";
 import { FeedbackBody, postToSlack, slackMessage, type FetchLike } from "./feedback.js";
+import type { Auth, AuthUser } from "./auth/types.js";
 import { disabledCounter, durationBucket, normalizeEvent, turnBucket, type Counter, type MetricsStore } from "./metrics/counter.js";
 import { statsView } from "./metrics/stats.js";
 import { FixedWindowLimiter, clientIp } from "./rate-limit.js";
@@ -59,6 +60,8 @@ export interface AppDeps {
   /** Where GET /admin/stats reads from; null when counting is off. */
   metricsStore?: MetricsStore | null;
   pingMs?: number;
+  /** Sign-in (AUTH_MODE=on); null or unset: off, invite codes as before. */
+  auth?: Auth | null;
 }
 
 const MESSAGES: Record<ErrorCode, string> = {
@@ -67,9 +70,12 @@ const MESSAGES: Record<ErrorCode, string> = {
   case_not_found: "Unknown case.",
   rate_limited: "Too many requests. Please wait a moment.",
   model_unavailable: "The model is not available right now.",
+  session_expired: "Your session has expired. Please sign in again.",
+  update_required: "Please update the app.",
 };
 
-const fail = (c: Context, status: 400 | 401 | 404 | 429 | 503, code: ErrorCode, message = MESSAGES[code]) =>
+type Status = 400 | 401 | 404 | 426 | 429 | 503;
+const fail = (c: Context, status: Status, code: ErrorCode, message = MESSAGES[code]) =>
   c.json({ error: { code, message } }, status);
 
 /** Past MAX_BODY_BYTES we keep reading (and dropping) up to this, so the client can finish sending. */
@@ -155,8 +161,9 @@ export function createApp(deps: AppDeps) {
    * 401 and 429 are not counted: they come before or from the rate limit, so anyone could make
    * us write to the database without end.
    */
-  const failCounted = (c: Context, status: 400 | 401 | 404 | 429 | 503, code: ErrorCode, message?: string) => {
-    if (code !== "invite_required" && code !== "rate_limited") counter.count({ metric: "error", dim: code });
+  const failCounted = (c: Context, status: Status, code: ErrorCode, message?: string) => {
+    // Also not 401 session_expired or 426 update_required: they come before the rate limit too.
+    if (!["invite_required", "rate_limited", "session_expired", "update_required"].includes(code)) counter.count({ metric: "error", dim: code });
     return fail(c, status, code, message);
   };
   const limiter = new FixedWindowLimiter(config.rateLimit.max, config.rateLimit.windowMs, deps.now);
@@ -191,9 +198,25 @@ export function createApp(deps: AppDeps) {
 
   const app = new Hono();
 
-  app.use("*", cors({ origin: "*", allowHeaders: ["Content-Type", "X-Invite-Code"], exposeHeaders: ["Retry-After"] }));
+  app.use("*", cors({ origin: "*", allowHeaders: ["Content-Type", "X-Invite-Code", "Authorization"], exposeHeaders: ["Retry-After"] }));
 
-  app.get("/health", (c) => c.json({ ok: true }));
+  const nowMs = () => deps.now?.() ?? Date.now();
+  const auth = deps.auth ?? null;
+  /** The signed-in account of a request, set by the gate below. */
+  const userOf = new WeakMap<Request, AuthUser>();
+  /** The store reviewer's requests are never counted. */
+  const isReviewer = (u: AuthUser | undefined) => u?.inviteBatch === "review";
+
+  // With sign-in off, exactly {"ok":true} as before.
+  app.get("/health", (c) => c.json(auth ? { ok: true, auth: auth.mode(nowMs()) } : { ok: true }));
+
+  // /auth/*, /me, /admin/accounts/delete: sign-in's own routes, ahead of the gate. Off: 404.
+  if (auth) app.route("/", auth.routes);
+  else {
+    const notFound = (c: Context) => c.json({ error: { code: "not_found", message: "Not found." } }, 404);
+    app.all("/auth/*", notFound);
+    app.all("/me", notFound);
+  }
 
   // GET /admin/stats: anonymous counts for us, not for the app. Its own token, no invite code.
   // Without ADMIN_STATS_TOKEN the endpoint doesn't exist.
@@ -208,6 +231,8 @@ export function createApp(deps: AppDeps) {
     }
     const range = statsRange(c.req.query("from"), c.req.query("to"), deps.now?.() ?? Date.now());
     if (!range) return c.json({ error: { code: "invalid_request", message: "from/to must be YYYY-MM-DD, from ≤ to, at most 366 days." } }, 400);
+    // Finished days and weeks of active accounts first, so the view is up to date.
+    if (auth) await auth.rollUp().catch((err) => logger.error({ msg: "active roll-up failed", ...describe(err) }));
     try {
       return c.json(statsView(range.from, range.to, await deps.metricsStore.rows(range.from, range.to)));
     } catch (err) {
@@ -216,13 +241,35 @@ export function createApp(deps: AppDeps) {
     }
   });
 
-  // Everything below needs the invite code, when INVITE_CODES is set.
+  // The gate for everything below. A request with Authorization is judged by its token alone.
+  // Without a token: 426 once sign-in is required, else the invite code (when INVITE_CODES is set).
   app.use("*", async (c, next) => {
-    if (c.req.method === "OPTIONS" || !config.inviteCodes) return next();
-    const code = c.req.header("x-invite-code")?.trim();
-    if (!code || !config.inviteCodes.has(code)) return failCounted(c, 401, "invite_required");
+    if (c.req.method === "OPTIONS") return next();
+    if (auth) {
+      const header = c.req.header("authorization");
+      if (header !== undefined) {
+        const token = header.match(/^Bearer\s+(.+)$/i)?.[1]?.trim();
+        const user = token ? await auth.authenticate(token) : null;
+        if (!user) return failCounted(c, 401, "session_expired");
+        userOf.set(c.req.raw, user);
+        countAuth(c, "session");
+        return next();
+      }
+      if (auth.mode(nowMs()) === "required") return failCounted(c, 426, "update_required");
+    }
+    if (config.inviteCodes) {
+      const code = c.req.header("x-invite-code")?.trim();
+      if (!code || !config.inviteCodes.has(code)) return failCounted(c, 401, "invite_required");
+    }
+    if (auth) countAuth(c, "invite");
     return next();
   });
+
+  /** With sign-in on: how each /chat turn came in, to see old apps fade out before "required". */
+  function countAuth(c: Context, how: "session" | "invite") {
+    if (isReviewer(userOf.get(c.req.raw))) return;
+    if (c.req.method === "POST" && c.req.path === "/chat") counter.count({ metric: "auth", dim: how });
+  }
 
   app.get("/cases", (c) =>
     c.json({ cases: [...cases.values()].map(publicSummary) }),
@@ -230,7 +277,8 @@ export function createApp(deps: AppDeps) {
 
   /** 429 with Retry-After when this caller (invite code, else IP) is over the limit. */
   function rateLimited(c: Context, l: FixedWindowLimiter): Response | null {
-    const key = config.inviteCodes ? `invite:${c.req.header("x-invite-code")?.trim()}` : `ip:${clientIp(c)}`;
+    const user = userOf.get(c.req.raw);
+    const key = user ? `user:${user.id}` : config.inviteCodes ? `invite:${c.req.header("x-invite-code")?.trim()}` : `ip:${clientIp(c)}`;
     const retryAfter = l.take(key);
     if (!retryAfter) return null;
     c.header("Retry-After", String(retryAfter));
@@ -282,7 +330,11 @@ export function createApp(deps: AppDeps) {
         // so a session "starts" with the turn that answers the counselor's first line.
         const at = { caseId: theCase.id, locale };
         const counselorLines = messages.filter((m) => m.role === "counselor").length;
+        const user = userOf.get(c.req.raw);
         const onDone = (o: { ok: boolean; sessionEnd: boolean }) => {
+          if (isReviewer(user)) return; // the store reviewer is never counted
+          // A /chat or /supervision (either mode) that ended well makes the account active today.
+          if (o.ok && user && auth) auth.markActive(user);
           if (role === "client") {
             if (o.ok) {
               counter.count({ metric: "chat_turn", ...at });

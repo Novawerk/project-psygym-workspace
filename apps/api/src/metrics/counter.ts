@@ -17,6 +17,7 @@ export const METRICS = [
   "feedback", // dim = up | down
   "user_report", // dim = reason
   "error", // dim = error code (pre-stream codes, or stream_error)
+  "auth", // with sign-in on: a /chat that came with a session or an invite code; dim = session | invite
 ] as const;
 export type Metric = (typeof METRICS)[number];
 
