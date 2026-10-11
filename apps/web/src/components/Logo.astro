@@ -1,0 +1,11 @@
+---
+// The mark from the design: a black square with the app's ring and two dots.
+const { size = 28 } = Astro.props;
+---
+
+<svg width={size} height={size} viewBox="0 0 28 28" aria-hidden="true" class="shrink-0">
+  <rect width="28" height="28" rx="8" class="fill-zinc-900 dark:fill-zinc-50"></rect>
+  <circle cx="14" cy="14" r="7" fill="none" stroke-width="2" class="stroke-white dark:stroke-zinc-950"></circle>
+  <circle cx="11.5" cy="14" r="1.6" class="fill-white dark:fill-zinc-950"></circle>
+  <circle cx="16.5" cy="14" r="1.6" class="fill-white dark:fill-zinc-950"></circle>
+</svg>

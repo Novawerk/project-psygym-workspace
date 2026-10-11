@@ -407,7 +407,7 @@ export function createAuth(deps: AuthDeps): Auth {
     return c.body(null, 204);
   });
 
-  // For a deletion asked for by email (novawerk.io/psygym/delete-account). Its own token.
+  // For a deletion asked for by email (psygym.novawerk.io/delete-account). Its own token.
   routes.post("/admin/accounts/delete", async (c) => {
     if (!config.adminToken) return fail(c, 404, "not_found");
     const token = bearer(c);

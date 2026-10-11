@@ -1,34 +1,36 @@
 ---
-// Google Play's web deletion entry. Wording follows docs/product/login.md (deleting an account);
-// the product will replace it with the final copy.
+// Google Play's web deletion entry (docs/product/landing.md §4, points from login.md). Google Play
+// links psygym.novawerk.io/delete-account, which sends the browser here.
 import Base from "../../layouts/Base.astro";
-import { LOCALES, strings, type Locale } from "../../lib/i18n";
+import { LOCALES, mailto, strings, type Locale } from "../../lib/i18n";
 
 export const getStaticPaths = () => LOCALES.map((lang) => ({ params: { lang } }));
 const lang = Astro.params.lang as Locale;
 const t = strings[lang];
-
-const copy = {
-  zh: {
-    inApp: "在 App 里删除：打开「我的」→「删除账号」。我们服务器上的邮箱、注册时间、邀请码批次和登录会话会马上删除。",
-    noApp: "不能用 App？用你注册时的邮箱写信到",
-    noAppAfter: "说明要删除账号。我们会回信确认，并在 30 天内删除。",
-    stays: "统计里已经汇总的数字不受影响，它们认不出你。你以前发出的报告评价和举报在我们内部的 Slack 频道里，不带邮箱；要删，也请写信给我们。",
-  },
-  en: {
-    inApp: "In the app: open Me → Delete account. We delete your email, sign-up date, invite batch and sessions from our server right away.",
-    noApp: "Can't use the app? Email",
-    noAppAfter: "from the address you signed up with and ask us to delete your account. We reply to confirm and delete it within 30 days.",
-    stays: "Totals already counted stay; they can't identify you. Ratings and reports you sent earlier are in our internal Slack channel, without your email; to remove them, email us too.",
-  },
-}[lang];
+const d = t.del;
+const h2 = "mt-10 text-xl font-bold md:text-2xl";
+const body = "mt-3 text-base leading-[1.75] text-zinc-700 dark:text-zinc-300";
 ---
 
-<Base lang={lang} path="/delete-account" title={`${t.deleteAccount} · ${t.siteName}`}>
-  <h1 class="text-3xl font-semibold tracking-tight">{t.deleteAccount}</h1>
-  <div class="mt-6 space-y-4 leading-relaxed text-zinc-800">
-    <p>{copy.inApp}</p>
-    <p>{copy.noApp} <a class="underline" href="mailto:info@novawerk.io">info@novawerk.io</a> {copy.noAppAfter}</p>
-    <p class="text-zinc-600">{copy.stays}</p>
+<Base lang={lang} path="/delete-account" title={`${d.navTitle} · ${t.siteName}`} description={d.intro}>
+  <div class="max-w-[760px] pt-8 pb-16 md:pt-14">
+    <h1 class="text-[32px] leading-tight font-bold md:text-[44px]">{d.title}</h1>
+    <p class="mt-4 text-base leading-[1.75] text-zinc-700 md:text-lg dark:text-zinc-300">{d.intro}</p>
+
+    <h2 class={h2}>{d.h1}</h2>
+    <p class={body}>{d.b1}</p>
+
+    <h2 class={h2}>{d.h2}</h2>
+    <p class={body}>{d.b2}</p>
+    <a href={mailto(d.subject)} class="mt-5 inline-flex h-12 items-center rounded-lg bg-zinc-900 px-[22px] text-base font-bold text-white no-underline hover:bg-zinc-700 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200">{d.btn}</a>
+
+    <div class="mt-10 grid grid-cols-1 gap-4 md:grid-cols-3">
+      {[[d.h3, d.b3], [d.h4, d.b4], [d.h5, d.b5]].map(([title, text]) => (
+        <div class="rounded-xl bg-zinc-100 p-5 dark:bg-zinc-900">
+          <h2 class="text-base font-bold">{title}</h2>
+          <p class="mt-1.5 text-[15px] leading-[1.7] text-zinc-700 dark:text-zinc-300">{text}</p>
+        </div>
+      ))}
+    </div>
   </div>
 </Base>

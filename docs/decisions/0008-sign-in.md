@@ -122,9 +122,9 @@ well (`turn_end`).
 ## Deleting an account without the app
 
 Google Play asks for a way to request deletion on the web: the page
-`novawerk.io/psygym/delete-account` (as in `product/login.md`; built in `apps/web` of the
-Novawerk site, assigned by the lead). It says: delete in the app (Me → Delete account); if you
-can't, email `info@novawerk.io` from the account's address. We confirm by replying to that
+`psygym.novawerk.io/delete-account` (the PSYGYM site in this repo's `apps/web`, spec in
+[`product/landing.md`](../product/landing.md) §4; it sends the browser to `/zh/` or `/en/`).
+It says: delete in the app (Me → Delete account); if you can't, email `info@novawerk.io` from the account's address. We confirm by replying to that
 address, then delete within 30 days with an admin call:
 
 - `POST /admin/accounts/delete { email }`, `Authorization: Bearer <ADMIN_TOKEN>` (a token of its

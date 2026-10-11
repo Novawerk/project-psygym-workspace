@@ -36,3 +36,14 @@ export function policyHtml(locale: Locale, markdown = fs.readFileSync(POLICY_FIL
   const section = absoluteLinks(policySection(markdown, locale)).replace(/^### /gm, "## ");
   return marked.parse(section, { async: false }) as string;
 }
+
+/** The "生效日期 … 版本 …" line at the top of the file, shown under the page title. */
+export function policyMeta(locale: Locale, markdown = fs.readFileSync(POLICY_FILE, "utf8")) {
+  const m = markdown.match(/^生效日期：(.+?)\s*·\s*版本：(.+)$/m);
+  if (!m) return { line: "", draft: false };
+  const [date, version] = [m[1].trim(), m[2].trim()];
+  const draft = /草稿|待定/.test(date + version);
+  if (locale === "zh") return { line: `生效日期：${date} · 版本：${version}`, draft };
+  const en = (s: string) => s.replace("待定", "to be set").replace("草稿", "draft");
+  return { line: `Effective: ${en(date)} · Version: ${en(version)}`, draft };
+}

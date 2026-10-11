@@ -21,11 +21,13 @@ test("nothing loads from another host: no scripts, styles, fonts, images or fram
     const html = read(p);
     for (const m of html.matchAll(/<(script|link|img|iframe|source)\b[^>]*\b(?:src|href)="([^"]+)"/g)) {
       const [, tag, url] = m;
-      if (tag === "link" && /rel="alternate"/.test(m[0])) continue; // hreflang links to our own site
+      if (tag === "link" && /rel="(alternate|canonical)"/.test(m[0])) continue; // links to our own site, not loads
       assert.ok(!/^(https?:)?\/\//.test(url), `${p}: ${tag} loads ${url}`);
     }
     assert.ok(!/fonts\.googleapis|googletagmanager|google-analytics|plausible|vercel-insights|_vercel\/insights/.test(html), `${p}: tracker`);
-    assert.ok(!/document\.cookie|localStorage|sessionStorage/.test(html), `${p}: storage`);
+    assert.ok(!/document\.cookie|sessionStorage|indexedDB/.test(html), `${p}: storage`);
+    // The one thing kept in the browser: the language a visitor picked (landing.md).
+    for (const m of html.matchAll(/localStorage\.(\w+)\(([^,)]*)/g)) assert.equal(m[2], '"lang"', `${p}: localStorage ${m[0]}`);
   }
 });
 
@@ -33,6 +35,9 @@ test("the privacy page is the policy, nothing else", () => {
   const zh = read("zh/privacy/index.html");
   const en = read("en/privacy/index.html");
   assert.match(zh, /<h2>这是什么<\/h2>/);
+  assert.match(zh, /生效日期：/);
+  assert.match(zh, /草稿，正式版上架前发布。/);
+  assert.match(en, /Draft\. The final version is published before launch\./);
   assert.match(en, /<h2>What this is<\/h2>/);
   for (const html of [zh, en]) {
     assert.doesNotMatch(html, /正式上架前要解决/); // the internal to-do section
@@ -58,4 +63,21 @@ test("each page says its language and links to the other one", () => {
   assert.match(read("en/privacy/index.html"), /<html lang="en"/);
   assert.match(read("zh/privacy/index.html"), /href="\/en\/privacy"/);
   assert.match(read("en/delete-account/index.html"), /mailto:info@novawerk\.io/);
+});
+
+test("home and delete pages follow the spec: copy, mailto subjects, search and sharing", () => {
+  const zh = read("zh/index.html");
+  const en = read("en/index.html");
+  assert.match(zh, /和 AI 来访者练一场，再听听督导怎么说/);
+  assert.match(en, /Practise with an AI client\. Then hear what a supervisor would say\./);
+  assert.ok(zh.includes(`mailto:info@novawerk.io?subject=${encodeURIComponent("加入聆镜 PSYGYM 内测")}`));
+  assert.ok(read("en/delete-account/index.html").includes(`mailto:info@novawerk.io?subject=${encodeURIComponent("Delete my 聆镜 PSYGYM account")}`));
+  for (const p of ["zh/index.html", "en/index.html", "zh/delete-account/index.html", "en/delete-account/index.html", "zh/privacy/index.html"]) {
+    const html = read(p);
+    assert.doesNotMatch(html, /name="robots" content="noindex"/, `${p} must be findable`);
+    assert.match(html, /hreflang="x-default"/, p);
+    assert.match(html, /rel="canonical" href="https:\/\/psygym\.novawerk\.io\//, p);
+    assert.match(html, /property="og:image" content="https:\/\/psygym\.novawerk\.io\/og-(zh|en)\.png"/, p);
+  }
+  assert.ok(fs.existsSync(path.join(dist, "og-zh.png")) && fs.existsSync(path.join(dist, "og-en.png")), "og images");
 });

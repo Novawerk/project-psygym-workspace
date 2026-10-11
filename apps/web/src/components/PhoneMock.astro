@@ -1,0 +1,31 @@
+---
+// The app's session screen in a phone frame, drawn in HTML with demo data (design ⑨). A real
+// screenshot can replace it later; the text stays readable and translatable this way.
+import { strings, type Locale } from "../lib/i18n";
+
+const { lang } = Astro.props as { lang: Locale };
+const m = strings[lang].home.mock;
+---
+
+<figure
+  role="img"
+  aria-label={m.label}
+  class="m-0 flex h-[533px] w-[260px] flex-none flex-col self-center overflow-hidden rounded-[36px] border-8 border-zinc-900 bg-white text-zinc-950 md:h-[615px] md:w-[300px] dark:border-zinc-700"
+>
+  <div class="border-b border-zinc-200 px-3.5 pt-3.5 pb-2.5">
+    <p class="text-sm font-bold">{m.name}</p>
+    <p class="mt-0.5 text-[11px] text-zinc-500">{m.meta}</p>
+  </div>
+  <div class="px-3 pt-2">
+    <span class="inline-block rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] text-zinc-700">{m.chip}</span>
+  </div>
+  <div class="flex flex-1 flex-col gap-2.5 p-3 text-xs leading-normal">
+    {m.lines.map(([who, text]) =>
+      who === "me" ? (
+        <div class="max-w-[80%] self-end rounded-[14px_14px_4px_14px] bg-zinc-900 px-2.5 py-2 text-white">{text}</div>
+      ) : (
+        <div class="max-w-[84%] self-start rounded-[14px_14px_14px_4px] bg-zinc-100 px-2.5 py-2">{text}</div>
+      ),
+    )}
+  </div>
+</figure>

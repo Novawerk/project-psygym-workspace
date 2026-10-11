@@ -15,6 +15,7 @@
     "test": "pnpm build && node --test test/site.test.mjs"
   },
   "dependencies": {
+    "@fontsource-variable/noto-sans-sc": "5.3.1",
     "@tailwindcss/vite": "^4.3.3",
     "astro": "^7.3.8",
     "marked": "^18.1.0",
