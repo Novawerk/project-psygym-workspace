@@ -24,9 +24,18 @@ export const ChatBody = base.refine((b) => b.messages.at(-1)?.role === "counselo
   path: ["messages"],
 });
 
+export const MAX_DURATION_SEC = 7200;
+
 // A session usually ends on the client's reply, so supervision takes either role last.
 // A very short transcript still gets a report (the prompt says how to handle it).
-export const SupervisionBody = base;
+// durationSec (optional) only feeds the anonymous counts; anything that isn't a whole number
+// of seconds in 0–7200 is ignored, never a 400.
+export const SupervisionBody = base.extend({
+  durationSec: z
+    .unknown()
+    .optional()
+    .transform((v) => (typeof v === "number" && Number.isInteger(v) && v >= 0 && v <= MAX_DURATION_SEC ? v : undefined)),
+});
 
 export type ErrorCode = "invalid_request" | "invite_required" | "case_not_found" | "rate_limited" | "model_unavailable";
 

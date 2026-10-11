@@ -11,7 +11,9 @@ in a PR that touches both sides, or not at all.
   `https://psygym-api.novawerk.io`).
 - JSON in, JSON or SSE out. UTF-8.
 - Stateless. The app sends the whole conversation each turn. The server stores no
-  transcript and never logs message text. `/chat` and `/supervision` pass the conversation to
+  transcript and never logs message text. It may keep anonymous counts per day, case and
+  language (sessions started, reports, ratings, errors…): no text, no invite code, no IP, no
+  id of any kind ([`decisions/0007-anonymous-counts.md`](./decisions/0007-anonymous-counts.md)). `/chat` and `/supervision` pass the conversation to
   the model vendor to get a reply, and nowhere else. The only conversation text that goes
   anywhere beyond that is one passage the user reports with `POST /report`.
 - Header `X-Invite-Code: <code>` on every request. The server checks it only when
@@ -64,9 +66,14 @@ one short line and that stream should carry `session_end` again. That repeat is 
 
 ### `POST /supervision` → `text/event-stream`
 
-Body: `{ caseId: string, locale: Locale, messages: Message[] }`. The server streams one
-supervision report in Markdown: what went well, what went wrong, what to practise next.
-Any message may come last, and a very short session still gets a report.
+Body: `{ caseId: string, locale: Locale, messages: Message[], durationSec?: number }`. The
+server streams one supervision report in Markdown: what went well, what went wrong, what to
+practise next. Any message may come last, and a very short session still gets a report.
+
+`durationSec` (optional): how long the session lasted, in whole seconds, 0–7200. It only feeds
+the anonymous daily counts (the sum and the number of sessions that sent it); it never changes
+the report. A value that isn't a whole number in that range is ignored, never a 400. An app
+that doesn't send it works as before.
 
 ### `POST /feedback` → `204` (no body)
 
@@ -143,3 +150,9 @@ JSON `{ "error": { "code": string, "message": string } }` with:
 In a stream, `error` with `model_unavailable` also covers a model that returned an empty reply.
 
 The app shows a friendly message for each code, in the current language.
+
+## Changes
+
+- **#62** — `POST /supervision` takes an optional `durationSec`. Backend first; the app sends it
+  in a later PR. An exception to "both sides in one PR", allowed by the lead: the field is
+  optional and old apps work unchanged.

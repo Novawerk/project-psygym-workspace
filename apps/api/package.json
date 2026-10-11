@@ -13,18 +13,27 @@
     "build": "tsup",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:migrate:prod": "MIGRATE_TARGET=production drizzle-kit migrate"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.133.0",
     "@hono/node-server": "^2.1.4",
+    "@vercel/functions": "^3.9.11",
+    "drizzle-orm": "^0.45.4",
     "hono": "^4.13.13",
     "openai": "^7.32.0",
+    "pg": "^8.23.1",
     "yaml": "^2.9.1",
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "@types/node": "^22.20.5",
+    "@types/pg": "^8.23.1",
+    "drizzle-kit": "^0.31.11",
     "tsup": "^8.5.1",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",

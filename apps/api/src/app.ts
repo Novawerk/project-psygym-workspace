@@ -8,6 +8,8 @@
 //   POST /report       → 204, one reported AI passage, forwarded to Slack (or dropped)
 //
 // Stateless. We store no transcript, and the log never carries message text.
+import { createHash, timingSafeEqual } from "node:crypto";
+
 import { Hono, type Context } from "hono";
 import { cors } from "hono/cors";
 import { streamSSE } from "hono/streaming";
@@ -18,6 +20,8 @@ import { publicSummary, type Case, type Prompts } from "./content.js";
 import { createProvider, type ModelProvider } from "./llm/index.js";
 import type { ModelRequest } from "./llm/types.js";
 import { FeedbackBody, postToSlack, slackMessage, type FetchLike } from "./feedback.js";
+import { disabledCounter, durationBucket, normalizeEvent, turnBucket, type Counter, type MetricsStore } from "./metrics/counter.js";
+import { statsView } from "./metrics/stats.js";
 import { FixedWindowLimiter, clientIp } from "./rate-limit.js";
 import { ReportBody, reportSlackMessage } from "./report.js";
 import { ChatBody, SupervisionBody, type ErrorCode, type Locale, type StreamEvent } from "./schema.js";
@@ -50,6 +54,10 @@ export interface AppDeps {
   fetch?: FetchLike;
   /** How long we wait for Slack. Default 5 s. */
   slackTimeoutMs?: number;
+  /** Anonymous counts. Default: off. */
+  counter?: Counter;
+  /** Where GET /admin/stats reads from; null when counting is off. */
+  metricsStore?: MetricsStore | null;
   pingMs?: number;
 }
 
@@ -102,6 +110,26 @@ async function readBody(req: Request): Promise<BodyRead> {
   return { tooLarge: false, text: Buffer.concat(chunks).toString("utf8") };
 }
 
+/** Constant-time comparison for the admin token; hashing first hides its length too. */
+function sameToken(given: string, expected: string): boolean {
+  const a = createHash("sha256").update(given).digest();
+  const b = createHash("sha256").update(expected).digest();
+  return timingSafeEqual(a, b);
+}
+
+const DAY_MS = 86_400_000;
+/** ?from=&to= as UTC days. Default: the last 30 days up to today. */
+function statsRange(from: string | undefined, to: string | undefined, nowMs: number) {
+  const ok = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(`${s}T00:00:00Z`));
+  const t = to ?? new Date(nowMs).toISOString().slice(0, 10);
+  if (!ok(t)) return null;
+  const f = from ?? new Date(Date.parse(`${t}T00:00:00Z`) - 29 * DAY_MS).toISOString().slice(0, 10);
+  if (!ok(f)) return null;
+  const days = (Date.parse(`${t}T00:00:00Z`) - Date.parse(`${f}T00:00:00Z`)) / DAY_MS;
+  if (days < 0 || days > 365) return null;
+  return { from: f, to: t };
+}
+
 /** The model finished without any text to show. */
 class EmptyReplyError extends Error {
   constructor(readonly stop: string) {
@@ -119,6 +147,18 @@ export function createApp(deps: AppDeps) {
   const { config, cases, prompts } = deps;
   const logger = deps.logger ?? consoleLogger;
   const pingMs = deps.pingMs ?? PING_MS;
+  const rawCounter = deps.counter ?? disabledCounter;
+  // Every count goes through normalizeEvent: unknown case ids and languages become "unknown".
+  const counter: Counter = { enabled: rawCounter.enabled, count: (e) => rawCounter.count(normalizeEvent(e, cases)) };
+  /**
+   * The error answer, counted by its code only (no case, language, invite code or IP).
+   * 401 and 429 are not counted: they come before or from the rate limit, so anyone could make
+   * us write to the database without end.
+   */
+  const failCounted = (c: Context, status: 400 | 401 | 404 | 429 | 503, code: ErrorCode, message?: string) => {
+    if (code !== "invite_required" && code !== "rate_limited") counter.count({ metric: "error", dim: code });
+    return fail(c, status, code, message);
+  };
   const limiter = new FixedWindowLimiter(config.rateLimit.max, config.rateLimit.windowMs, deps.now);
   // Feedback has its own bucket: rating a report never eats into chat turns.
   const feedbackLimiter = new FixedWindowLimiter(config.rateLimit.max, config.rateLimit.windowMs, deps.now);
@@ -155,11 +195,32 @@ export function createApp(deps: AppDeps) {
 
   app.get("/health", (c) => c.json({ ok: true }));
 
+  // GET /admin/stats: anonymous counts for us, not for the app. Its own token, no invite code.
+  // Without ADMIN_STATS_TOKEN the endpoint doesn't exist.
+  app.get("/admin/stats", async (c) => {
+    if (!config.adminStatsToken) return c.json({ error: { code: "not_found", message: "Not found." } }, 404);
+    const given = c.req.header("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1]?.trim() ?? "";
+    if (!sameToken(given, config.adminStatsToken)) {
+      return c.json({ error: { code: "unauthorized", message: "A valid admin token is required." } }, 401);
+    }
+    if (!deps.metricsStore) {
+      return c.json({ error: { code: "metrics_disabled", message: "Counting is off on this server." } }, 503);
+    }
+    const range = statsRange(c.req.query("from"), c.req.query("to"), deps.now?.() ?? Date.now());
+    if (!range) return c.json({ error: { code: "invalid_request", message: "from/to must be YYYY-MM-DD, from ≤ to, at most 366 days." } }, 400);
+    try {
+      return c.json(statsView(range.from, range.to, await deps.metricsStore.rows(range.from, range.to)));
+    } catch (err) {
+      logger.error({ msg: "stats failed", ...describe(err) });
+      return c.json({ error: { code: "metrics_unavailable", message: "The counts can't be read right now." } }, 503);
+    }
+  });
+
   // Everything below needs the invite code, when INVITE_CODES is set.
   app.use("*", async (c, next) => {
     if (c.req.method === "OPTIONS" || !config.inviteCodes) return next();
     const code = c.req.header("x-invite-code")?.trim();
-    if (!code || !config.inviteCodes.has(code)) return fail(c, 401, "invite_required");
+    if (!code || !config.inviteCodes.has(code)) return failCounted(c, 401, "invite_required");
     return next();
   });
 
@@ -173,7 +234,7 @@ export function createApp(deps: AppDeps) {
     const retryAfter = l.take(key);
     if (!retryAfter) return null;
     c.header("Retry-After", String(retryAfter));
-    return fail(c, 429, "rate_limited");
+    return failCounted(c, 429, "rate_limited");
   }
 
   /** The body, parsed and validated; or the 400 to send back. */
@@ -182,7 +243,7 @@ export function createApp(deps: AppDeps) {
     if (read.tooLarge) {
       // Drained: the keep-alive connection stays usable. Not drained: close it.
       if (!read.drained) c.header("Connection", "close");
-      return fail(c, 400, "invalid_request", "The request body is too large.");
+      return failCounted(c, 400, "invalid_request", "The request body is too large.");
     }
     let raw: unknown;
     try {
@@ -191,7 +252,7 @@ export function createApp(deps: AppDeps) {
       raw = undefined;
     }
     const parsed = schema.safeParse(raw);
-    if (!parsed.success) return fail(c, 400, "invalid_request", parsed.error.issues[0]?.message ?? MESSAGES.invalid_request);
+    if (!parsed.success) return failCounted(c, 400, "invalid_request", parsed.error.issues[0]?.message ?? MESSAGES.invalid_request);
     return parsed.data;
   }
 
@@ -201,28 +262,56 @@ export function createApp(deps: AppDeps) {
       async (c) => {
         const limited = rateLimited(c, limiter);
         if (limited) return limited;
-        const body = await readJson(c, schema as z.ZodType<z.infer<typeof ChatBody>>);
+        const body = await readJson(c, schema as z.ZodType<z.infer<typeof SupervisionBody>>);
         if (body instanceof Response) return body;
-        const { caseId, locale, messages } = body;
+        const { caseId, locale, messages, durationSec } = body;
 
         const theCase = cases.get(caseId);
-        if (!theCase) return fail(c, 404, "case_not_found");
+        if (!theCase) return failCounted(c, 404, "case_not_found");
 
         const provider = providerFor(role);
         if (typeof provider === "string") {
           logger.error({ msg: "model unavailable", route: path, reason: provider });
-          return fail(c, 503, "model_unavailable");
+          return failCounted(c, 503, "model_unavailable");
         }
 
         const request = build(prompts, theCase, locale, messages);
-        return streamTurn(c, { path, caseId, locale, count: messages.length, provider, request });
+        // What we count when the stream ends (aborted streams aren't counted). /chat is stateless,
+        // so a session "starts" with the turn that answers the counselor's first line.
+        const at = { caseId: theCase.id, locale };
+        const counselorLines = messages.filter((m) => m.role === "counselor").length;
+        const onDone = (o: { ok: boolean; sessionEnd: boolean }) => {
+          if (role === "client") {
+            if (o.ok) {
+              counter.count({ metric: "chat_turn", ...at });
+              if (counselorLines === 1) counter.count({ metric: "session_started", ...at });
+              if (o.sessionEnd) counter.count({ metric: "session_ended_by_client", ...at });
+            }
+          } else if (o.ok) {
+            counter.count({ metric: "report_generated", ...at, dim: turnBucket(messages.length), durationSec });
+            if (durationSec !== undefined) counter.count({ metric: "session_duration", ...at, dim: durationBucket(durationSec) });
+          } else {
+            counter.count({ metric: "report_failed", ...at });
+          }
+          if (!o.ok) counter.count({ metric: "error", dim: "stream_error" });
+        };
+        return streamTurn(c, { path, caseId, locale, count: messages.length, provider, request, onDone });
       },
     );
   }
 
   function streamTurn(
     c: Context,
-    t: { path: string; caseId: string; locale: Locale; count: number; provider: ModelProvider; request: Omit<ModelRequest, "signal"> },
+    t: {
+      path: string;
+      caseId: string;
+      locale: Locale;
+      count: number;
+      provider: ModelProvider;
+      request: Omit<ModelRequest, "signal">;
+      /** After the last frame is queued; never for an aborted stream. */
+      onDone?: (o: { ok: boolean; sessionEnd: boolean }) => void;
+    },
   ) {
     // Tell proxies (and Vercel) not to buffer or transform the stream.
     c.header("Cache-Control", "no-cache, no-transform");
@@ -269,6 +358,7 @@ export function createApp(deps: AppDeps) {
           throw new EmptyReplyError(res.stopReason);
         }
         send({ type: "turn_end", usage: { inputTokens: res.usage.inputTokens, outputTokens: res.usage.outputTokens } });
+        t.onDone?.({ ok: true, sessionEnd });
         logger.info({
           ...log,
           msg: "turn",
@@ -290,6 +380,7 @@ export function createApp(deps: AppDeps) {
             ms: Date.now() - started,
           });
           send({ type: "error", code: "model_unavailable", message: MESSAGES.model_unavailable });
+          t.onDone?.({ ok: false, sessionEnd: false });
         }
       } finally {
         clearInterval(ping);
@@ -326,7 +417,8 @@ export function createApp(deps: AppDeps) {
     if (limited) return limited;
     const body = await readJson(c, FeedbackBody);
     if (body instanceof Response) return body;
-    if (!cases.has(body.caseId)) return fail(c, 404, "case_not_found");
+    if (!cases.has(body.caseId)) return failCounted(c, 404, "case_not_found");
+    counter.count({ metric: "feedback", caseId: body.caseId, locale: body.locale, dim: body.rating });
     const log = { msg: "feedback", caseId: body.caseId, locale: body.locale, rating: body.rating, commentChars: chars(body.comment) };
     return forwardToSlack(c, "feedback", log, slackMessage(body, now()));
   });
@@ -337,7 +429,8 @@ export function createApp(deps: AppDeps) {
     if (limited) return limited;
     const body = await readJson(c, ReportBody);
     if (body instanceof Response) return body;
-    if (!cases.has(body.caseId)) return fail(c, 404, "case_not_found");
+    if (!cases.has(body.caseId)) return failCounted(c, 404, "case_not_found");
+    counter.count({ metric: "user_report", caseId: body.caseId, locale: body.locale, dim: body.reason });
     const log = {
       msg: "report",
       caseId: body.caseId,
@@ -355,6 +448,7 @@ export function createApp(deps: AppDeps) {
 
   app.notFound((c) => c.json({ error: { code: "not_found", message: "Not found." } }, 404));
   app.onError((err, c) => {
+    counter.count({ metric: "error", dim: "internal" });
     logger.error({ msg: "unhandled", route: c.req.path, ...describe(err) });
     return c.json({ error: { code: "internal", message: "Something went wrong on our side." } }, 500);
   });

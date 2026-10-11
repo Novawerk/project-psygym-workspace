@@ -43,6 +43,14 @@ const EnvSchema = z.object({
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(30),
   RATE_LIMIT_WINDOW_SEC: z.coerce.number().int().positive().default(60),
 
+  // ── Anonymous counts (docs/decisions/0007-anonymous-counts.md) ──
+  /** "true" turns counting on; it still stays off without DATABASE_URL. */
+  METRICS_ENABLED: z.enum(["true", "false", "1", "0"]).optional(),
+  /** Postgres (Neon, Frankfurt). Pooled URL at runtime. */
+  DATABASE_URL: optionalString,
+  /** Bearer token for GET /admin/stats. Unset: the endpoint answers 404. */
+  ADMIN_STATS_TOKEN: optionalString,
+
   // ── Report feedback ──
   /** Slack incoming webhook for POST /feedback. Unset: feedback is dropped (204). */
   FEEDBACK_SLACK_WEBHOOK_URL: optionalString.pipe(z.url({ protocol: /^https$/ }).optional()),
@@ -68,6 +76,9 @@ export interface AppConfig {
   rateLimit: { max: number; windowMs: number };
   /** Where POST /feedback goes. Null: dropped. */
   feedbackWebhookUrl: string | null;
+  /** Counting is on only with METRICS_ENABLED=true and a DATABASE_URL. */
+  metrics: { databaseUrl: string } | null;
+  adminStatsToken: string | null;
 }
 
 const PROVIDER_DEFAULTS: Record<ProviderName, { model: string; baseURL?: string; maxOutputTokens: number }> = {
@@ -163,5 +174,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     inviteCodes: codes.length ? new Set(codes) : null,
     rateLimit: { max: e.RATE_LIMIT_MAX, windowMs: e.RATE_LIMIT_WINDOW_SEC * 1000 },
     feedbackWebhookUrl: e.FEEDBACK_SLACK_WEBHOOK_URL ?? null,
+    metrics: (e.METRICS_ENABLED === "true" || e.METRICS_ENABLED === "1") && e.DATABASE_URL ? { databaseUrl: e.DATABASE_URL } : null,
+    adminStatsToken: e.ADMIN_STATS_TOKEN ?? null,
   };
 }
