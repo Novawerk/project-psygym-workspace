@@ -1,6 +1,6 @@
 # 路线图和实现顺序
 
-完整设计在 10/18 demo 前实现。下面的批次只排**先做什么、后做什么**：先做 demo 一定会走到的路径，再做其余；要等决策的，决策定了再做。页面编号见 [information-architecture.md](./information-architecture.md)。
+完整设计在 10/17 demo 前实现。下面的批次只排**先做什么、后做什么**：先做 demo 一定会走到的路径，再做其余；要等决策的，决策定了再做。页面编号见 [information-architecture.md](./information-architecture.md)。
 
 | 标记 | 批次 | 什么时候 |
 |------|------|----------|
