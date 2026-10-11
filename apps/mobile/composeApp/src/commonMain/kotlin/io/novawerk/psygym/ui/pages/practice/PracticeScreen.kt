@@ -117,7 +117,6 @@ fun PracticeScreen(
     onSessionLost: () -> Unit,
     onEnd: () -> Unit,
     onHelp: () -> Unit,
-    onOpenSettings: () -> Unit,
     onOtherCase: () -> Unit,
 ) {
     val locale = rememberApiLocale()
@@ -248,7 +247,6 @@ fun PracticeScreen(
                     ErrorCard(
                         error = error,
                         onRetry = { viewModel.retry(locale) },
-                        onOpenSettings = onOpenSettings,
                         onOtherCase = onOtherCase,
                         onEndSession = { if (viewModel.canEnd) onEnd() },
                     )

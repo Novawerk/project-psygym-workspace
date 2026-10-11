@@ -3,10 +3,15 @@ package io.novawerk.psygym.di
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import io.novawerk.psygym.AppConfig
+import io.novawerk.psygym.data.api.AuthApi
+import io.novawerk.psygym.data.api.Backend
 import io.novawerk.psygym.data.api.FakePsygymApi
 import io.novawerk.psygym.data.api.KtorPsygymApi
 import io.novawerk.psygym.data.api.PsygymApi
 import io.novawerk.psygym.data.api.SwitchingPsygymApi
+import io.novawerk.psygym.domain.auth.SecureStore
+import io.novawerk.psygym.domain.auth.SessionGuard
+import io.novawerk.psygym.domain.auth.SessionStore
 import io.novawerk.psygym.domain.history.HistoryRepository
 import io.novawerk.psygym.domain.practice.CaseStore
 import io.novawerk.psygym.domain.practice.PracticeSession
@@ -28,11 +33,18 @@ abstract class AppComponent(
     @get:Provides protected val dataStore: DataStore<Preferences>,
     @get:Provides protected val historyDir: HistoryDir,
     @get:Provides val screenshot: ScreenshotModeHolder,
+    @get:Provides protected val secureStore: SecureStore,
 ) {
     abstract val settingsRepository: SettingsRepository
     abstract val practiceSession: PracticeSession
     abstract val caseStore: CaseStore
     abstract val history: HistoryRepository
+    abstract val sessions: SessionStore
+    abstract val auth: AuthApi
+
+    @AppScope
+    @Provides
+    protected fun sessions(secure: SecureStore): SessionStore = SessionStore(secure)
 
     @AppScope
     @Provides
@@ -49,14 +61,25 @@ abstract class AppComponent(
 
     @AppScope
     @Provides
-    protected fun api(settings: SettingsRepository, screenshot: ScreenshotModeHolder): PsygymApi {
-        // Debug-only store-screenshot mode replaces the backend entirely.
-        screenshot.mode?.let { return it.api }
-        val real = KtorPsygymApi(baseUrl = AppConfig.apiBaseUrl, inviteCode = settings::currentInviteCode)
-        // Release never sees demo data: no fake API is even built.
-        if (!AppConfig.isDebug) return real
-        return SwitchingPsygymApi(real = real, fake = FakePsygymApi(), useFake = settings::currentUseFakeApi)
+    protected fun backend(settings: SettingsRepository, sessions: SessionStore): Backend {
+        val real = KtorPsygymApi(baseUrl = AppConfig.apiBaseUrl, token = sessions::token)
+        // Release never sees demo data: no fake API (and no demo sign-in) is even built.
+        val backend = if (AppConfig.isDebug) {
+            SwitchingPsygymApi(real = real, fake = FakePsygymApi(), useFake = settings::currentUseFakeApi)
+        } else {
+            real
+        }
+        return SessionGuard(backend, sessions)
     }
+
+    @AppScope
+    @Provides
+    protected fun api(backend: Backend, screenshot: ScreenshotModeHolder): PsygymApi =
+        // Debug-only store-screenshot mode replaces the backend entirely.
+        screenshot.mode?.api ?: backend
+
+    @Provides
+    protected fun authApi(backend: Backend): AuthApi = backend
 
     companion object
 }
@@ -69,4 +92,5 @@ expect fun AppComponent.Companion.create(
     dataStore: DataStore<Preferences>,
     historyDir: HistoryDir,
     screenshot: ScreenshotModeHolder,
+    secureStore: SecureStore,
 ): AppComponent

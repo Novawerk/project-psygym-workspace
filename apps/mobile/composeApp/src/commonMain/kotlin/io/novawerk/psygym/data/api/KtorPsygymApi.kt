@@ -10,7 +10,10 @@ import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.plugins.sse.SSE
 import io.ktor.client.plugins.sse.SSEClientException
 import io.ktor.client.plugins.sse.sse
+import io.ktor.client.request.HttpRequestBuilder
+import io.ktor.client.request.delete
 import io.ktor.client.request.get
+import io.ktor.client.request.post
 import io.ktor.client.request.header
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
@@ -21,6 +24,7 @@ import io.ktor.http.HttpMethod
 import io.ktor.http.content.TextContent
 import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
+import io.novawerk.psygym.domain.model.ApiLocale
 import io.novawerk.psygym.domain.model.CaseSummary
 import io.novawerk.psygym.domain.model.CasesResponse
 import io.novawerk.psygym.domain.model.TurnRequest
@@ -32,6 +36,7 @@ import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.timeout
 import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.flow.transformWhile
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlin.time.Duration.Companion.milliseconds
@@ -39,18 +44,23 @@ import kotlin.time.Duration.Companion.milliseconds
 /**
  * Talks to `apps/api` as described in docs/api-contract.md.
  *
- * [inviteCode] is read on every request so a code saved in Settings takes effect at once.
+ * [token] is the session token, read on every request; sent as `Authorization: Bearer`. The
+ * app always signs in, so it never sends an invite code header (contract "Sign-in").
  * [idleTimeoutMillis] is how long we wait for any byte: `: ping` comments arrive every
  * ~15 s, so a slow supervision report doesn't trip it (acceptance D7).
  */
 class KtorPsygymApi(
     private val baseUrl: String,
-    private val inviteCode: suspend () -> String,
+    private val token: suspend () -> String?,
     engineClient: HttpClient = HttpClient(),
     private val idleTimeoutMillis: Long = 30_000,
-) : PsygymApi {
+) : Backend {
 
-    private val json = Json { ignoreUnknownKeys = true }
+    // explicitNulls = false: optional fields we don't set (durationSec) are left out.
+    private val json = Json {
+        ignoreUnknownKeys = true
+        explicitNulls = false
+    }
 
     private val client = engineClient.config {
         expectSuccess = false
@@ -68,9 +78,40 @@ class KtorPsygymApi(
     }
 
     override suspend fun cases(): List<CaseSummary> = mapErrors {
-        val response = client.get("cases") { header(INVITE_HEADER, inviteCode()) }
+        val bearer = token()
+        val response = client.get("cases") { auth(bearer) }
         if (!response.status.isSuccess()) throw response.toApiException()
         response.body<CasesResponse>().cases
+    }
+
+    override suspend fun startSignIn(email: String, locale: ApiLocale) = mapErrors {
+        val response = client.post("auth/start") { jsonBody(StartBody.serializer(), StartBody(email, locale)) }
+        if (!response.status.isSuccess()) throw response.toApiException()
+    }
+
+    override suspend fun verify(email: String, code: String, inviteCode: String?): AuthSession = mapErrors {
+        val response = client.post("auth/verify") { jsonBody(VerifyBody.serializer(), VerifyBody(email, code, inviteCode)) }
+        if (!response.status.isSuccess()) throw response.toApiException()
+        json.decodeFromString(AuthSession.serializer(), response.bodyAsText())
+    }
+
+    override suspend fun signOut(token: String) = mapErrors {
+        val response = client.post("auth/logout") { auth(token) }
+        if (!response.status.isSuccess()) throw response.toApiException()
+    }
+
+    override suspend fun deleteAccount() = mapErrors {
+        val bearer = token()
+        val response = client.delete("me") { auth(bearer) }
+        if (!response.status.isSuccess()) throw response.toApiException()
+    }
+
+    private fun HttpRequestBuilder.auth(bearer: String?) {
+        if (bearer != null) header(HttpHeaders.Authorization, "Bearer $bearer")
+    }
+
+    private fun <T> HttpRequestBuilder.jsonBody(serializer: KSerializer<T>, body: T) {
+        setBody(TextContent(json.encodeToString(serializer, body), ContentType.Application.Json))
     }
 
     override fun chat(request: TurnRequest): Flow<ChatEvent> = stream("chat", request)
@@ -80,7 +121,7 @@ class KtorPsygymApi(
 
     @OptIn(FlowPreview::class)
     private fun stream(path: String, request: TurnRequest): Flow<ChatEvent> = channelFlow {
-        val code = inviteCode()
+        val bearer = token()
         // How the stream ended. An error frame is thrown after the SSE block closes:
         // thrown inside, the connection teardown would replace it with a transport error.
         var ended = false
@@ -91,8 +132,8 @@ class KtorPsygymApi(
                     urlString = path,
                     request = {
                         method = HttpMethod.Post
-                        header(INVITE_HEADER, code)
-                        setBody(TextContent(json.encodeToString(TurnRequest.serializer(), request), ContentType.Application.Json))
+                        auth(bearer)
+                        jsonBody(TurnRequest.serializer(), request)
                     },
                 ) {
                     incoming
@@ -177,13 +218,18 @@ class KtorPsygymApi(
     )
 
     @Serializable
+    private data class StartBody(val email: String, val locale: ApiLocale)
+
+    @Serializable
+    private data class VerifyBody(val email: String, val code: String, val inviteCode: String? = null)
+
+    @Serializable
     private data class ErrorBody(val error: ErrorDetail? = null)
 
     @Serializable
     private data class ErrorDetail(val code: String? = null, val message: String? = null)
 
     private companion object {
-        const val INVITE_HEADER = "X-Invite-Code"
         const val SOCKET_TIMEOUT_MARGIN_MILLIS = 5_000L
     }
 }

@@ -23,9 +23,6 @@ enum class AppLanguage(val tag: String?) {
 
 enum class StartState { Welcome, Consent, Home }
 
-/** Invite codes never contain whitespace; keyboards sometimes add some ("test code1"). */
-fun normalizeInviteCode(code: String): String = code.filterNot { it.isWhitespace() }
-
 /**
  * Bump when the O2 disclaimer changes in substance: everyone sees it again on next launch
  * (docs/product/onboarding.md, docs/safety.md §5).
@@ -36,8 +33,6 @@ const val DISCLAIMER_VERSION = "2026-10-v1"
 class SettingsRepository(private val dataStore: DataStore<Preferences>) {
 
     val language: Flow<AppLanguage> = dataStore.data.map { AppLanguage.fromStored(it[LANGUAGE]) }
-
-    val inviteCode: Flow<String> = dataStore.data.map { it[INVITE_CODE].orEmpty() }
 
     /**
      * Where the app opens. Null until DataStore answers. The intro runs until the user
@@ -85,16 +80,40 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         AppConfig.isDebug && (it[USE_FAKE_API] ?: AppConfig.fakeApiDefault)
     }
 
-    suspend fun currentInviteCode(): String = inviteCode.first()
+    /**
+     * The invite code the version without sign-in kept. Sent once with the first sign-in so
+     * those users skip L3 (login.md §1 "迁移"), then cleared.
+     */
+    suspend fun legacyInviteCode(): String? = dataStore.data.first()[INVITE_CODE]?.takeIf { it.isNotBlank() }
+
+    suspend fun clearLegacyInviteCode() {
+        dataStore.edit { it.remove(INVITE_CODE) }
+    }
+
+    /**
+     * Someone has signed in on this install. Until then, a user who already finished the intro
+     * (in the version without sign-in) sees "You now sign in with email" on L1.
+     */
+    val signedInOnce: Flow<Boolean> = dataStore.data.map { it[SIGNED_IN_ONCE] ?: false }
+
+    suspend fun markSignedIn() {
+        dataStore.edit { it[SIGNED_IN_ONCE] = true }
+    }
+
+    /**
+     * True once per install. iOS keeps Keychain items when the app is deleted, so a reinstall
+     * would still be signed in; the app clears the session the first time it runs.
+     */
+    suspend fun consumeFirstLaunch(): Boolean {
+        val first = dataStore.data.first()[LAUNCHED] != true
+        if (first) dataStore.edit { it[LAUNCHED] = true }
+        return first
+    }
 
     suspend fun currentUseFakeApi(): Boolean = useFakeApi.first()
 
     suspend fun setLanguage(language: AppLanguage) {
         dataStore.edit { it[LANGUAGE] = language.name }
-    }
-
-    suspend fun setInviteCode(code: String) {
-        dataStore.edit { it[INVITE_CODE] = normalizeInviteCode(code) }
     }
 
     suspend fun acceptDisclaimer() {
@@ -122,5 +141,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         val SAVE_HISTORY = booleanPreferencesKey("save_history")
         val PRACTICE_IN_PROGRESS = booleanPreferencesKey("practice_in_progress")
         val USE_FAKE_API = booleanPreferencesKey("use_fake_api")
+        val LAUNCHED = booleanPreferencesKey("launched")
+        val SIGNED_IN_ONCE = booleanPreferencesKey("signed_in_once")
     }
 }

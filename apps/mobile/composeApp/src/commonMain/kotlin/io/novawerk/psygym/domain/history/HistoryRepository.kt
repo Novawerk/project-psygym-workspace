@@ -29,6 +29,8 @@ data class SavedSession(
     val messages: List<Message>,
     val report: String = "",
     val reportComplete: Boolean = false,
+    /** The account it belongs to ([io.novawerk.psygym.domain.auth.accountKey]), never an email. Null: saved before sign-in. */
+    val owner: String? = null,
 ) {
     val turns: Int get() = messages.count { it.role == io.novawerk.psygym.domain.model.Role.Counselor }
     val durationMillis: Long get() = (endedAtMillis - startedAtMillis).coerceAtLeast(0)
@@ -38,6 +40,9 @@ data class SavedSession(
  * Practice history on this phone: one JSON file per session in the app's private
  * directory. Not uploaded, not synced, not encrypted (decision 0005 leaves encryption
  * open). Android: allowBackup=false. iOS: Application Support, excluded from backup.
+ *
+ * Each session belongs to an account (login.md "练习记录跟账号走"): the list shows only the
+ * signed-in account's sessions. This is filtering, not protection: the files aren't encrypted.
  */
 class HistoryRepository(
     private val dir: Path,
@@ -46,9 +51,32 @@ class HistoryRepository(
     private val json = Json { ignoreUnknownKeys = true }
     private val mutex = Mutex()
     private val _sessions = MutableStateFlow<List<SavedSession>?>(null)
+    private var owner: String? = null
 
-    /** Newest first. Null until the first [load]. */
+    /** The signed-in account the list shows (null: nobody). */
+    val currentOwner: String? get() = owner
+
+    /** The signed-in account's sessions, newest first. Null until the first [load]. */
     val sessions: StateFlow<List<SavedSession>?> = _sessions.asStateFlow()
+
+    /**
+     * Switches to [account] (null: signed out, nothing shows). Sessions saved before anyone
+     * signed in (owner null, from the version without accounts) go to the first account that
+     * signs in (login.md §1 "迁移").
+     */
+    suspend fun setOwner(account: String?) = mutex.withLock {
+        owner = account
+        if (account != null) {
+            readFiles().filter { it.owner == null }.forEach { write(it.copy(owner = account)) }
+        }
+        _sessions.value = readAll()
+    }
+
+    /** Deletes every session of [account] (deleting the account deletes its history). */
+    suspend fun deleteAccount(account: String) = mutex.withLock {
+        readFiles().filter { it.owner == account }.forEach { s -> io { fileSystem.delete(file(s.id), mustExist = false) } }
+        _sessions.value = readAll()
+    }
 
     // Disk trouble (full, unreadable) never crashes the app: a save that fails is skipped,
     // a list that can't be read is empty. History is a convenience, not the practice itself.
@@ -56,28 +84,35 @@ class HistoryRepository(
     suspend fun load() = mutex.withLock { _sessions.value = readAll() }
 
     /** Returns false when the file couldn't be written. */
+    /** Saved under the signed-in account. Returns false when the file couldn't be written. */
     suspend fun save(session: SavedSession): Boolean = mutex.withLock {
-        val ok = io {
-            fileSystem.createDirectories(dir)
-            fileSystem.write(file(session.id)) { writeUtf8(json.encodeToString(SavedSession.serializer(), session)) }
-        } != null
+        val ok = write(session.copy(owner = session.owner ?: owner))
         _sessions.value = readAll()
         ok
     }
+
+    private suspend fun write(session: SavedSession): Boolean = io {
+        fileSystem.createDirectories(dir)
+        fileSystem.write(file(session.id)) { writeUtf8(json.encodeToString(SavedSession.serializer(), session)) }
+    } != null
 
     suspend fun delete(id: String) = mutex.withLock {
         io { fileSystem.delete(file(id), mustExist = false) }
         _sessions.value = readAll()
     }
 
+    /** "Delete all practice history": the signed-in account's sessions. */
     suspend fun deleteAll() = mutex.withLock {
-        io { fileSystem.deleteRecursively(dir, mustExist = false) }
+        readAll().forEach { s -> io { fileSystem.delete(file(s.id), mustExist = false) } }
         _sessions.value = readAll()
     }
 
     fun find(id: String): SavedSession? = _sessions.value?.firstOrNull { it.id == id }
 
-    private suspend fun readAll(): List<SavedSession> = io {
+    // Only the signed-in account's. With no one signed in, nothing.
+    private suspend fun readAll(): List<SavedSession> = owner?.let { o -> readFiles().filter { it.owner == o } } ?: emptyList()
+
+    private suspend fun readFiles(): List<SavedSession> = io {
         if (!fileSystem.exists(dir)) return@io emptyList<SavedSession>()
         fileSystem.list(dir)
             .filter { it.name.endsWith(SUFFIX) }

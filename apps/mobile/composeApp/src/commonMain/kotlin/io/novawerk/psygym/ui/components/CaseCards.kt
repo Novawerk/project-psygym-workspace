@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import io.novawerk.psygym.domain.model.ApiLocale
 import io.novawerk.psygym.domain.model.CaseSummary
 import io.novawerk.psygym.domain.model.Difficulty
+import io.novawerk.psygym.resources.brief_session_first
 import io.novawerk.psygym.resources.Res
 import io.novawerk.psygym.resources.case_difficulty_hard
 import io.novawerk.psygym.resources.case_title_with_alias
@@ -74,8 +75,10 @@ fun CaseSummary.displayTitle(locale: ApiLocale): String {
 /** Topic tags · difficulty · about N min · CBT. Missing fields are left out. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun CaseTags(case: CaseSummary, locale: ApiLocale) {
+fun CaseTags(case: CaseSummary, locale: ApiLocale, firstSession: Boolean = false) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        // C2 only: every practice is a first session for now (S-1, copy.md).
+        if (firstSession) Tag(stringResource(Res.string.brief_session_first))
         case.tags.forEach { Tag(it.get(locale)) }
         case.difficulty?.let {
             Tag(

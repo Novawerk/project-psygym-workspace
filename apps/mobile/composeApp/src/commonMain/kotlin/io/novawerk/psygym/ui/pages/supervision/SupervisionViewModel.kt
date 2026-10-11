@@ -15,6 +15,7 @@ import io.novawerk.psygym.domain.model.CaseSummary
 import io.novawerk.psygym.domain.history.HistoryRepository
 import io.novawerk.psygym.domain.history.SavedSession
 import io.novawerk.psygym.domain.model.TurnRequest
+import io.novawerk.psygym.domain.model.durationSec
 import io.novawerk.psygym.domain.practice.PracticeSession
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
@@ -38,6 +39,10 @@ class SupervisionViewModel(
     val duration: Duration = session.elapsed
     val turns: Int = session.turns
     private val sessionId = session.id
+
+    // Whose practice this is, fixed now: if someone else signs in before the report is saved,
+    // it still goes to the person who practised (login.md H6).
+    private val owner = history?.currentOwner
     private val endedAt = startedAt?.plus(duration)
 
     var report by mutableStateOf("")
@@ -72,7 +77,8 @@ class SupervisionViewModel(
 
     fun load(locale: ApiLocale) {
         val caseId = case?.id ?: return
-        val request = TurnRequest(caseId, locale, transcript)
+        // The clock stopped when the client ended the session (PracticeSession.elapsed).
+        val request = TurnRequest(caseId, locale, transcript, durationSec = durationSec(duration))
         report = ""
         error = null
         streaming = true
@@ -102,6 +108,7 @@ class SupervisionViewModel(
             messages = transcript,
             report = if (complete) report else "",
             reportComplete = complete,
+            owner = owner,
         )
         // Outlives this screen: leaving mid-report must not lose the save.
         GlobalScope.launch { repo.save(record) }

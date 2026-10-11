@@ -34,8 +34,21 @@ import kotlinx.serialization.Serializable
 /** P1 · Me. */
 @Serializable data object MeRoute
 
-/** P1 opened from an error card (e.g. a bad invite code): a back arrow, no bottom bar. */
-@Serializable data object SettingsRoute
+/**
+ * L1–L3: one page that steps through email, code and invite code (state in LoginFlow).
+ * [notice] is one of the NOTICE_* values; [returnBack] when the session expired mid-use:
+ * after signing in, back to the page the user was on.
+ */
+@Serializable data class LoginRoute(val notice: String? = null, val returnBack: Boolean = false) {
+    companion object {
+        const val NOTICE_MIGRATION = "migration"
+        const val NOTICE_EXPIRED = "expired"
+        const val NOTICE_DELETED = "deleted"
+    }
+}
+
+/** Delete account, step one (P1 → 删除账号). */
+@Serializable data object DeleteAccountRoute
 
 /** M1. */
 @Serializable data object HistoryRoute

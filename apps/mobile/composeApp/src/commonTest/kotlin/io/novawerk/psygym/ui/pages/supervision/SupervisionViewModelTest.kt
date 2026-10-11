@@ -1,5 +1,9 @@
 package io.novawerk.psygym.ui.pages.supervision
 
+import kotlin.test.assertEquals
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.delay
+import io.novawerk.psygym.domain.auth.accountKey
 import io.novawerk.psygym.data.api.ChatEvent
 import io.novawerk.psygym.data.api.PsygymApi
 import io.novawerk.psygym.domain.history.HistoryRepository
@@ -75,5 +79,30 @@ class SupervisionViewModelTest {
         reportGate.complete(Unit)
         assertTrue(vm.done)
         assertTrue(vm.leaveNeedsConfirm)
+    }
+
+    @Test
+    fun theReportIsSavedUnderWhoPractisedEvenIfSomeoneElseSignsIn() = runTest {
+        val fs = FakeFileSystem()
+        val history = HistoryRepository("/h".toPath(), fs)
+        val a = accountKey("a@example.com")
+        val b = accountKey("b@example.com")
+        history.setOwner(a)
+        val vm = SupervisionViewModel(api, session(), history)
+        vm.start(ApiLocale.Zh)
+        // A's session expired and B signed in before the report finished.
+        history.setOwner(b)
+        reportGate.complete(Unit)
+        // Saves run outside the screen's scope: wait for them on the real clock.
+        withContext(Dispatchers.Default) {
+            repeat(100) {
+                if (fs.list("/h".toPath()).isNotEmpty() && fs.read(fs.list("/h".toPath()).single()) { readUtf8() }.contains("开放")) return@withContext
+                delay(20)
+            }
+        }
+        assertEquals(emptyList(), history.sessions.value)
+        history.setOwner(a)
+        assertEquals(1, history.sessions.value!!.size)
+        assertTrue(history.sessions.value!!.single().reportComplete)
     }
 }

@@ -68,7 +68,12 @@ data class TurnRequest(
     val caseId: String,
     val locale: ApiLocale,
     val messages: List<Message>,
+    /** `/supervision` only: the session length in whole seconds, 0–7200. Left out when null. */
+    val durationSec: Int? = null,
 )
+
+/** The session length the contract accepts as `durationSec`: whole seconds, at most two hours. */
+fun durationSec(duration: kotlin.time.Duration): Int = duration.inWholeSeconds.coerceIn(0, 7200).toInt()
 
 object ContractLimits {
     const val MAX_MESSAGE_CHARS = 2000

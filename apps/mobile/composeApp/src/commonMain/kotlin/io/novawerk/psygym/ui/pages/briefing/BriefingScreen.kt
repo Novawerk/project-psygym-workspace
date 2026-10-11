@@ -38,6 +38,7 @@ import io.novawerk.psygym.resources.back
 import io.novawerk.psygym.resources.brief_client
 import io.novawerk.psygym.resources.brief_content_note
 import io.novawerk.psygym.resources.brief_focus
+import io.novawerk.psygym.resources.brief_session_first_note
 import io.novawerk.psygym.resources.brief_setup
 import io.novawerk.psygym.resources.brief_setup_body
 import io.novawerk.psygym.resources.brief_start
@@ -106,10 +107,16 @@ fun BriefingScreen(
                 CaseAvatar(case, caseIndex, locale, size = 52.dp)
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(case.displayTitle(locale), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                    CaseTags(case, locale)
+                    CaseTags(case, locale, firstSession = true)
                 }
             }
             Section(stringResource(Res.string.brief_client), (case.clientIntro ?: case.summary).get(locale))
+            // What a first session is for, above "What to practise" (S-1, copy.md).
+            Text(
+                stringResource(Res.string.brief_session_first_note),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             if (case.practiceFocus.isNotEmpty()) {
                 BorderedCard(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

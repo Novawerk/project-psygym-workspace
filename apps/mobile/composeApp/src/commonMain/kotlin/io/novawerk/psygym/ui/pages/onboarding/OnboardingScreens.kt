@@ -64,13 +64,9 @@ import io.novawerk.psygym.resources.onb_consent_check
 import io.novawerk.psygym.resources.onb_consent_title
 import io.novawerk.psygym.resources.onb_continue
 import io.novawerk.psygym.resources.onb_link_privacy
-import io.novawerk.psygym.resources.onb_ready_invite_body
-import io.novawerk.psygym.resources.onb_ready_invite_hint
-import io.novawerk.psygym.resources.onb_ready_invite_title
+import io.novawerk.psygym.resources.onb_ready_continue
 import io.novawerk.psygym.resources.onb_ready_language_note
 import io.novawerk.psygym.resources.onb_ready_language_title
-import io.novawerk.psygym.resources.onb_ready_skip
-import io.novawerk.psygym.resources.onb_ready_start
 import io.novawerk.psygym.resources.onb_ready_title
 import io.novawerk.psygym.resources.onb_skip
 import io.novawerk.psygym.resources.onb_step1_body
@@ -289,28 +285,19 @@ private fun Point(n: Int, title: StringResource, body: StringResource) {
     }
 }
 
-/** O3 · Almost ready: language and invite code. The invite code isn't checked here. */
+/** O3 · Almost ready: the language. Sign-in (L1) comes next (login.md §1). */
 @Composable
 fun ReadyScreen(
     language: AppLanguage,
-    inviteCode: String,
     onLanguage: (AppLanguage) -> Unit,
-    onStart: (inviteCode: String) -> Unit,
-    onSkip: () -> Unit,
+    onContinue: () -> Unit,
 ) {
-    var code by rememberSaveable { mutableStateOf(inviteCode) }
-    // "Skip for now" is at the bottom, so no second Skip up top (audit F). The 中/EN toggle
-    // stays, as on every intro page (design).
+    // The 中/EN toggle stays, as on every intro page (design). No skip: sign-in follows.
     OnboardingPage(
         page = 2,
         onSkip = null,
         onLanguage = onLanguage,
-        bottom = {
-            PrimaryButton(stringResource(Res.string.onb_ready_start), { onStart(code) })
-            TextButton(onClick = onSkip) {
-                Text(stringResource(Res.string.onb_ready_skip), color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        },
+        bottom = { PrimaryButton(stringResource(Res.string.onb_ready_continue), onContinue) },
     ) {
         Text(stringResource(Res.string.onb_ready_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(24.dp))
@@ -340,30 +327,6 @@ fun ReadyScreen(
                 stringResource(Res.string.onb_ready_language_note),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Spacer(Modifier.height(12.dp))
-        GrayCard {
-            Text(stringResource(Res.string.onb_ready_invite_title), style = MaterialTheme.typography.titleSmall)
-            Spacer(Modifier.height(4.dp))
-            Text(
-                stringResource(Res.string.onb_ready_invite_body),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(12.dp))
-            OutlinedTextField(
-                value = code,
-                onValueChange = { code = it },
-                singleLine = true,
-                placeholder = { Text(stringResource(Res.string.onb_ready_invite_hint)) },
-                shape = MaterialTheme.shapes.small,
-                keyboardOptions = InviteCodeKeyboard,
-                colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedContainerColor = MaterialTheme.colorScheme.background,
-                    focusedContainerColor = MaterialTheme.colorScheme.background,
-                ),
-                modifier = Modifier.fillMaxWidth(),
             )
         }
     }

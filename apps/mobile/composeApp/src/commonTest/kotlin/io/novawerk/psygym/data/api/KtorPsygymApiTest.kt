@@ -17,12 +17,13 @@ class KtorPsygymApiTest {
 
     private fun api(engine: MockEngine) = KtorPsygymApi(
         baseUrl = "http://test",
-        inviteCode = { "code-1" },
+        token = { "tok-1" },
         engineClient = HttpClient(engine),
     )
 
     private fun json(body: String, status: HttpStatusCode = HttpStatusCode.OK) = MockEngine { req ->
-        assertEquals("code-1", req.headers["X-Invite-Code"])
+        assertEquals("Bearer tok-1", req.headers[HttpHeaders.Authorization])
+        assertEquals(null, req.headers["X-Invite-Code"])
         assertEquals("/cases", req.url.encodedPath)
         respond(body, status, headersOf(HttpHeaders.ContentType, "application/json"))
     }
@@ -68,5 +69,73 @@ class KtorPsygymApiTest {
             api(json("not json", HttpStatusCode.ServiceUnavailable)).cases()
         }
         assertEquals(ApiErrorCode.ModelUnavailable, e.code)
+    }
+
+    private class Seen {
+        var path = ""
+        var method = ""
+        var body = ""
+        var auth: String? = null
+    }
+
+    private fun auth(status: HttpStatusCode, body: String = "", seen: Seen = Seen()) = MockEngine { req ->
+        seen.path = req.url.encodedPath
+        seen.method = req.method.value
+        seen.auth = req.headers[HttpHeaders.Authorization]
+        seen.body = (req.body as? io.ktor.http.content.TextContent)?.text.orEmpty()
+        respond(body, status, headersOf(HttpHeaders.ContentType, "application/json"))
+    }
+
+    @Test
+    fun startSignInPostsEmailAndLocale() = runTest {
+        val seen = Seen()
+        api(auth(HttpStatusCode.Accepted, seen = seen)).startSignIn("lin@example.com", ApiLocale.Zh)
+        assertEquals("/auth/start", seen.path)
+        assertEquals("POST", seen.method)
+        assertEquals("""{"email":"lin@example.com","locale":"zh"}""", seen.body)
+    }
+
+    @Test
+    fun verifyReturnsTheSessionAndLeavesOutAMissingInviteCode() = runTest {
+        val seen = Seen()
+        val body = """{"token":"t9","expiresAt":"2027-01-01T00:00:00Z","me":{"email":"lin@example.com","createdAt":"2026-10-11T00:00:00Z","inviteBatch":null}}"""
+        val session = api(auth(HttpStatusCode.OK, body, seen)).verify("lin@example.com", "123456")
+        assertEquals("t9", session.token)
+        assertEquals("lin@example.com", session.me.email)
+        assertEquals("/auth/verify", seen.path)
+        assertEquals("""{"email":"lin@example.com","code":"123456"}""", seen.body)
+        // With an invite code (L3, or the one an old install kept).
+        api(auth(HttpStatusCode.OK, body, seen)).verify("lin@example.com", "123456", "k7mpx2qr9wtd")
+        assertEquals("""{"email":"lin@example.com","code":"123456","inviteCode":"k7mpx2qr9wtd"}""", seen.body)
+    }
+
+    @Test
+    fun verifyErrorsMapToCodes() = runTest {
+        val cases = mapOf(
+            "invalid_code" to (HttpStatusCode.BadRequest to ApiErrorCode.InvalidCode),
+            "invite_required" to (HttpStatusCode.Forbidden to ApiErrorCode.InviteRequired),
+            "invite_invalid" to (HttpStatusCode.Forbidden to ApiErrorCode.InviteInvalid),
+        )
+        for ((wire, pair) in cases) {
+            val e = assertFailsWith<ApiException> {
+                api(auth(pair.first, """{"error":{"code":"$wire","message":"x"}}""")).verify("a@b.co", "123456")
+            }
+            assertEquals(pair.second, e.code, wire)
+        }
+    }
+
+    @Test
+    fun signOutAndDeleteCarryTheToken() = runTest {
+        val seen = Seen()
+        // Sign out sends the token it's given (already forgotten by the app), not the current one.
+        api(auth(HttpStatusCode.NoContent, seen = seen)).signOut("old-tok")
+        assertEquals("/auth/logout" to "Bearer old-tok", seen.path to seen.auth)
+        api(auth(HttpStatusCode.NoContent, seen = seen)).deleteAccount()
+        assertEquals("/me" to "DELETE", seen.path to seen.method)
+        assertEquals("Bearer tok-1", seen.auth)
+        val e = assertFailsWith<ApiException> {
+            api(auth(HttpStatusCode.Unauthorized, """{"error":{"code":"session_expired","message":"x"}}""")).deleteAccount()
+        }
+        assertEquals(ApiErrorCode.SessionExpired, e.code)
     }
 }
