@@ -58,4 +58,28 @@ class SessionStoreTest {
         assertEquals("tok", sessions.token())
         assertTrue(!sessions.expired.value)
     }
+
+    @Test
+    fun anExpiredSessionRemembersWhoseItWas() = runTest {
+        val sessions = SessionStore(MemorySecureStore()).apply { load(); save(StoredSession("tok", "A@example.com")) }
+        sessions.markExpired()
+        assertEquals(accountKey("a@example.com"), sessions.expiredAccount)
+        // Back to the page only for the same person.
+        assertTrue(LoginFlow.returnsToPage(true, sessions.expiredAccount, accountKey("a@example.com")))
+        assertTrue(!LoginFlow.returnsToPage(true, sessions.expiredAccount, accountKey("b@example.com")))
+        assertTrue(!LoginFlow.returnsToPage(false, sessions.expiredAccount, accountKey("a@example.com")))
+    }
+
+    @Test
+    fun aStoreThatRefusesToWriteIsReportedNotThrownAtTheUser() = runTest {
+        val broken = object : SecureStore {
+            override suspend fun read(): String? = null
+            override suspend fun write(value: String?) = throw SecureStoreException("keystore is broken")
+        }
+        val sessions = SessionStore(broken).apply { load() }
+        assertFailsWith<SecureStoreException> { sessions.save(StoredSession("tok", "a@b.co")) }
+        assertNull(sessions.session.value, "nothing half-saved")
+        // Clearing never throws: the app is signed out either way.
+        sessions.clear()
+    }
 }

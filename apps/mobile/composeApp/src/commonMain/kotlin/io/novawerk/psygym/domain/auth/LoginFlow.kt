@@ -24,6 +24,9 @@ sealed interface LoginError {
     /** On L3: the code's 5 tries are gone (or it expired); go back and send a new one. */
     data object InviteUsedUp : LoginError
     data object Network : LoginError
+
+    /** Signed in, but the phone's secure store wouldn't keep the session. */
+    data object Storage : LoginError
     data object Other : LoginError
 }
 
@@ -178,7 +181,13 @@ class LoginFlow(
     }
 
     private suspend fun finish(session: io.novawerk.psygym.data.api.AuthSession) {
-        sessions.save(StoredSession(session.token, session.me.email))
+        try {
+            sessions.save(StoredSession(session.token, session.me.email))
+        } catch (e: SecureStoreException) {
+            // Stay on this screen with a message; trying again usually works.
+            error = LoginError.Storage
+            return
+        }
         clearLegacyInvite()
         step = LoginStep.Done
     }
@@ -213,6 +222,14 @@ class LoginFlow(
         private val EMAIL = Regex("""^[^\s@]+@[^\s@]+\.[^\s@]+$""")
 
         fun isValidEmail(email: String): Boolean = email.trim().let { it.length <= 254 && EMAIL.matches(it) }
+
+        /**
+         * After signing in again from an expired session: back to that page only if it's the same
+         * account. Someone else signing in must not land in the first person's practice, or its
+         * report would be saved under the wrong account (login.md H6).
+         */
+        fun returnsToPage(returnBack: Boolean, expiredAccount: String?, signedIn: String?): Boolean =
+            returnBack && expiredAccount != null && expiredAccount == signedIn
 
         /** Invite codes: dashes and spaces optional, not case-sensitive (login.md L3). */
         fun normalizeInvite(code: String): String = code.filterNot { it == '-' || it.isWhitespace() }.lowercase()

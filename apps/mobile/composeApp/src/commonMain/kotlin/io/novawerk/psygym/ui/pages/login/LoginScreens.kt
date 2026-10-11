@@ -42,6 +42,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -299,7 +300,7 @@ private fun errorText(error: LoginError): String = when (error) {
     LoginError.InviteInvalid -> stringResource(Res.string.login_invite_invalid)
     LoginError.InviteUsedUp -> stringResource(Res.string.login_invite_code_used_up)
     LoginError.Network -> stringResource(Res.string.error_network)
-    LoginError.Other -> stringResource(Res.string.error_unknown)
+    LoginError.Storage, LoginError.Other -> stringResource(Res.string.error_unknown)
 }
 
 @Composable
@@ -433,7 +434,11 @@ private fun CodeBoxes(code: String, onCode: (String) -> Unit, isError: Boolean, 
                 contentDescription = label
                 contentType = ContentType.SmsOtpCode
             },
-        decorationBox = {
+        decorationBox = { innerTextField ->
+            // The real text field must be laid out (invisibly) under the boxes: it carries the
+            // cursor, the paste menu and the platform's one-time-code autofill.
+            Box {
+                Box(Modifier.matchParentSize().alpha(0f)) { innerTextField() }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 repeat(6) { i ->
                     val color = when {
@@ -448,6 +453,7 @@ private fun CodeBoxes(code: String, onCode: (String) -> Unit, isError: Boolean, 
                         Text(code.getOrNull(i)?.toString().orEmpty(), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
                     }
                 }
+            }
             }
         },
     )

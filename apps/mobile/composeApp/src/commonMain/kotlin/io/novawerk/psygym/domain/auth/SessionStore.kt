@@ -15,9 +15,12 @@ import okio.ByteString.Companion.encodeUtf8
 interface SecureStore {
     suspend fun read(): String?
 
-    /** Null deletes. */
+    /** Null deletes. Throws [SecureStoreException] when the platform store refuses. */
     suspend fun write(value: String?)
 }
+
+/** The platform's secure store failed (some phones' Keystores do). Never a crash: the caller says so. */
+class SecureStoreException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
 /** The signed-in account on this phone. */
 @Serializable
@@ -58,20 +61,31 @@ class SessionStore(private val secure: SecureStore) {
         return _session.value?.token
     }
 
+    /** Throws [SecureStoreException] when it couldn't be stored; then nothing changes. */
     suspend fun save(session: StoredSession) {
         secure.write(json.encodeToString(StoredSession.serializer(), session))
         _session.value = session
         _expired.value = false
     }
 
+    /** Forgets the session. If the store can't delete it, the app still treats it as signed out. */
     suspend fun clear() {
-        secure.write(null)
         _session.value = null
+        try {
+            secure.write(null)
+        } catch (e: SecureStoreException) {
+            // Nothing to do: the token isn't used again (load() runs once, at start).
+        }
     }
+
+    /** Whose session the server refused last; set by [markExpired]. */
+    var expiredAccount: String? = null
+        private set
 
     /** The server refused the token: forget it and ask to sign in again. */
     suspend fun markExpired() {
         if (_session.value == null && _expired.value) return
+        _session.value?.let { expiredAccount = it.accountKey }
         clear()
         _expired.value = true
     }

@@ -1,6 +1,7 @@
 package io.novawerk.psygym.data.auth
 
 import io.novawerk.psygym.domain.auth.SecureStore
+import io.novawerk.psygym.domain.auth.SecureStoreException
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.alloc
@@ -29,6 +30,7 @@ import platform.CoreFoundation.kCFTypeDictionaryValueCallBacks
 import platform.Security.SecItemAdd
 import platform.Security.SecItemCopyMatching
 import platform.Security.SecItemDelete
+import platform.Security.errSecItemNotFound
 import platform.Security.errSecSuccess
 import platform.Security.kSecAttrAccessible
 import platform.Security.kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
@@ -65,15 +67,18 @@ class KeychainSecureStore : SecureStore {
 
     override suspend fun write(value: String?) {
         val base = query()
-        SecItemDelete(base)
+        val deleted = SecItemDelete(base)
         CFRelease(base)
+        // Not found is fine (nothing stored yet); anything else means the old token may linger.
+        if (deleted != errSecSuccess && deleted != errSecItemNotFound) throw SecureStoreException("SecItemDelete failed: $deleted")
         if (value == null) return
         val bytes = value.encodeToByteArray()
         val data = bytes.usePinned { CFDataCreate(null, it.addressOf(0).reinterpret(), bytes.size.convert()) }
         val add = query(kSecValueData to data, kSecAttrAccessible to kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly)
-        SecItemAdd(add, null)
+        val status = SecItemAdd(add, null)
         CFRelease(add)
         CFRelease(data)
+        if (status != errSecSuccess) throw SecureStoreException("SecItemAdd failed: $status")
     }
 
     /** The item's address (class, service, account) plus [extra] pairs. Release the result. */

@@ -32,8 +32,11 @@ interface AuthApi {
      */
     suspend fun verify(email: String, code: String, inviteCode: String? = null): AuthSession
 
-    /** `POST /auth/logout`: ends this session on the server. Succeeds for unknown tokens too. */
-    suspend fun signOut()
+    /**
+     * `POST /auth/logout`: ends the session of [token] on the server. Succeeds for unknown tokens
+     * too. The app forgets the token first and calls this afterwards, so it takes the token.
+     */
+    suspend fun signOut(token: String)
 
     /** `DELETE /me`: deletes the account on the server. */
     suspend fun deleteAccount()

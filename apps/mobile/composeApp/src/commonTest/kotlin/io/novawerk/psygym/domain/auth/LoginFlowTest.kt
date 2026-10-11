@@ -40,7 +40,7 @@ private class ScriptedAuth : AuthApi {
         return AuthSession("tok", me = Account(email))
     }
 
-    override suspend fun signOut() = Unit
+    override suspend fun signOut(token: String) = Unit
     override suspend fun deleteAccount() = Unit
 }
 
@@ -197,5 +197,20 @@ class LoginFlowTest {
         f.sendCode(ApiLocale.En)
         assertEquals(LoginError.RateLimited(42), f.error)
         assertEquals(LoginStep.Email, f.step)
+    }
+
+    @Test
+    fun aSessionThePhoneCantKeepShowsAnErrorOnTheCodeScreen() = runTest {
+        val broken = object : SecureStore {
+            override suspend fun read(): String? = null
+            override suspend fun write(value: String?) = throw SecureStoreException("keystore is broken")
+        }
+        val f = LoginFlow(auth, SessionStore(broken).apply { load() }, { legacy }, { legacy = null }, time)
+        f.email = "lin@example.com"
+        f.sendCode(ApiLocale.Zh)
+        f.submitCode("123456")
+        assertEquals(LoginError.Storage, f.error)
+        assertEquals(LoginStep.Code, f.step)
+        assertTrue(!f.busy)
     }
 }

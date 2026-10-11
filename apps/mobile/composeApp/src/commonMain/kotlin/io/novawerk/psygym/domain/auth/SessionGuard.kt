@@ -24,7 +24,7 @@ class SessionGuard(private val inner: Backend, private val sessions: SessionStor
 
     override suspend fun verify(email: String, code: String, inviteCode: String?) = inner.verify(email, code, inviteCode)
 
-    override suspend fun signOut() = inner.signOut()
+    override suspend fun signOut(token: String) = inner.signOut(token)
 
     override suspend fun deleteAccount() = guard { inner.deleteAccount() }
 

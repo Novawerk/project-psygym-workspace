@@ -39,6 +39,10 @@ class SupervisionViewModel(
     val duration: Duration = session.elapsed
     val turns: Int = session.turns
     private val sessionId = session.id
+
+    // Whose practice this is, fixed now: if someone else signs in before the report is saved,
+    // it still goes to the person who practised (login.md H6).
+    private val owner = history?.currentOwner
     private val endedAt = startedAt?.plus(duration)
 
     var report by mutableStateOf("")
@@ -104,6 +108,7 @@ class SupervisionViewModel(
             messages = transcript,
             report = if (complete) report else "",
             reportComplete = complete,
+            owner = owner,
         )
         // Outlives this screen: leaving mid-report must not lose the save.
         GlobalScope.launch { repo.save(record) }

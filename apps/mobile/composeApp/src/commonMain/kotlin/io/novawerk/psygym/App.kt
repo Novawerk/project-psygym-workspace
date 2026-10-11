@@ -162,13 +162,17 @@ fun App(component: AppComponent) {
                 }
                 val signOut = {
                     scope.launch {
-                        // Best effort: the server forgets the session; the phone forgets it anyway.
-                        try {
-                            component.auth.signOut()
-                        } catch (e: ApiException) {
-                            // offline or already expired: nothing to undo
-                        }
+                        // The phone forgets the session at once; then, best effort, the server
+                        // ends it with the token we kept. No waiting on the network.
+                        val token = sessions.session.value?.token
                         sessions.clear()
+                        if (token != null) {
+                            try {
+                                component.auth.signOut(token)
+                            } catch (e: ApiException) {
+                                // offline or already expired: nothing to undo
+                            }
+                        }
                     }
                     nav.navigate(LoginRoute()) { popUpTo(nav.graph.id) { inclusive = true } }
                 }
@@ -246,8 +250,18 @@ fun App(component: AppComponent) {
                         LaunchedEffect(flow.step) {
                             if (flow.step != LoginStep.Done) return@LaunchedEffect
                             settings.markSignedIn()
-                            // Expired mid-use: back to that page, its state intact. Otherwise home.
-                            if (route.returnBack && nav.previousBackStackEntry?.destination.let { it != null && it !is NavGraph }) nav.popBackStack() else nav.finishIntro()
+                            // Expired mid-use and the same account is back: that page, its state
+                            // intact. Anyone else: home, and the open practice is dropped.
+                            val samePerson = LoginFlow.returnsToPage(route.returnBack, sessions.expiredAccount, sessions.session.value?.accountKey)
+                            if (samePerson && nav.previousBackStackEntry?.destination.let { it != null && it !is NavGraph }) {
+                                nav.popBackStack()
+                            } else {
+                                if (route.returnBack) {
+                                    session.finish()
+                                    settings.setPracticeInProgress(false)
+                                }
+                                nav.finishIntro()
+                            }
                         }
                         // System back steps back through the three screens.
                         BackHandler(enabled = flow.step == LoginStep.Code || flow.step == LoginStep.Invite) {

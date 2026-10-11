@@ -41,7 +41,7 @@ class FakeAuthApi(private val delayMillis: Long = 400) : AuthApi {
         return AuthSession(token = "demo-token-$issued", me = Account(address, inviteBatch = "demo"))
     }
 
-    override suspend fun signOut() {
+    override suspend fun signOut(token: String) {
         delay(delayMillis / 2)
     }
 

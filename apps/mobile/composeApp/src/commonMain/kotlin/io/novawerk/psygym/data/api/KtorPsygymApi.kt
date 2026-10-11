@@ -95,9 +95,8 @@ class KtorPsygymApi(
         json.decodeFromString(AuthSession.serializer(), response.bodyAsText())
     }
 
-    override suspend fun signOut() = mapErrors {
-        val bearer = token() ?: return@mapErrors
-        val response = client.post("auth/logout") { auth(bearer) }
+    override suspend fun signOut(token: String) = mapErrors {
+        val response = client.post("auth/logout") { auth(token) }
         if (!response.status.isSuccess()) throw response.toApiException()
     }
 

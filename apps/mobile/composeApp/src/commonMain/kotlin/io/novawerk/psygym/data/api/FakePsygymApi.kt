@@ -28,7 +28,7 @@ class FakePsygymApi(
 
     override suspend fun verify(email: String, code: String, inviteCode: String?) = auth.verify(email, code, inviteCode)
 
-    override suspend fun signOut() = auth.signOut()
+    override suspend fun signOut(token: String) = auth.signOut(token)
 
     override suspend fun deleteAccount() = auth.deleteAccount()
 

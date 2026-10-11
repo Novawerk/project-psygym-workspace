@@ -127,8 +127,9 @@ class KtorPsygymApiTest {
     @Test
     fun signOutAndDeleteCarryTheToken() = runTest {
         val seen = Seen()
-        api(auth(HttpStatusCode.NoContent, seen = seen)).signOut()
-        assertEquals("/auth/logout" to "Bearer tok-1", seen.path to seen.auth)
+        // Sign out sends the token it's given (already forgotten by the app), not the current one.
+        api(auth(HttpStatusCode.NoContent, seen = seen)).signOut("old-tok")
+        assertEquals("/auth/logout" to "Bearer old-tok", seen.path to seen.auth)
         api(auth(HttpStatusCode.NoContent, seen = seen)).deleteAccount()
         assertEquals("/me" to "DELETE", seen.path to seen.method)
         assertEquals("Bearer tok-1", seen.auth)

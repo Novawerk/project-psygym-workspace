@@ -53,6 +53,9 @@ class HistoryRepository(
     private val _sessions = MutableStateFlow<List<SavedSession>?>(null)
     private var owner: String? = null
 
+    /** The signed-in account the list shows (null: nobody). */
+    val currentOwner: String? get() = owner
+
     /** The signed-in account's sessions, newest first. Null until the first [load]. */
     val sessions: StateFlow<List<SavedSession>?> = _sessions.asStateFlow()
 

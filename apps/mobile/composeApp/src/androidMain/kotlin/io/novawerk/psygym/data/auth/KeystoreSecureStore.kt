@@ -5,6 +5,7 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
 import io.novawerk.psygym.domain.auth.SecureStore
+import io.novawerk.psygym.domain.auth.SecureStoreException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.security.KeyStore
@@ -32,18 +33,23 @@ class KeystoreSecureStore(context: Context) : SecureStore {
         }.getOrNull()
     }
 
+    // Some vendors' Keystores fail to make or use keys: that's a SecureStoreException, never a crash.
     override suspend fun write(value: String?) = withContext(Dispatchers.IO) {
-        if (value == null) {
-            prefs.edit().remove(KEY).commit()
-            return@withContext
+        val stored = try {
+            if (value == null) {
+                prefs.edit().remove(KEY).commit()
+            } else {
+                val cipher = Cipher.getInstance(TRANSFORMATION)
+                cipher.init(Cipher.ENCRYPT_MODE, key())
+                val iv = cipher.iv
+                check(iv.size == IV_BYTES)
+                val sealed = iv + cipher.doFinal(value.toByteArray(Charsets.UTF_8))
+                prefs.edit().putString(KEY, Base64.encodeToString(sealed, Base64.NO_WRAP)).commit()
+            }
+        } catch (e: Exception) {
+            throw SecureStoreException("keystore write failed", e)
         }
-        val cipher = Cipher.getInstance(TRANSFORMATION)
-        cipher.init(Cipher.ENCRYPT_MODE, key())
-        val iv = cipher.iv
-        check(iv.size == IV_BYTES)
-        val sealed = iv + cipher.doFinal(value.toByteArray(Charsets.UTF_8))
-        prefs.edit().putString(KEY, Base64.encodeToString(sealed, Base64.NO_WRAP)).commit()
-        Unit
+        if (!stored) throw SecureStoreException("preferences commit failed")
     }
 
     private fun key(): SecretKey {

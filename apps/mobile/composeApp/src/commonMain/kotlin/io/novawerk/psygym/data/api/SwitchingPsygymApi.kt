@@ -22,7 +22,7 @@ class SwitchingPsygymApi(
 
     override suspend fun verify(email: String, code: String, inviteCode: String?) = pick().verify(email, code, inviteCode)
 
-    override suspend fun signOut() = pick().signOut()
+    override suspend fun signOut(token: String) = pick().signOut(token)
 
     override suspend fun deleteAccount() = pick().deleteAccount()
 
