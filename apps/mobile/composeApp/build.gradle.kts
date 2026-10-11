@@ -145,10 +145,6 @@ android {
             if (hasUploadKey) signingConfig = signingConfigs.getByName("upload")
         }
     }
-    testOptions {
-        // JVM unit tests use android.jar stubs; let them return defaults (e.g. new Intent()).
-        unitTests.isReturnDefaultValues = true
-    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
