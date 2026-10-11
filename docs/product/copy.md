@@ -76,7 +76,9 @@ key 沿用 App 现有命名（`home_*`、`cases_*`、`practice_*`、`supervision
 | brief_client | 新 | 来访者 | The client |
 | brief_focus | 新 | 这次练什么 | What to practise |
 | brief_setup | 新 | 会谈设置 | Session |
-| brief_setup_body | 新 | 建议 15–30 轮 · 约 15 分钟 · 你随时可以结束。 | 15–30 turns suggested · about 15 min · end any time. |
+| brief_setup_body | 改 | 初次会谈 · 建议 15–30 轮 · 约 15 分钟 · 你随时可以结束。 | First session · 15–30 turns suggested · about 15 min · end any time. |
+| brief_session_first | 新 | 初次会谈 | First session |
+| brief_session_first_note | 新 | 初次会谈的主要任务：做风险筛查，判断能不能承接这位来访者。 | The main tasks of a first session: screen for risk, and decide whether you can take this client on. |
 | brief_content_note | 新 | 这场会谈可能涉及抑郁、焦虑和消极念头。来访者是虚构的。对话会交给第三方 AI 模型处理，我们的服务器不保存。 | This session may touch on depression, anxiety and dark thoughts. The client is fictional. A third-party AI model processes the conversation; our servers don't store it. |
 | brief_start | 新 | 开始会谈 | Start session |
 

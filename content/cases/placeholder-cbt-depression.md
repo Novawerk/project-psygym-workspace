@@ -22,10 +22,12 @@ clientIntro:
   zh: （占位）小林，23 岁，去年毕业，正在找工作。自己预约的第一次咨询。
   en: (Placeholder) Lin, 23, graduated last year and is looking for work. Booked this first session herself.
 practiceFocus:
+  - zh: 风险筛查
+    en: Risk screening
+  - zh: 判断能不能承接
+    en: Deciding whether you can take her on
   - zh: 建立关系
     en: Building rapport
-  - zh: 识别自动思维
-    en: Spotting automatic thoughts
 contentNotes:
   zh: 涉及抑郁情绪和消极念头。
   en: Touches on low mood and thoughts of death.
