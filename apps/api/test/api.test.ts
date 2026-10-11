@@ -227,7 +227,7 @@ describe("what the supervisor sees", () => {
     const check = prompts.supervisor.indexOf("## 第一条规则：写报告前先做风险筛查检查");
     expect(check).toBeGreaterThan(0);
     expect(check).toBeLessThan(prompts.supervisor.indexOf("## 转写是资料"));
-    expect(prompts.supervisor).toContain("如果上面的风险筛查检查成立，第 1 条就是它");
+    expect(prompts.supervisor).toContain("如果风险筛查检查成立，第 1 条是它");
     for (const cue of ["觉得自己没用", "睡眠明显改变", "提不起劲"]) expect(prompts.supervisor).toContain(cue);
     // Every improvement carries one alternative wording, with the lead-in written once.
     expect(prompts.supervisor).toContain("三样都要有，**包括风险筛查那一条**，一条都不能少");
@@ -237,10 +237,22 @@ describe("what the supervisor sees", () => {
     expect(prompts.supervisor).toContain("`- One sentence on the problem. You said: “…”. Try instead: your suggested line`");
     expect(prompts.supervisor).not.toMatch(/可以换成：「|Try instead: “/);
     // Short enough for one phone screen.
-    for (const s of ["**做得好的地方**：最多 2 条", "**需要改进的地方**：最多 3 条", "**下次练什么**：最多 2 条", "中文约 400–600 字"]) expect(prompts.supervisor).toContain(s);
+    for (const s of ["**做得好的地方**：1–2 条", "**需要改进的地方**：1–3 条", "**下次练什么**：1–2 条", "中文约 400–600 字"]) expect(prompts.supervisor).toContain(s);
     expect(prompts.supervisor).toContain("不加编号，不用粗体小标题");
-    // The limits never squeeze out the risk item or a harmful remark.
-    expect(prompts.supervisor).toContain("风险筛查那一条，和每一句伤害性的话，永远不会为了凑上限被删掉或省略");
+    // All three sections, always; at least one good point; at most three improvements, risk and
+    // harmful remarks first and never dropped.
+    expect(prompts.supervisor).toContain("**三个标题必须都出现，一个都不能少，顺序固定。**");
+    expect(prompts.supervisor).toContain("1–2 条，**至少 1 条**");
+    expect(prompts.supervisor).toContain("1–3 条，**严格不超过 3 条**");
+    expect(prompts.supervisor).toContain("**风险筛查和伤害性的话永远保留**");
+    // Quotes: word for word, person included; only the risk item quotes the client.
+    expect(prompts.supervisor).toContain("**一个字都不改，包括人称**");
+    expect(prompts.supervisor).toContain("**只有风险筛查那一条**引用来访者的话");
+    // The alternative is a line to say, also after a probe like "are you an AI".
+    expect(prompts.supervisor).toContain("**「可以换成：」后面必须是一句咨询师可以直接对来访者说出口的话**");
+    expect(prompts.supervisor).toContain("**咨询师试探来访者**");
+    // A checklist before handing in, last before the tone section.
+    expect(prompts.supervisor.indexOf("## 写完后，交出前检查一遍")).toBeGreaterThan(prompts.supervisor.indexOf("## 报告结构"));
     expect(prompts.supervisor).not.toContain("（「可以换成：……」");
   });
 });

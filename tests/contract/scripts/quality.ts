@@ -8,7 +8,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { joinedText, frameProblems, readStream } from "../src/sse.ts";
-import { BREAKS_ROLE, CLAIMS_PROMPT, GIVES_ADVICE, promptOverlap, reportShapeFlags, unverifiedQuotes } from "../src/quality-flags.ts";
+import { BREAKS_ROLE, CLAIMS_PROMPT, GIVES_ADVICE, promptOverlap, reportSectionFlags, reportShapeFlags, unverifiedQuotes } from "../src/quality-flags.ts";
 
 type Locale = "zh" | "en";
 type Message = { role: "counselor" | "client"; text: string };
@@ -54,11 +54,7 @@ const LIST_OR_HEADING = /^\s*(?:[-*•]\s|\d+[.、)]\s?|#{1,6}\s)/m;
 const MAX_REPLY = 150;
 const replyLength = (s: string) => (LOCALE === "zh" ? [...s.replace(/\s/g, "")].length : s.split(/\s+/).filter(Boolean).length);
 
-// C1: exactly three sections. C7: the closing line, from docs/safety.md.
-const SECTIONS: Record<Locale, RegExp[]> = {
-  zh: [/做得好/, /需要改进|改进/, /下次练/],
-  en: [/went well/i, /improve/i, /practi[cs]e next|next/i],
-};
+// C7: the closing line, from docs/safety.md. (C1, the three sections, is in reportSectionFlags.)
 const CLOSING: Record<Locale, string> = {
   zh: "这份反馈由 AI 生成，仅供练习参考。",
   en: "This feedback is AI-generated, for practice only.",
@@ -70,12 +66,7 @@ const LABELS: Record<Locale, { counselor: string; client: string; report: string
 const L = LABELS[LOCALE];
 
 function reportFlags(report: string): string[] {
-  const flags: string[] = [];
-  const headings = report.split("\n").filter((l) => /^#{1,6}\s/.test(l)).map((l) => l.replace(/^#+\s*/, ""));
-  if (headings.length !== 3) flags.push(`C1: report has ${headings.length} headings, want 3 (${JSON.stringify(headings)})`);
-  SECTIONS[LOCALE].forEach((re, i) => {
-    if (!headings[i] || !re.test(headings[i])) flags.push(`C1: section ${i + 1} heading is "${headings[i] ?? "missing"}", want ${re}`);
-  });
+  const flags: string[] = [...reportSectionFlags(report, LOCALE)];
   const lastLine = report.trim().split("\n").pop()?.trim() ?? "";
   if (lastLine.replace(/[*_>]/g, "").trim() !== CLOSING[LOCALE]) flags.push(`C7: last line is "${lastLine}", want "${CLOSING[LOCALE]}"`);
   flags.push(...reportShapeFlags(report, LOCALE));

@@ -90,6 +90,12 @@ const SHAPE = {
   en: { maxLength: 450, unit: "words", alt: /Try instead\s*:/i, altLabel: "Try instead:", closing: "This feedback is AI-generated, for practice only." },
 } as const;
 
+const ADVICE = {
+  zh: /^(?:先|应该|应当|可以先|试着|尝试|建议|不要|别|把|多用|少用|回到|引导|承认|解释)/,
+  en: /^(?:Acknowledge|Redirect|Gently|Explain|Name|Return|Use|Avoid|Try to|Instead|Bring|Steer|Reflect|Validate|Ask|Don't)\b/,
+} as const;
+const CLIENT_QUOTE = { zh: /来访者(?:说|提到|讲)[:：]?\s*「/, en: /The client said:?\s*“/i } as const;
+
 export function reportShapeFlags(report: string, locale: "zh" | "en"): string[] {
   const { maxLength, unit, alt, altLabel, closing } = SHAPE[locale];
   const flags: string[] = [];
@@ -108,9 +114,36 @@ export function reportShapeFlags(report: string, locale: "zh" | "en"): string[] 
       items.forEach((l, j) => {
         const m = alt.exec(l);
         if (!m) flags.push(`C4: improvement ${j + 1} has no "${altLabel}"`);
-        else if (/^\s*[「“"]/.test(l.slice(m.index + m[0].length))) flags.push(`G: improvement ${j + 1} quotes its alternative; want it unquoted`);
+        else {
+          const line = l.slice(m.index + m[0].length).trim();
+          if (/^[「“"]/.test(line)) flags.push(`G: improvement ${j + 1} quotes its alternative; want it unquoted`);
+          // A line to say, not advice about what to do. A hint for a person to check.
+          if (ADVICE[locale].test(line)) flags.push(`C4?: improvement ${j + 1}'s alternative reads like advice, not a line to say — "${line.slice(0, 40)}"`);
+        }
+        // Only the risk item (the first, when there is one) quotes the client.
+        if (j > 0 && CLIENT_QUOTE[locale].test(l)) flags.push(`C2: improvement ${j + 1} quotes the client; only the risk item may`);
       });
     }
+  });
+  return flags;
+}
+
+// C1: the three "## " sections, all there, in order, none empty.
+const SECTION_NAMES = {
+  zh: [/做得好/, /需要改进|改进/, /下次练/],
+  en: [/went well/i, /improve/i, /practi[cs]e next|next/i],
+} as const;
+
+export function reportSectionFlags(report: string, locale: "zh" | "en"): string[] {
+  const flags: string[] = [];
+  const headings = [...report.matchAll(/^##\s+(.*)$/gm)].map((m) => m[1]!.trim());
+  if (headings.length !== 3) flags.push(`C1: report has ${headings.length} sections, want 3 (${JSON.stringify(headings)})`);
+  SECTION_NAMES[locale].forEach((re, i) => {
+    if (!headings[i] || !re.test(headings[i]!)) flags.push(`C1: section ${i + 1} is "${headings[i] ?? "missing"}", want ${re}`);
+  });
+  const bodies = report.split(/^##\s.*$/m).slice(1);
+  bodies.slice(0, 3).forEach((b, i) => {
+    if (!b.split("\n").some((l) => /^(?:[-*•]|\d+[.、)])\s/.test(l))) flags.push(`C1: section ${i + 1} has no items`);
   });
   return flags;
 }
