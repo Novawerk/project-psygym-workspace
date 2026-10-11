@@ -21,15 +21,15 @@ clientAlias:
   zh: 阿杰
   en: Jie
 clientIntro:
-  zh: （占位）阿杰，31 岁，程序员，组里的小组长。妻子劝他来的。
-  en: (Placeholder) Jie, 31, a developer who leads a small team. His wife talked him into coming.
+  zh: （占位）阿杰，31 岁，程序员，组里的小组长。妻子劝他来的，第一次来咨询。
+  en: (Placeholder) Jie, 31, a developer who leads a small team. His wife talked him into coming. This is his first session.
 practiceFocus:
+  - zh: 风险筛查
+    en: Risk screening
+  - zh: 判断能不能承接
+    en: Deciding whether you can take him on
   - zh: 情绪识别
     en: Naming feelings
-  - zh: 认知概念化
-    en: Case conceptualisation
-  - zh: 风险评估
-    en: Risk assessment
 contentNotes:
   zh: 涉及抑郁、焦虑和消极念头。
   en: Touches on depression, anxiety and thoughts of death.
