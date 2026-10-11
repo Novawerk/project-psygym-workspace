@@ -100,6 +100,7 @@ fun App(component: AppComponent) {
     val sessionsLoaded by sessions.loaded.collectAsState()
     val expired by sessions.expired.collectAsState()
     val realInfoHintSeen by settings.realInfoHintSeen.collectAsState(initial = true)
+    val liveNotes by settings.liveNotes.collectAsState(initial = true)
     val demoData by settings.useFakeApi.collectAsState(initial = AppConfig.fakeApiDefault)
     // Store-screenshot mode (Android debug builds only): no demo badges, written sessions.
     val shot = component.screenshot.mode
@@ -188,6 +189,8 @@ fun App(component: AppComponent) {
                         onSaveHistoryChange = { scope.launch { settings.setSaveHistory(it) } },
                         onDeleteAllHistory = { scope.launch { history.deleteAll() } },
                         onUseFakeApiChange = { scope.launch { settings.setUseFakeApi(it) } },
+                        liveNotes = liveNotes,
+                        onLiveNotesChange = { scope.launch { settings.setLiveNotes(it) } },
                         onReplayOnboarding = { nav.navigate(WelcomeRoute) },
                         onHelp = openHelp,
                         onPrivacy = { nav.navigate(PrivacyRoute) },
@@ -280,6 +283,8 @@ fun App(component: AppComponent) {
                                 onBack = if (nav.previousBackStackEntry?.destination.let { it != null && it !is NavGraph }) ({ nav.popBackStack() }) else null,
                                 onLanguage = setLanguage,
                                 onPrivacy = { nav.navigate(PrivacyRoute) },
+                                demoData = if (AppConfig.demoSwitchOnSignIn) demoData else null,
+                                onDemoData = { scope.launch { settings.setUseFakeApi(it) } },
                             )
                             LoginStep.Code -> LoginCodeScreen(flow, onChangeEmail = flow::backToEmail)
                             LoginStep.Invite -> LoginInviteScreen(flow, onBack = flow::backToCode, onNoInvite = flow::backToEmail)
@@ -394,6 +399,7 @@ fun App(component: AppComponent) {
                             viewModel = vm,
                             elapsed = { session.elapsed },
                             showRealInfoHint = !realInfoHintSeen && shot == null,
+                            liveEnabled = liveNotes && shot == null,
                             // Screenshot mode never saves; the end sheet must say so.
                             saveHistory = saveHistory && shot == null,
                             onLeave = {

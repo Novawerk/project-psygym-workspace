@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -29,6 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -100,6 +102,7 @@ import io.novawerk.psygym.resources.login_invite_submit
 import io.novawerk.psygym.resources.login_invite_title
 import io.novawerk.psygym.resources.login_privacy_link
 import io.novawerk.psygym.resources.login_privacy_note
+import io.novawerk.psygym.resources.settings_fake_api
 import io.novawerk.psygym.ui.components.BottomActions
 import io.novawerk.psygym.ui.components.InviteCodeKeyboard
 import io.novawerk.psygym.ui.components.LanguageToggle
@@ -120,6 +123,9 @@ fun LoginEmailScreen(
     onBack: (() -> Unit)?,
     onLanguage: (AppLanguage) -> Unit,
     onPrivacy: () -> Unit,
+    /** Debug builds only (AppConfig.demoSwitchOnSignIn): the demo data switch; null hides it. */
+    demoData: Boolean? = null,
+    onDemoData: (Boolean) -> Unit = {},
 ) {
     val locale = rememberApiLocale()
     val scope = rememberCoroutineScope()
@@ -157,6 +163,21 @@ fun LoginEmailScreen(
         )
         val message = if (showInvalid && flow.error == null) stringResource(Res.string.login_email_invalid) else flow.error?.let { errorText(it) }
         message?.let { ErrorLine(it) }
+        if (demoData != null) {
+            // A debug build may have no server with sign-in to talk to; the switch in Me is
+            // behind sign-in. Release never shows this.
+            Spacer(Modifier.height(24.dp))
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .toggleable(value = demoData, onValueChange = onDemoData, role = Role.Switch)
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(stringResource(Res.string.settings_fake_api), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                Switch(checked = demoData, onCheckedChange = null)
+            }
+        }
     }
 }
 

@@ -207,4 +207,15 @@ class KtorPsygymApiStreamTest {
         api().supervision(request.copy(durationSec = 754)).toList()
         assertTrue(lastRequestBody.contains("\"durationSec\":754"), lastRequestBody)
     }
+
+    @Test
+    fun liveNotesAskWithModeLive() = runBlocking {
+        script = {
+            it.frame("""{"type":"text_delta","text":"- 提示"}""")
+            it.frame("""{"type":"turn_end"}""")
+        }
+        api().supervision(request.copy(mode = "live")).toList()
+        assertTrue(lastRequestBody.contains("\"mode\":\"live\""), lastRequestBody)
+        assertTrue("durationSec" !in lastRequestBody)
+    }
 }

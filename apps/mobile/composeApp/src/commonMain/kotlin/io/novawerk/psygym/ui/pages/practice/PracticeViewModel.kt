@@ -16,6 +16,7 @@ import io.novawerk.psygym.domain.model.ContractLimits
 import io.novawerk.psygym.domain.model.Message
 import io.novawerk.psygym.domain.model.Role
 import io.novawerk.psygym.domain.model.TurnRequest
+import io.novawerk.psygym.domain.practice.LiveNotes
 import io.novawerk.psygym.domain.practice.PracticeSession
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -49,6 +50,19 @@ class PracticeViewModel(
         private set
 
     private var job: Job? = null
+
+    /** Mid-session supervisor notes. Live as long as this screen: never saved. */
+    val live = LiveNotes(api, viewModelScope)
+
+    fun openLive(locale: ApiLocale) {
+        val caseId = case?.id ?: return
+        live.open(caseId, locale, transcript, turns)
+    }
+
+    fun retryLive(locale: ApiLocale) {
+        val caseId = case?.id ?: return
+        live.retry(caseId, locale, transcript, turns)
+    }
 
     init {
         // A new session starts when this screen opens; the clock starts here.

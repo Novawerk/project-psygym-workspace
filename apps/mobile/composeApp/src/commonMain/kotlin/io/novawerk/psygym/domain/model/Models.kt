@@ -70,6 +70,8 @@ data class TurnRequest(
     val messages: List<Message>,
     /** `/supervision` only: the session length in whole seconds, 0–7200. Left out when null. */
     val durationSec: Int? = null,
+    /** `/supervision` only: "live" for mid-session notes; left out for the full report. */
+    val mode: String? = null,
 )
 
 /** The session length the contract accepts as `durationSec`: whole seconds, at most two hours. */

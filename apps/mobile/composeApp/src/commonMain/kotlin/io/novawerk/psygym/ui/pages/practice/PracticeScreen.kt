@@ -113,6 +113,8 @@ fun PracticeScreen(
     elapsed: () -> Duration,
     showRealInfoHint: Boolean,
     saveHistory: Boolean,
+    /** "Show supervisor notes during a session" in Me (L-3). */
+    liveEnabled: Boolean,
     onLeave: () -> Unit,
     onSessionLost: () -> Unit,
     onEnd: () -> Unit,
@@ -122,6 +124,7 @@ fun PracticeScreen(
     val locale = rememberApiLocale()
     var input by rememberSaveable { mutableStateOf("") }
     var showEndSheet by rememberSaveable { mutableStateOf(false) }
+    var showLive by rememberSaveable { mutableStateOf(false) }
     var showTimer by rememberSaveable { mutableStateOf(true) }
     val listState = rememberLazyListState()
     val items = viewModel.items
@@ -138,7 +141,7 @@ fun PracticeScreen(
 
     // Back opens S2 instead of leaving (information-architecture.md). While S2 is open,
     // back belongs to the sheet, so it closes.
-    BackHandler(enabled = !showEndSheet) { showEndSheet = true }
+    BackHandler(enabled = !showEndSheet && !showLive) { showEndSheet = true }
 
     val clock by produceState("00:00") {
         while (true) {
@@ -217,9 +220,23 @@ fun PracticeScreen(
             }
         },
     ) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding)) {
+        // The supervisor chip, quiet and above the messages (live-supervision.md §1).
+        if (viewModel.live.chipVisible(viewModel.turns, liveEnabled, viewModel.clientEnded)) {
+            LiveChip(
+                notes = viewModel.live,
+                turns = viewModel.turns,
+                enabled = !viewModel.streaming,
+                onOpen = {
+                    viewModel.openLive(locale)
+                    showLive = true
+                },
+                modifier = Modifier.padding(start = 16.dp),
+            )
+        }
         LazyColumn(
             state = listState,
-            modifier = Modifier.fillMaxSize().padding(padding),
+            modifier = Modifier.weight(1f).fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
@@ -256,6 +273,11 @@ fun PracticeScreen(
                 item { SystemLine(stringResource(Res.string.practice_limit_reached)) }
             }
         }
+        }
+    }
+
+    if (showLive) {
+        LiveSheet(notes = viewModel.live, onRetry = { viewModel.retryLive(locale) }, onDismiss = { showLive = false })
     }
 
     if (showEndSheet) {

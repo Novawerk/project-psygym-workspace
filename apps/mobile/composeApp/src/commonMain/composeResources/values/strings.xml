@@ -265,4 +265,16 @@
     <string name="privacy_a_delete">Go to Me → Delete account. We delete your account data from our server right away, and this account’s practice history on this phone too. If you can’t use the app, follow the steps at psygym.novawerk.io/delete-account.</string>
     <string name="brief_session_first">First session</string>
     <string name="brief_session_first_note">The main tasks of a first session: screen for risk, and decide whether you can take this client on.</string>
+    <string name="live_chip">Supervisor’s take</string>
+    <string name="live_chip_seen">Supervisor · turn %1$d</string>
+    <string name="live_chip_used_up">Supervisor · seen %1$d times</string>
+    <string name="live_chip_cd">See what the supervisor says now</string>
+    <string name="live_new_cd">New turns since you last looked</string>
+    <string name="live_title">Supervisor’s notes</string>
+    <string name="live_subtitle">Turn %1$d · session in progress</string>
+    <string name="live_generating">The supervisor is reading the session…</string>
+    <string name="live_footer">These are quick notes mid-session. You get the full report at the end.</string>
+    <string name="live_back">Back to the session</string>
+    <string name="live_used_up">You’ve used the mid-session notes for this session. See the full report at the end.</string>
+    <string name="live_setting">Show supervisor notes during a session</string>
 </resources>

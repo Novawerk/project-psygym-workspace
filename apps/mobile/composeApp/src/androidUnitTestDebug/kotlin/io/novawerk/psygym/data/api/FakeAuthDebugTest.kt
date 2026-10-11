@@ -30,4 +30,9 @@ class FakeAuthDebugTest {
         // Now it has an account.
         auth.verify("new@example.com", "654321")
     }
+
+    @Test
+    fun debugBuildsShowTheDemoDataSwitchOnSignIn() {
+        kotlin.test.assertTrue(io.novawerk.psygym.AppConfig.demoSwitchOnSignIn)
+    }
 }

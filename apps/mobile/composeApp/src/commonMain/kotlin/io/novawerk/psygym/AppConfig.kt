@@ -13,4 +13,10 @@ object AppConfig {
 
     /** Demo data is a debug-only thing. Release can't turn it on. */
     val fakeApiDefault: Boolean get() = isDebug && BuildKonfig.DEV_FAKE_API_DEFAULT
+
+    /**
+     * The "Use demo data" switch on L1, so a debug build can sign in without a server. The one
+     * in Me is behind sign-in. Never in release.
+     */
+    val demoSwitchOnSignIn: Boolean get() = isDebug
 }

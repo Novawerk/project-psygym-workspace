@@ -58,7 +58,14 @@ class FakePsygymApi(
         val first = counselor.firstOrNull() ?: "…"
         val last = counselor.lastOrNull() ?: first
         val client = request.messages.firstOrNull { it.role == Role.Client }?.text ?: "…"
-        val report = (if (request.locale == ApiLocale.Zh) REPORT_ZH else REPORT_EN)
+        // Mid-session notes (live-supervision.md §3): no headings, at most 3 items in order of
+        // priority (risk, harmful remark, one done well, one to try next), no AI line.
+        val template = when {
+            request.mode == "live" -> if (request.locale == ApiLocale.Zh) LIVE_ZH else LIVE_EN
+            request.locale == ApiLocale.Zh -> REPORT_ZH
+            else -> REPORT_EN
+        }
+        val report = template
             .replace("{first}", first)
             .replace("{last}", last)
             .replace("{client}", client)
@@ -125,6 +132,18 @@ class FakePsygymApi(
             "Maybe. I keep thinking everyone else does better than me.",
             "Saying it out loud helps a little, I think.",
         )
+
+        val LIVE_ZH = """
+            - 来访者说「{client}」，可以找机会问一下安全。可以换成：你有没有想过伤害自己，或者不想活了？
+            - 你说「{first}」，好在开场开放，给了来访者空间。（演示数据）
+            - 接下来可以先和来访者一起定下今天聊什么（演示数据）。可以换成：今天我们先聊聊最困扰你的一件事，好吗？
+        """.trimIndent()
+
+        val LIVE_EN = """
+            - The client said “{client}”; find a moment to ask about safety. Try instead: Have you had thoughts of hurting yourself, or of not wanting to live?
+            - You said “{first}”, which opened the session and gave the client room. (Demo data)
+            - Next, you could agree with the client what to talk about today (demo data). Try instead: Shall we start with the thing that troubles you most today?
+        """.trimIndent()
 
         val REPORT_ZH = """
             ## 做得好的地方

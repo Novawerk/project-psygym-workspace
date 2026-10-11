@@ -75,6 +75,13 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
     /** The "don't enter real client information" line shows until the first report. */
     val realInfoHintSeen: Flow<Boolean> = dataStore.data.map { it[REAL_INFO_HINT_SEEN] ?: false }
 
+    /** "Show supervisor notes during a session" (live-supervision.md L-3). On by default. */
+    val liveNotes: Flow<Boolean> = dataStore.data.map { it[LIVE_NOTES] ?: true }
+
+    suspend fun setLiveNotes(value: Boolean) {
+        dataStore.edit { it[LIVE_NOTES] = value }
+    }
+
     /** Demo data instead of the backend. Debug builds only; always false in release. */
     val useFakeApi: Flow<Boolean> = dataStore.data.map {
         AppConfig.isDebug && (it[USE_FAKE_API] ?: AppConfig.fakeApiDefault)
@@ -143,5 +150,6 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         val USE_FAKE_API = booleanPreferencesKey("use_fake_api")
         val LAUNCHED = booleanPreferencesKey("launched")
         val SIGNED_IN_ONCE = booleanPreferencesKey("signed_in_once")
+        val LIVE_NOTES = booleanPreferencesKey("live_notes")
     }
 }
