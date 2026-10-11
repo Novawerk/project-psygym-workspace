@@ -17,7 +17,8 @@ in a PR that touches both sides, or not at all.
   the model vendor to get a reply, and nowhere else. The only conversation text that goes
   anywhere beyond that is one passage the user reports with `POST /report`.
 - Header `X-Invite-Code: <code>` on every request. The server checks it only when
-  `INVITE_CODES` is set; otherwise any value (or none) passes.
+  `INVITE_CODES` is set; otherwise any value (or none) passes. With sign-in on, see
+  [Sign-in](#sign-in-proposed-not-live-yet): a session token replaces the invite code.
 
 ## Models (shared shapes)
 
@@ -46,7 +47,9 @@ type CaseSummary = {
 
 ### `GET /health` → `200 {"ok":true}`
 
-Never checks the invite code.
+Never checks the invite code. With sign-in on, it also says which mode the server runs:
+`{"ok":true,"auth":"optional"}` or `{"ok":true,"auth":"required"}` (see Sign-in). With sign-in
+off it stays exactly `{"ok":true}`.
 
 ### `GET /cases` → `200 {"cases": CaseSummary[]}`
 
@@ -114,6 +117,90 @@ Same invite code check; same rate limit, its own bucket. Same delivery as `/feed
 either way, best effort, dropped when Slack isn't set up. Errors: `400 invalid_request`,
 `401 invite_required`, `404 case_not_found`, `429 rate_limited`.
 
+## Sign-in (proposed, not live yet)
+
+> **Draft for review.** Nothing below is live. The server keeps working exactly as described
+> above until `AUTH_MODE` is set. Decisions and storage: [`decisions/0008-sign-in.md`](./decisions/0008-sign-in.md).
+
+Email and a one-time code; no passwords. The code arrives by email from
+`no-reply@novawerk.io`.
+
+### Modes and the move from invite codes
+
+The server runs in one of three modes (`AUTH_MODE`). The app reads it from `GET /health`.
+
+| Mode | `/health` | `/auth/*`, `/me` | Every other endpoint (except `/health`) |
+|---|---|---|---|
+| `off` (today, default) | `{"ok":true}` | `404 not_found` | invite code, as today |
+| `optional` (move-over) | `"auth":"optional"` | live | **either** a valid `Authorization: Bearer <token>` **or** a valid `X-Invite-Code` (or anything, when `INVITE_CODES` isn't set) |
+| `required` | `"auth":"required"` | live | `Authorization: Bearer <token>` only; `X-Invite-Code` alone is `401 sign_in_required` |
+
+- In `optional` and `required`, a request that carries `Authorization` is judged by the token
+  alone: a bad or expired token is `401 session_expired`, even if an invite code is there too.
+  The app then signs in again.
+- Old apps (invite code only) keep working through `optional`. We switch to `required` only once
+  the counts show that old apps are gone (we count requests by how they authenticated:
+  `session` or `invite`, no ids), and announce the date first. After the switch an old app gets
+  `401 sign_in_required`, a code it doesn't know: it shows its generic error.
+- A new app: if `/health` says `optional` or `required`, it signs in and sends the token on
+  every request. It sends no `X-Invite-Code` with a token.
+
+### `POST /auth/start` → `202` (no body)
+
+Body: `{ email: string, locale: Locale, inviteCode?: string }`.
+
+- `email`: trimmed and lower-cased by the server; at most 254 characters; must look like an
+  address. `locale`: the language of the email.
+- `inviteCode`: needed only for an email that has no account yet. It is checked at
+  `/auth/verify`, not here (so this endpoint never tells anyone whether an email has an account).
+- The server emails a 6-digit code, valid for 10 minutes. A new `start` for the same email
+  replaces the previous code.
+- Always `202` for a well-formed request, whether or not the email has an account.
+- Rate limits, both apply: per email (5 per hour) and per IP (20 per hour). Over either →
+  `429 rate_limited` with `Retry-After`.
+- Errors: `400 invalid_request`, `429 rate_limited`, `503 email_unavailable` (the email
+  couldn't be sent; try again later).
+
+### `POST /auth/verify` → `200`
+
+Body: `{ email: string, code: string }`. Answer:
+
+```ts
+type Me = { email: string; createdAt: string /* ISO 8601 */; inviteBatch: string | null };
+type Session = { token: string; expiresAt: string /* ISO 8601 */; me: Me };
+```
+
+- On success the code is used up and the account exists (created now, for a new email with a
+  valid invite code from `start`). The token is opaque: keep it in the platform's secure
+  storage (Android Keystore, iOS Keychain), send it as `Authorization: Bearer <token>`.
+- A token lasts 30 days from sign-in. Then `401 session_expired`; sign in again.
+- Errors:
+  - `400 invalid_code`: wrong, expired, already used, or too many tries (5 per code). One code
+    for all four on purpose. The app offers "send a new code".
+  - `403 invite_required`: the email has no account and `start` carried no valid invite code.
+    The app asks for an invite code and calls `start` again with it.
+  - `400 invalid_request`, `429 rate_limited`.
+
+### `GET /me` → `200 Me`
+
+Needs the token. Errors: `401 sign_in_required` (no token), `401 session_expired`.
+
+### `POST /auth/logout` → `204`
+
+Ends the session of the token sent. Also `204` if the token is unknown or already expired, so
+the app can always call it and forget the token.
+
+### `DELETE /me` → `204`
+
+Deletes the account: the email, every session and any pending code, right away. Anonymous
+counts stay (they never held the account). Feedback and reports already sent to our Slack
+channel never carried the account either. Needs the token; same `401` errors as `GET /me`.
+
+### App review
+
+One reviewer address, set on the server, signs in with a fixed code and no email is sent. It
+only works for that one address. Nothing changes for the app.
+
 ## Stream format (both streaming endpoints)
 
 Data-only SSE frames, one JSON object per frame, discriminated by `type`:
@@ -143,6 +230,11 @@ JSON `{ "error": { "code": string, "message": string } }` with:
 |------|------|---------|
 | 400 | `invalid_request` | body fails validation, or is too large (never 413) |
 | 401 | `invite_required` | invite code missing or wrong |
+| 401 | `sign_in_required` | (sign-in on) no session token where one is needed |
+| 401 | `session_expired` | (sign-in on) the token is wrong, expired or signed out |
+| 400 | `invalid_code` | (`/auth/verify`) wrong, expired, used or too many tries |
+| 403 | `invite_required` | (`/auth/verify`) new email without a valid invite code |
+| 503 | `email_unavailable` | (`/auth/start`) the code email couldn't be sent |
 | 404 | `case_not_found` | unknown `caseId` |
 | 429 | `rate_limited` | too many requests; `Retry-After` header set |
 | 503 | `model_unavailable` | no model configured or vendor down |
@@ -153,6 +245,9 @@ The app shows a friendly message for each code, in the current language.
 
 ## Changes
 
+- **(draft, this PR)** — Sign-in: `AUTH_MODE`, `/auth/start`, `/auth/verify`, `/auth/logout`,
+  `GET /me`, `DELETE /me`, Bearer tokens, the move from invite codes, new error codes, `auth`
+  in `/health`. Proposed only; not live until the implementation PR, which touches both sides.
 - **#62** — `POST /supervision` takes an optional `durationSec`. Backend first; the app sends it
   in a later PR. An exception to "both sides in one PR", allowed by the lead: the field is
   optional and old apps work unchanged.
