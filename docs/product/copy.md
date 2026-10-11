@@ -212,10 +212,10 @@ key 沿用 App 现有命名（`home_*`、`cases_*`、`practice_*`、`supervision
 | privacy_q_vendor | AI 模型服务存吗？ | Does the AI model service store it? |
 | privacy_a_vendor | 按它们自己的政策处理。 | It follows its own policy. |
 | privacy_q_device | 手机上存吗？ | Is it stored on my phone? |
-| privacy_a_device | 存。每场练习的对话和报告存在这台手机上 App 自己的空间里，不上传、不进云备份。记录未加密，保存在 App 自己的存储空间里。可以在「我的」里关掉保存或全部删除，也可以在练习记录里删除单场。卸载 App 就全部删除。 | Yes. Each session and its report are saved in the app's own space on this phone. Nothing is uploaded or backed up to the cloud. Records are stored unencrypted in the app's private storage. Turn saving off or delete everything under Me; delete a single session from your practice history. Uninstalling the app deletes everything. |
+| privacy_a_device | 存。每场练习的对话和报告存在这台手机上 App 自己的空间里，未加密，不上传，不进云备份。可以在「我的」里关掉保存或全部删除，也可以在练习记录里删除单场。卸载 App 就全部删除。 | Yes. Each session and its report are saved, unencrypted, in the app's own space on this phone. Nothing is uploaded or backed up to the cloud. Turn saving off or delete everything under Me; delete a single session from your practice history. Uninstalling the app deletes everything. |
 | privacy_q_feedback | 你们收到我的评价吗？ | Do you receive my ratings? |
 | privacy_a_feedback | 只有你在报告页点了 👍 / 👎 时才发。评价和你写的那句话会转到我们内部的 Slack 频道（第三方服务），不进数据库；还会带上病例编号和界面语言。那句话最多 500 字。不收对话内容。 | Only when you tap 👍 / 👎 on a report. Your rating and the line you write go to our internal Slack channel (a third-party service), not a database, together with the case id and interface language. The line is up to 500 characters. We never receive the conversation. |
 | privacy_q_collect | 你们收集什么？ | What do you collect? |
-| privacy_a_collect | 邀请码（用来连服务器）和你选的语言，只存在这台手机上。没有账号，不收集姓名、手机号、位置。 | Your invite code (to reach our server) and your language, kept on this phone only. No account. We don't collect your name, phone number or location. |
+| privacy_a_collect | 邀请码：每次请求会发给我们的服务器，用来校验和限流，服务器不保存邀请码。你选的界面语言：每次请求也会带上，用来决定来访者和报告用哪种语言。没有账号，不收集姓名、手机号、位置。 | Your invite code: sent to our server with each request, to check it and limit load; our server doesn't store it. Your interface language: also sent with each request, so the client and the report use it. No account. We don't collect your name, phone number or location. |
 | privacy_q_real | 我能输入真实来访者的信息吗？ | Can I enter real client information? |
 | privacy_a_real | 不能。请只把它当练习。 | No. Please use it for practice only. |
