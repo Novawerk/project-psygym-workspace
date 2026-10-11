@@ -1,7 +1,8 @@
 import { defineConfig } from "vitest/config";
 
 // Vite sets BASE_URL to "/" inside test workers. Hand ours over under another name.
-process.env.CONTRACT_BASE_URL ??= process.env.BASE_URL;
+// No default: see src/env.ts. (Assigning undefined to process.env would store "undefined".)
+if (process.env.BASE_URL && !process.env.CONTRACT_BASE_URL) process.env.CONTRACT_BASE_URL = process.env.BASE_URL;
 
 export default defineConfig({
   test: {

@@ -2,7 +2,7 @@
 // then one /supervision report. Writes transcripts and automatic flags to out/quality-*/.
 // A person still reads every transcript; the flags only say where to look first.
 //
-//   BASE_URL=http://localhost:8787 LOCALE=zh pnpm --filter @psygym/contract-tests quality
+//   BASE_URL=http://localhost:8790 LOCALE=zh pnpm --filter @psygym/contract-tests quality
 //
 // See docs/test-plan.md, part 2. Never run this against production.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -13,7 +13,12 @@ import { BREAKS_ROLE, CLAIMS_PROMPT, GIVES_ADVICE, promptOverlap, reportShapeFla
 type Locale = "zh" | "en";
 type Message = { role: "counselor" | "client"; text: string };
 
-const BASE_URL = (process.env.BASE_URL || "http://localhost:8787").replace(/\/+$/, "");
+// No default: port 8787 is often another project's server (see scripts/require-base-url.mjs).
+if (!process.env.BASE_URL?.trim()) {
+  console.error("请设置 BASE_URL，例如 BASE_URL=http://localhost:8790。 / Set BASE_URL, e.g. BASE_URL=http://localhost:8790.");
+  process.exit(1);
+}
+const BASE_URL = process.env.BASE_URL.trim().replace(/\/+$/, "");
 const LOCALE = (process.env.LOCALE || "zh") as Locale;
 const INVITE = process.env.INVITE_CODE;
 const ONLY_CASE = process.env.CASE_ID;

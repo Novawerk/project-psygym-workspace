@@ -5,10 +5,11 @@
   "type": "module",
   "description": "Black-box tests for docs/api-contract.md. Run against any base URL.",
   "scripts": {
-    "test": "vitest run --exclude '**/rate-limit.test.ts'",
-    "test:rate-limit": "vitest run src/rate-limit.test.ts",
+    "test": "node scripts/require-base-url.mjs && vitest run --exclude '**/rate-limit.test.ts'",
+    "test:rate-limit": "node scripts/require-base-url.mjs && vitest run src/rate-limit.test.ts",
+    "test:unit": "vitest run src/sse.unit.test.ts src/quality-flags.unit.test.ts",
     "selfcheck": "node scripts/selfcheck.mjs",
-    "quality": "node --experimental-strip-types --no-warnings scripts/quality.ts"
+    "quality": "node scripts/require-base-url.mjs && node --experimental-strip-types --no-warnings scripts/quality.ts"
   },
   "devDependencies": {
     "vitest": "3.2.4"

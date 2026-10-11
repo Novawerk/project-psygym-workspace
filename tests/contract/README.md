@@ -6,18 +6,23 @@ HTTP, so they run against any backend: local, preview or staging. Vitest and nat
 
 ## Run
 
-From the repo root:
+From the repo root, against a server you started yourself on a free port (here 8790):
 
 ```bash
-BASE_URL=http://localhost:8787 pnpm test:contract
+PORT=8790 LLM_PROVIDER=mock RATE_LIMIT_MAX=1000 pnpm --filter api dev
+BASE_URL=http://localhost:8790 pnpm test:contract
 ```
+
+`BASE_URL` has no default. Without it the run stops before sending anything: port 8787 on
+our machines is often another project's dev server, and the suite must never hit it by
+accident. The unit tests need no server: `pnpm --filter @psygym/contract-tests test:unit`.
 
 Never point this at production, and never at a server with `FEEDBACK_SLACK_WEBHOOK_URL` set: the `/feedback` and `/report` tests would post to the team's Slack channel. `apps/api` also reads `apps/api/.env` at start, so that file must not set it either. The suite sends real `/chat` and `/supervision`
 requests; with a real model they cost tokens. Prefer a server running `LLM_PROVIDER=mock`.
 
 | Variable | Default | What |
 |---|---|---|
-| `BASE_URL` | `http://localhost:8787` | Server under test. |
+| `BASE_URL` | none, required | Server under test. Unset: the run stops with "请设置 BASE_URL". |
 | `INVITE_CODE` | unset | A valid code. Set it when the server has `INVITE_CODES`; the 401 tests run then. Unset: we check that any code (or none) passes. |
 | `CASE_ID` | first of `GET /cases` | Case used for `/chat` and `/supervision`. |
 | `EXPECT_MODEL_UNAVAILABLE` | unset | `1` when the server runs with no model. Stream tests are skipped; `503 model_unavailable` is checked instead. |
@@ -28,7 +33,7 @@ requests; with a real model they cost tokens. Prefer a server running `LLM_PROVI
 The rate-limit test is separate, because it uses up the limiter:
 
 ```bash
-BASE_URL=http://localhost:8787 pnpm test:contract:rate-limit
+BASE_URL=http://localhost:8790 pnpm test:contract:rate-limit
 ```
 
 Other tests wait and retry once on `429` when `Retry-After` is 65 s or less, so a tight

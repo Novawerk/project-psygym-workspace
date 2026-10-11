@@ -150,8 +150,10 @@ E-08 跑不了 — 原因: ……
 ### 怎么跑
 
 ```bash
-BASE_URL=http://localhost:8787 LOCALE=zh pnpm --filter @psygym/contract-tests quality
+BASE_URL=http://localhost:8790 LOCALE=zh pnpm --filter @psygym/contract-tests quality
 ```
+
+`BASE_URL` 必须设，没有默认值；不设会直接退出，提示「请设置 BASE_URL」。被测的后端起在一个空闲端口上（例：`PORT=8790 pnpm --filter api dev`）。本机 8787 常被别的项目占着，别指过去。
 
 可选 `CASE_ID`（只跑一个病例）、`INVITE_CODE`。结果写到 `tests/contract/out/quality-<时间>-<语言>/`：每个病例一份完整对话 + 报告，一份 `SUMMARY.md`。有自动标记时退出码是 1。
 
