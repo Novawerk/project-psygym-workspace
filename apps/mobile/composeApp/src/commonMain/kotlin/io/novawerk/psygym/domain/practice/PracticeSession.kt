@@ -54,6 +54,13 @@ class PracticeSession {
         startMark = TimeSource.Monotonic.markNow()
     }
 
+    /** Screenshot mode: start the session with written messages, already [elapsed] long. */
+    fun seed(messages: List<Message>, elapsed: Duration) {
+        begin()
+        transcript = messages
+        startMark = TimeSource.Monotonic.markNow() - elapsed
+    }
+
     fun update(messages: List<Message>) {
         transcript = messages
     }

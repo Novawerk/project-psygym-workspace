@@ -28,6 +28,7 @@ import io.novawerk.psygym.di.AppComponent
 import io.novawerk.psygym.domain.model.CaseSummary
 import io.novawerk.psygym.domain.settings.StartState
 import io.novawerk.psygym.ui.locale.LocalAppLocale
+import io.novawerk.psygym.ui.locale.rememberApiLocale
 import io.novawerk.psygym.ui.navigation.BriefingRoute
 import io.novawerk.psygym.ui.navigation.CasesRoute
 import io.novawerk.psygym.ui.navigation.ConsentRoute
@@ -74,6 +75,9 @@ fun App(component: AppComponent) {
     val inviteCode by settings.inviteCode.collectAsState(initial = "")
     val realInfoHintSeen by settings.realInfoHintSeen.collectAsState(initial = true)
     val demoData by settings.useFakeApi.collectAsState(initial = AppConfig.fakeApiDefault)
+    // Store-screenshot mode (Android debug builds only): no demo badges, written sessions.
+    val shot = component.screenshot.mode
+    val demoBadge = demoData && shot == null
     val saveHistory by settings.saveHistory.collectAsState(initial = true)
     val history = component.history
     val savedSessions by history.sessions.collectAsState()
@@ -95,6 +99,7 @@ fun App(component: AppComponent) {
     CompositionLocalProvider(LocalAppLocale provides lang.tag) {
         key(lang) {
             PsygymTheme {
+                val apiLocale = rememberApiLocale()
                 val setLanguage: (io.novawerk.psygym.domain.settings.AppLanguage) -> Unit =
                     { scope.launch { settings.setLanguage(it) } }
                 // From an error card (e.g. invite_required): push Me on top so Back returns to the
@@ -137,7 +142,7 @@ fun App(component: AppComponent) {
                 NavHost(
                     modifier = Modifier.widthIn(max = 640.dp).fillMaxSize(),
                     navController = nav,
-                    startDestination = when (start) {
+                    startDestination = if (shot != null) HomeRoute else when (start) {
                         StartState.Welcome -> WelcomeRoute
                         StartState.Consent -> ConsentRoute(thenReady = false)
                         StartState.Home -> HomeRoute
@@ -182,7 +187,7 @@ fun App(component: AppComponent) {
                     }
                     composable<HomeRoute> {
                         HomeScreen(
-                            demoData = demoData,
+                            demoData = demoBadge,
                             cases = caseStore.cases,
                             casesError = caseStore.error,
                             onStart = { nav.navigate(CasesRoute) },
@@ -221,7 +226,7 @@ fun App(component: AppComponent) {
                         CasesScreen(
                             cases = caseStore.cases,
                             error = caseStore.error,
-                            demoData = demoData,
+                            demoData = demoBadge,
                             interrupted = practiceInterrupted,
                             onInterruptedShown = { practiceInterrupted = false },
                             onBack = { if (!nav.popBackStack()) goHome() },
@@ -234,7 +239,12 @@ fun App(component: AppComponent) {
                         BriefingScreen(
                             case = session.case,
                             caseIndex = caseIndex(session.case),
-                            onStart = { nav.navigate(PracticeRoute) },
+                            onStart = {
+                                // Screenshot mode opens on a written session instead of an empty one.
+                                session.case?.let { case -> shot?.seed?.invoke(case.id, apiLocale) }
+                                    ?.let { session.seed(it.messages, it.elapsed) }
+                                nav.navigate(PracticeRoute)
+                            },
                             onBack = { nav.popBackStack() },
                             onHelp = openHelp,
                             onSessionLost = sessionLost,
@@ -245,7 +255,7 @@ fun App(component: AppComponent) {
                         PracticeScreen(
                             viewModel = vm,
                             elapsed = { session.elapsed },
-                            showRealInfoHint = !realInfoHintSeen,
+                            showRealInfoHint = !realInfoHintSeen && shot == null,
                             saveHistory = saveHistory,
                             onLeave = {
                                 // Nothing kept: coming back starts a fresh session (timer, messages).
@@ -260,10 +270,10 @@ fun App(component: AppComponent) {
                         )
                     }
                     composable<SupervisionRoute> {
-                        val vm = viewModel { SupervisionViewModel(component.api, session, history.takeIf { saveHistory }) }
+                        val vm = viewModel { SupervisionViewModel(component.api, session, history.takeIf { saveHistory && shot == null }) }
                         SupervisionScreen(
                             viewModel = vm,
-                            demoData = demoData,
+                            demoData = demoBadge,
                             onShown = { scope.launch { settings.markRealInfoHintSeen() } },
                             onHome = {
                                 vm.finish()
