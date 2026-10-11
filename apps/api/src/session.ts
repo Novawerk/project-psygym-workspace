@@ -63,6 +63,34 @@ export function clientRequest(prompts: Prompts, c: Case, locale: Locale, message
   return { system, messages: out, tools: [END_SESSION_TOOL] };
 }
 
+/**
+ * Placeholder for "can I take this client on / should I refer" (skill id intake_decision), until
+ * 聆镜 writes the standard (docs/product/session-stages.md). Added to the report's prompt only
+ * when the counselor has written at least this many messages.
+ */
+export const INTAKE_MIN_COUNSELOR_LINES = 15;
+
+const INTAKE_RULE: Record<Locale, string> = {
+  zh: [
+    "## 承接判断（这场会谈够长，才有这一条）",
+    "",
+    "在「下次练什么」里，用**一句话**提醒练习判断能不能承接这位来访者，例如：初次会谈里，可以练习评估自己能不能承接这位来访者（例如了解来访者的期待，说明接下来怎么安排）。",
+    "",
+    "- 它排在「下次练什么」的最后。这一部分已经有 2 条更具体的练习时，不另开一条，把这句话并进第 2 条，作为最后半句。",
+    "- 不引原话，不算进「需要改进的地方」，不判对错。",
+    "- 风险筛查和伤害性的话的优先级不变。",
+  ].join("\n"),
+  en: [
+    "## Intake decision (only because this session is long enough)",
+    "",
+    "In \"What to practise next\", add **one sentence** reminding the counselor to practise deciding whether they can take this client on, for example: In a first session, practise judging whether you can take this client on (for example, ask what the client hopes for and explain what happens next).",
+    "",
+    "- It comes last in that section. If the section already has 2 more specific items, don't add a third: put this sentence at the end of the second item.",
+    "- No quote, not part of \"What to improve\", no judgement of right or wrong.",
+    "- The risk-screening item and harmful remarks keep their priority.",
+  ].join("\n"),
+};
+
 /** Low temperature for the report: steadier structure, fewer garbled words. The client keeps the default. */
 export const SUPERVISOR_TEMPERATURE = 0.3;
 
@@ -73,10 +101,13 @@ export const SUPERVISOR_TEMPERATURE = 0.3;
  * had said it.
  */
 export function supervisorRequest(prompts: Prompts, c: Case, locale: Locale, messages: Message[]): Omit<ModelRequest, "signal"> {
+  // Long enough sessions only: the server counts, not the model (models miscount).
+  const intake = messages.filter((m) => m.role === "counselor").length >= INTAKE_MIN_COUNSELOR_LINES ? [INTAKE_RULE[locale]] : [];
   const system = [
     prompts.supervisor,
     "## 督导标准",
     prompts.rubrics[c.school],
+    ...intake,
     "## 语言",
     REPORT_LANGUAGE[locale],
   ].join("\n\n");

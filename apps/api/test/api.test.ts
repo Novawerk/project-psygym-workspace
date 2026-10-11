@@ -687,3 +687,30 @@ describe("config", () => {
     expect(c.inviteCodes).toBeNull();
   });
 });
+
+describe("intake decision reminder (placeholder until 聆镜's standard)", () => {
+  const lines = (n: number) =>
+    Array.from({ length: n * 2 }, (_, i) => ({ role: i % 2 ? "client" : "counselor", text: i % 2 ? "嗯。" : "然后呢？" }));
+
+  it.each([
+    [14, false],
+    [15, true],
+  ])("%i counselor lines → rule in the prompt: %s", async (n, present) => {
+    for (const locale of ["zh", "en"] as const) {
+      const mock = new MockProvider([() => ({ text: "ok", toolCalls: [] })]);
+      const { app } = makeApp(undefined, { providerFor: () => mock });
+      await (await post(app, "/supervision", body({ locale, messages: lines(n) }))).text();
+      const system = mock.requests[0]!.system;
+      expect(system.includes(locale === "zh" ? "## 承接判断" : "## Intake decision"), `${n} ${locale}`).toBe(present);
+    }
+  });
+
+  it("never in live notes, never in the client's prompt", async () => {
+    const mock = new MockProvider([() => ({ text: "- ok", toolCalls: [] }), () => ({ text: "嗯", toolCalls: [] })]);
+    const { app } = makeApp(undefined, { providerFor: () => mock });
+    await (await post(app, "/supervision", body({ mode: "live", messages: lines(20) }))).text();
+    const chatMessages = [...lines(20), { role: "counselor", text: "好。" }];
+    await (await post(app, "/chat", body({ messages: chatMessages }))).text();
+    for (const r of mock.requests) expect(r.system).not.toMatch(/承接判断|Intake decision/);
+  });
+});
