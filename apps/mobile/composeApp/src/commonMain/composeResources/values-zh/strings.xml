@@ -250,7 +250,7 @@
     <string name="privacy_q_account">账号存了什么？</string>
     <string name="privacy_a_account">只有邮箱、注册时间、注册时用的邀请码批次和登录会话。练习对话和报告不在服务器上，只在你手机上。</string>
     <string name="privacy_q_delete">怎么删除账号？</string>
-    <string name="privacy_a_delete">在「我的」→「删除账号」。删除后，服务器上的账号信息马上删掉，这台手机上这个账号的练习记录也一起删掉。不方便用 App 时，也可以按 novawerk.io/psygym/delete-account 上的说明申请。</string>
+    <string name="privacy_a_delete">在「我的」→「删除账号」。删除后，服务器上的账号信息马上删掉，这台手机上这个账号的练习记录也一起删掉。不方便用 App 时，也可以按 psygym.novawerk.io/delete-account 上的说明申请。</string>
     <string name="brief_session_first">初次会谈</string>
     <string name="brief_session_first_note">初次会谈的主要任务：做风险筛查，判断能不能承接这位来访者。</string>
 </resources>

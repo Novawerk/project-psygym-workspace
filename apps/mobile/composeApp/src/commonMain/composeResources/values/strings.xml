@@ -262,7 +262,7 @@
     <string name="privacy_q_account">What does my account store?</string>
     <string name="privacy_a_account">Only your email, sign-up date, the invite batch you used and your sessions. Practice conversations and reports aren’t on our server, only on your phone.</string>
     <string name="privacy_q_delete">How do I delete my account?</string>
-    <string name="privacy_a_delete">Go to Me → Delete account. We delete your account data from our server right away, and this account’s practice history on this phone too. If you can’t use the app, follow the steps at novawerk.io/psygym/delete-account.</string>
+    <string name="privacy_a_delete">Go to Me → Delete account. We delete your account data from our server right away, and this account’s practice history on this phone too. If you can’t use the app, follow the steps at psygym.novawerk.io/delete-account.</string>
     <string name="brief_session_first">First session</string>
     <string name="brief_session_first_note">The main tasks of a first session: screen for risk, and decide whether you can take this client on.</string>
 </resources>
