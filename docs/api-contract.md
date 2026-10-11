@@ -71,9 +71,23 @@ one short line and that stream should carry `session_end` again. That repeat is 
 
 ### `POST /supervision` → `text/event-stream`
 
-Body: `{ caseId: string, locale: Locale, messages: Message[], durationSec?: number }`. The
-server streams one supervision report in Markdown: what went well, what went wrong, what to
-practise next. Any message may come last, and a very short session still gets a report.
+Body: `{ caseId: string, locale: Locale, messages: Message[], mode?: "final" | "live", durationSec?: number }`.
+Any message may come last, and a very short session still gets an answer. Same frames either
+way.
+
+- `mode: "final"` (the default; leave it out for the same thing): the full report at the end, in
+  Markdown, three sections: what went well, what to improve, what to practise next; the AI line
+  last.
+- `mode: "live"`: short notes mid-session, from the conversation so far. No headings; 1–3 `- `
+  items, the first three of these that apply, in this order: a safety reminder (the client
+  showed a risk cue and the counselor hasn't asked about safety yet), a harmful remark by the
+  counselor (quoted, with a line to say instead), one thing that went well, one thing to try
+  next with `可以换成：` / `Try instead:` and a line to say. About 150–250
+  characters (zh) or 100–170 words (en). **No AI line**: the app writes it. "At least 3 turns"
+  and "at most 5 per session" are the app's rules; the server doesn't check them: it only has
+  its general rate limit (30 a minute per invite code or IP), shared with `final`. Per-account
+  limits can come with sign-in. `live` ignores `durationSec`.
+- Any other `mode` → `400 invalid_request`.
 
 `durationSec` (optional): how long the session lasted, in whole seconds, 0–7200. It only feeds
 the anonymous daily counts (the sum and the number of sessions that sent it); it never changes
@@ -271,6 +285,9 @@ The app shows a friendly message for each code, in the current language.
 
 ## Changes
 
+- **#70** — `POST /supervision` takes an optional `mode` (`"final"`,
+  the default, or `"live"` for mid-session notes). Backend first; the app follows in a later PR,
+  as allowed by the lead (old apps send no `mode` and get the report as before).
 - **(draft, #64)** — Sign-in: `AUTH_MODE`, `AUTH_REQUIRED_FROM`, `/auth/start`, `/auth/verify`,
   `/auth/logout`, `GET /me`, `DELETE /me`, Bearer tokens, the move from invite codes, new error
   codes, `auth` in `/health`; Basics now mention pseudonymous active records. Proposed only;

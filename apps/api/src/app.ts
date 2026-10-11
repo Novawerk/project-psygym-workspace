@@ -25,7 +25,7 @@ import { statsView } from "./metrics/stats.js";
 import { FixedWindowLimiter, clientIp } from "./rate-limit.js";
 import { ReportBody, reportSlackMessage } from "./report.js";
 import { ChatBody, SupervisionBody, type ErrorCode, type Locale, type StreamEvent } from "./schema.js";
-import { FAREWELL, clientRequest, endsSession, supervisorRequest } from "./session.js";
+import { FAREWELL, clientRequest, endsSession, liveSupervisorRequest, supervisorRequest } from "./session.js";
 
 /** Keeps proxies from closing the stream while the model thinks. */
 export const PING_MS = 15_000;
@@ -265,6 +265,8 @@ export function createApp(deps: AppDeps) {
         const body = await readJson(c, schema as z.ZodType<z.infer<typeof SupervisionBody>>);
         if (body instanceof Response) return body;
         const { caseId, locale, messages, durationSec } = body;
+        // /supervision only: "live" is mid-session notes, a different prompt and different counts.
+        const live = role === "supervisor" && (body as { mode?: string }).mode === "live";
 
         const theCase = cases.get(caseId);
         if (!theCase) return failCounted(c, 404, "case_not_found");
@@ -275,7 +277,7 @@ export function createApp(deps: AppDeps) {
           return failCounted(c, 503, "model_unavailable");
         }
 
-        const request = build(prompts, theCase, locale, messages);
+        const request = (live ? liveSupervisorRequest : build)(prompts, theCase, locale, messages);
         // What we count when the stream ends (aborted streams aren't counted). /chat is stateless,
         // so a session "starts" with the turn that answers the counselor's first line.
         const at = { caseId: theCase.id, locale };
@@ -287,6 +289,9 @@ export function createApp(deps: AppDeps) {
               if (counselorLines === 1) counter.count({ metric: "session_started", ...at });
               if (o.sessionEnd) counter.count({ metric: "session_ended_by_client", ...at });
             }
+          } else if (live) {
+            // Mid-session notes: no report counts, no duration; a failure is only a stream_error.
+            if (o.ok) counter.count({ metric: "live_supervision", ...at, dim: turnBucket(messages.length) });
           } else if (o.ok) {
             counter.count({ metric: "report_generated", ...at, dim: turnBucket(messages.length), durationSec });
             if (durationSec !== undefined) counter.count({ metric: "session_duration", ...at, dim: durationBucket(durationSec) });

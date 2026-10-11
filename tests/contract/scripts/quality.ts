@@ -8,7 +8,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { joinedText, frameProblems, readStream } from "../src/sse.ts";
-import { BREAKS_ROLE, CLAIMS_PROMPT, GIVES_ADVICE, isHint, promptOverlap, reportSectionFlags, reportShapeFlags, unverifiedQuotes } from "../src/quality-flags.ts";
+import { BREAKS_ROLE, CLAIMS_PROMPT, GIVES_ADVICE, chineseOutsideQuotes, isHint, liveShapeFlags, promptOverlap, reportSectionFlags, reportShapeFlags, unverifiedQuotes } from "../src/quality-flags.ts";
 
 type Locale = "zh" | "en";
 type Message = { role: "counselor" | "client"; text: string };
@@ -59,9 +59,9 @@ const CLOSING: Record<Locale, string> = {
   zh: "这份反馈由 AI 生成，仅供练习参考。",
   en: "This feedback is AI-generated, for practice only.",
 };
-const LABELS: Record<Locale, { counselor: string; client: string; report: string; quoted: string; flags: string; timing: string }> = {
-  zh: { counselor: "咨询师", client: "来访者", report: "督导报告", quoted: "引用的咨询师原话", flags: "自动标记", timing: "耗时（首字 / 总时长）" },
-  en: { counselor: "Counselor", client: "Client", report: "Supervision report", quoted: "Counselor lines quoted", flags: "Automatic flags", timing: "Timing (first text / total)" },
+const LABELS: Record<Locale, { counselor: string; client: string; report: string; quoted: string; flags: string; timing: string; live: string }> = {
+  zh: { counselor: "咨询师", client: "来访者", report: "督导报告", quoted: "引用的咨询师原话", flags: "自动标记", timing: "耗时（首字 / 总时长）", live: "中途提示（第 3 轮后）" },
+  en: { counselor: "Counselor", client: "Client", report: "Supervision report", quoted: "Counselor lines quoted", flags: "Automatic flags", timing: "Timing (first text / total)", live: "Mid-session notes (after turn 3)" },
 };
 const L = LABELS[LOCALE];
 
@@ -83,16 +83,16 @@ type Timing = { path: string; firstTextMs?: number; totalMs: number };
 /** Every call's timing, per case, for the transcript and SUMMARY.md. */
 let timings: Timing[] = [];
 
-async function stream(path: string, caseId: string, messages: Message[]) {
+async function stream(path: string, caseId: string, messages: Message[], extra: Record<string, unknown> = {}) {
   const startedAt = Date.now();
   const res = await fetch(BASE_URL + path, {
     method: "POST",
     headers: headers(),
-    body: JSON.stringify({ caseId, locale: LOCALE, messages }),
+    body: JSON.stringify({ caseId, locale: LOCALE, messages, ...extra }),
   });
   if (res.status !== 200) throw new Error(`${path} → HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`);
   const r = await readStream(res, 120_000, { startedAt });
-  timings.push({ path, firstTextMs: r.firstTextMs, totalMs: r.totalMs ?? Date.now() - startedAt });
+  timings.push({ path: extra.mode === "live" ? `${path} (live)` : path, firstTextMs: r.firstTextMs, totalMs: r.totalMs ?? Date.now() - startedAt });
   const problems = frameProblems(r);
   if (problems.length) throw new Error(`${path} stream: ${problems.join("; ")}`);
   const last = r.frames[r.frames.length - 1];
@@ -126,7 +126,7 @@ const ms = (n: number | undefined) => (n === undefined ? "—" : `${(n / 1000).t
 /** One line per call, and the slowest first text / longest total for /chat and /supervision. */
 function timingLines(t: Timing[]): string[] {
   const lines = t.map((x, i) => `- ${i + 1}. ${x.path}: first text ${ms(x.firstTextMs)}, total ${ms(x.totalMs)}`);
-  for (const path of ["/chat", "/supervision"]) {
+  for (const path of ["/chat", "/supervision (live)", "/supervision"]) {
     const of = t.filter((x) => x.path === path);
     if (!of.length) continue;
     const first = of.map((x) => x.firstTextMs).filter((n): n is number => n !== undefined);
@@ -155,6 +155,14 @@ for (const c of cases.filter((c) => !ONLY_CASE || c.id === ONLY_CASE)) {
       if (replyLength(reply) > MAX_REPLY) flags.push(`B6 ${t}: reply is ${replyLength(reply)} ${LOCALE === "zh" ? "chars" : "words"}, want ≤ ${MAX_REPLY}`);
       if (LIST_OR_HEADING.test(reply)) flags.push(`B6 ${t}: reply has a list or heading`);
       if (!reply.trim()) flags.push(`${t}: empty reply`);
+      // Like the app: mid-session notes once the counselor has spoken three times.
+      if (i === 2) {
+        const notes = await stream("/supervision", c.id, messages, { mode: "live" });
+        md.push(`---`, ``, `### ${L.live}`, ``, notes, ``, `---`, ``);
+        for (const f of liveShapeFlags(notes, LOCALE)) flags.push(`live: ${f}`);
+        if (LOCALE === "en") for (const f of chineseOutsideQuotes(notes)) flags.push(`live: ${f}`);
+        for (const q of unverifiedQuotes(notes, messages.map((m) => m.text))) flags.push(`live C2/C3: quote not in the conversation word for word — 「${q}」`);
+      }
     }
     // /supervision wants the counselor's line last; end on a closing line.
     const closing = LOCALE === "zh" ? "今天我们先到这里，谢谢你。" : "Let's stop here for today. Thank you.";
@@ -164,6 +172,7 @@ for (const c of cases.filter((c) => !ONLY_CASE || c.id === ONLY_CASE)) {
     const quoted = quotedLines(report, messages.filter((m) => m.role === "counselor").map((m) => m.text));
     if (quoted.length === 0) flags.push("C2: report quotes no counselor line");
     flags.push(...reportFlags(report));
+    if (LOCALE === "en") flags.push(...chineseOutsideQuotes(report));
     for (const q of unverifiedQuotes(report, messages.map((m) => m.text))) flags.push(`C2/C3: quote not in the conversation word for word — 「${q}」`);
     md.push(`---`, ``, `## ${L.report}`, ``, report, ``, `---`, ``, `${L.quoted}: ${quoted.length}/${OPENERS[LOCALE].length + 1}`, ``);
   } catch (e) {

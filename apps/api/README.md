@@ -101,6 +101,9 @@ you set `CLIENT_LLM_MODEL` / `SUPERVISOR_LLM_MODEL` (and `_BASE_URL`).
   the stream carries `session_end` again.
 - A turn with no text to show (and no `end_session`) ends with an `error` frame
   (`model_unavailable`), so the app offers a retry instead of an empty bubble.
+- Mid-session notes (`/supervision` with `mode: "live"`): [`prompts/supervisor-live.md`](./prompts/supervisor-live.md)
+  + the rubric + a language line, with the conversation so far. No headings, 1–3 items, no AI
+  line. The mock answers with notes in the same shape.
 - AI supervisor: [`prompts/supervisor.md`](./prompts/supervisor.md) + the rubric
   (`content/rubrics/<school>.md`) + a language line. No case text at all (no role brief, no
   title, no summary), so the report rests only on what was said; every quote in it must appear
@@ -142,7 +145,8 @@ reasons and lengths only. See [`docs/decisions/0006-report.md`](../../docs/decis
 ## Anonymous counts
 
 With `METRICS_ENABLED=true` and a `DATABASE_URL`, the server counts per day (UTC), case and
-language: sessions started, chat turns, sessions the client ended, reports (by turns, with the
+language: sessions started, chat turns, sessions the client ended, mid-session notes (by turns),
+reports (by turns, with the
 session length the app sends as `durationSec`, also in five length buckets), failed reports,
 👍/👎, reports by reason, and errors by code (not 401 or 429: anyone could trigger those). One table, `daily_counts`; no text, no invite code, no IP, no id of any kind.
 Writes are fire and forget: a failed write is one `count failed` log line, the request goes on.

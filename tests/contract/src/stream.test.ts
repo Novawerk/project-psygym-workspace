@@ -47,6 +47,19 @@ describe.skipIf(env.expectModelUnavailable)("POST /supervision, any shape of ses
   });
 });
 
+describe.skipIf(env.expectModelUnavailable)("POST /supervision, mode", () => {
+  // "final" (or no mode) is the full report; "live" is short mid-session notes, same frames.
+  it.each(["final", "live"])("mode %s → 200, turn_start → text_delta* → turn_end", async (mode) => {
+    const body = { ...(await validBody("zh", conversation(5))), mode };
+    const res = await call("/supervision", { body });
+    expect(res.status, await peek(res)).toBe(200);
+    const r = await readStream(res, env.streamTimeoutMs);
+    expect(frameProblems(r, { sessionEnd: false })).toEqual([]);
+    expect(r.frames[r.frames.length - 1]).toMatchObject({ type: "turn_end" });
+    expect(joinedText(r).trim().length).toBeGreaterThan(0);
+  });
+});
+
 describe.skipIf(env.expectModelUnavailable)("POST /supervision, durationSec (optional, 0–7200 whole seconds)", () => {
   // A valid value is taken; anything else is ignored, never a 400. It never changes the report.
   it.each([

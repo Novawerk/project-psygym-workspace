@@ -17,7 +17,8 @@ longer holds; 0008 adds pseudonymous active-account records that rotate daily an
   | `chat_turn` | a `/chat` turn ends with `turn_end` |
   | `session_ended_by_client` | a `/chat` turn carries `session_end` (a repeat after the end counts again; the app locks the input, so this is rare) |
   | `report_generated` | a `/supervision` stream ends with `turn_end`; dim = turns in the session (1–5, 6–15, 16–30, 31+); duration from `durationSec` |
-  | `report_failed` | a `/supervision` stream ends with an error frame |
+  | `report_failed` | a `/supervision` stream (the final report) ends with an error frame |
+  | `live_supervision` | a `/supervision` stream with `mode: "live"` ends with `turn_end`; dim = turns so far (1–5, 6–15, 16–30, 31+). A failed one is only `error`/`stream_error`; it never counts as a report or a duration. |
   | `session_duration` | with `report_generated`, when the app sent `durationSec`; dim = 0–5, 5–10, 10–20, 20–40, 40+ minutes |
   | `feedback` | `/feedback`; dim = up / down |
   | `user_report` | `/report`; dim = reason |

@@ -11,7 +11,8 @@ export const METRICS = [
   "chat_turn", // a /chat turn that ended with turn_end
   "session_ended_by_client", // a /chat stream that carried session_end
   "report_generated", // a /supervision stream that ended with turn_end; dim = turn bucket
-  "report_failed", // a /supervision stream that ended with an error frame
+  "report_failed", // a /supervision stream (final report) that ended with an error frame
+  "live_supervision", // a /supervision stream with mode "live" that ended with turn_end; dim = turn bucket
   "session_duration", // with report_generated, when the app sent durationSec; dim = length bucket
   "feedback", // dim = up | down
   "user_report", // dim = reason

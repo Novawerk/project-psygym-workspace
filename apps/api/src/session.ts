@@ -11,7 +11,10 @@ const LANGUAGE: Record<Locale, string> = {
 
 const REPORT_LANGUAGE: Record<Locale, string> = {
   zh: "用简体中文写报告。引用原话用「」，保留原文。不要写 [7] 这样的消息编号。",
-  en: "Write the report in English. Quote the counselor's words as they were said, in “”. Never write message numbers such as [7].",
+  en:
+    "Write the whole report in English: headings, explanations and the line after “Try instead:”. " +
+    "Only a word-for-word quote keeps its original words. Quote the counselor's or the client's words exactly as they were said, in “”. " +
+    "Never use 「」 or 可以换成, and never write message numbers such as [7].",
 };
 
 const SPEAKER: Record<Locale, { counselor: string; client: string }> = {
@@ -87,6 +90,34 @@ export function supervisorRequest(prompts: Prompts, c: Case, locale: Locale, mes
     temperature: SUPERVISOR_TEMPERATURE,
   };
 }
+
+/**
+ * Mid-session notes (mode "live"): the same transcript, read so far, with prompts/supervisor-live.md.
+ * No case text either. A few lines, no headings, no AI line (the app writes that).
+ */
+export function liveSupervisorRequest(prompts: Prompts, c: Case, locale: Locale, messages: Message[]): Omit<ModelRequest, "signal"> {
+  const system = [prompts.supervisorLive, "## 督导标准", prompts.rubrics[c.school], "## 语言", LIVE_LANGUAGE[locale]].join("\n\n");
+  const names = SPEAKER[locale];
+  const transcript = messages.map((m, i) => `[${i + 1}] ${names[m.role]}：${escapeTranscript(m.text)}`).join("\n\n");
+  const intro =
+    locale === "zh"
+      ? "以下是这场练习到目前为止的记录，会谈还在进行。请给几句中途提示。"
+      : "Here is the practice session so far; it is still going on. Give a few mid-session notes.";
+  return {
+    system,
+    messages: [{ role: "user", text: `${intro}\n\n<transcript>\n${transcript}\n</transcript>` }],
+    tools: [],
+    temperature: SUPERVISOR_TEMPERATURE,
+  };
+}
+
+const LIVE_LANGUAGE: Record<Locale, string> = {
+  zh: "用简体中文写。引用原话用「」，保留原文。不要写 [7] 这样的消息编号。",
+  en:
+    "Write every word in English: the notes, the explanations and the line after “Try instead:”. " +
+    "Only a word-for-word quote keeps its original words. Quote the counselor's or the client's words exactly as they were said, in “”. " +
+    "Never use 「」 or 可以换成, and never write message numbers such as [7].",
+};
 
 /** Message text can't open or close the <transcript> block: the tags are escaped. */
 export function escapeTranscript(text: string): string {

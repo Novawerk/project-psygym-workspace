@@ -134,6 +134,8 @@ export function loadCases(dir = path.join(contentDir(), "cases"), warn: Warn = c
 export interface Prompts {
   client: string;
   supervisor: string;
+  /** Mid-session notes (/supervision with mode "live"). */
+  supervisorLive: string;
   /** Supervision rubric per school, without its frontmatter. */
   rubrics: Record<CaseSummary["school"], string>;
 }
@@ -145,6 +147,7 @@ export function loadPrompts(dir = promptsDir(), content = contentDir()): Prompts
   return {
     client: read(path.join(dir, "client.md")),
     supervisor: read(path.join(dir, "supervisor.md")),
+    supervisorLive: read(path.join(dir, "supervisor-live.md")),
     rubrics: { cbt: stripFrontmatter(read(path.join(content, "rubrics/cbt.md"))) },
   };
 }

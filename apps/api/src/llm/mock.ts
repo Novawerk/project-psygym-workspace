@@ -1,7 +1,7 @@
 // Copied from Novawerk/agent-starter (MIT), apps/agent/src/llm/mock.ts at fcbd91c.
 // https://github.com/Novawerk/agent-starter — changes: import paths (.js), demo replies for 聆镜
 // (the mock report quotes the counselor's last message, to demo acceptance item C2;
-// "#end" in a counselor message makes the mock client end the session).
+// "#end" in a counselor message makes the mock client end the session; mode "live" gets short notes).
 // A fake model that needs no API key: for frontend work, tests, and demoing the whole path
 // (streamed text + tool calls + memory updates).
 import {
@@ -68,7 +68,18 @@ export class MockProvider implements ModelProvider {
  * from the language line src/session.ts appends.
  */
 const demoStep: MockStep = (req) => {
-  const en = /Speak English|Write the report in English/.test(req.system);
+  // The language line src/session.ts appends.
+  const en = /Speak English|in English/.test(req.system);
+  // Mid-session notes (/supervision mode "live"): no headings, at most 3 items, no AI line.
+  if (req.system.includes("<!-- psygym:supervisor-live -->")) {
+    const quote = lastCounselorLine(req);
+    return {
+      text: en
+        ? `${quote ? `- (mock) You said “${quote}”, which keeps the client talking.\n` : ""}- (mock) Next, you could name the feeling before the next question. Try instead: What was that like for you?\n`
+        : `${quote ? `- （mock）你说「${quote}」，好在让来访者接着说。\n` : ""}- （mock）接下来可以先说出对方的感受，再问下一个问题。可以换成：那对你来说是什么感觉？\n`,
+      toolCalls: [],
+    };
+  }
   if (req.system.includes("<!-- psygym:supervisor -->")) {
     const quote = lastCounselorLine(req);
     // Same shape as prompts/supervisor.md asks for: problem → quote → alternative, the
