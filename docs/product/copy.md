@@ -217,5 +217,7 @@ key 沿用 App 现有命名（`home_*`、`cases_*`、`practice_*`、`supervision
 | privacy_a_feedback | 只有你在报告页点了 👍 / 👎 时才发。评价和你写的那句话会转到我们内部的 Slack 频道（第三方服务），不进数据库；还会带上病例编号和界面语言。那句话最多 500 字。不收对话内容。 | Only when you tap 👍 / 👎 on a report. Your rating and the line you write go to our internal Slack channel (a third-party service), not a database, together with the case id and interface language. The line is up to 500 characters. We never receive the conversation. |
 | privacy_q_collect | 你们收集什么？ | What do you collect? |
 | privacy_a_collect | 邀请码：每次请求会发给我们的服务器，用来校验和限流，服务器不保存邀请码。你选的界面语言：每次请求也会带上，用来决定来访者和报告用哪种语言。没有账号，不收集姓名、手机号、位置。 | Your invite code: sent to our server with each request, to check it and limit load; our server doesn't store it. Your interface language: also sent with each request, so the client and the report use it. No account. We don't collect your name, phone number or location. |
+| privacy_q_stats | 我们统计什么？ | What do you count? |
+| privacy_a_stats | 我们在服务器上按天统计匿名的数字，按病例和界面语言分开：开始了几场会谈、来访者主动结束了几场、写了几份报告、每场几轮、一场多长、出了几次错、收到几次 👍/👎 和举报。只有数字，不含对话，不含任何能认出你的信息。 | On our server we count anonymous numbers per day, split by case and interface language: sessions started, sessions the client ended, reports written, turns per session, how long a session lasts, errors, and 👍/👎 ratings and reports received. Only numbers: no conversation, nothing that could identify you. |
 | privacy_q_real | 我能输入真实来访者的信息吗？ | Can I enter real client information? |
 | privacy_a_real | 不能。请只把它当练习。 | No. Please use it for practice only. |

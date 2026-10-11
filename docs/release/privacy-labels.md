@@ -24,6 +24,26 @@
 - main 上 App 还**没有**调用 `/feedback`，也还**没有**本机练习记录。下面的申报按功能上线以后的样子写。如果先发的 build 里没有这两项，申报可以少写，但不能多出代码里没有的东西。
 - `PrivacyInfo.xcprivacy` 在 #43 里改成申报 Other User Content，和下面的 Apple 申报一致。
 
+## 匿名统计上线后要改的地方（请发布成员核对）
+
+我们 2026-10-11 定了：后端按天统计匿名次数，App 在 `/supervision` 里多带一个 `durationSec`（一场多长，整数秒）；只存汇总，存在 Neon（法兰克福）。见 [admin.md](../product/admin.md) 第 1、5 节。上线后，下面这些地方要改。我们给的是建议，以提交时商店的定义为准：
+
+1. **「核实过的事实」表**：
+   - 第 10 行补上 `/supervision` 的 `durationSec`。
+   - 第 15 行补上「服务端把匿名汇总计数写进数据库（Neon 法兰克福），不存单场记录」。
+   - 第 12 行「没有分析 SDK」仍然成立（统计在我们自己的服务器上做），但要加一句说明。
+2. **Apple · App Privacy**：
+   - 很可能要加 **Usage Data → Product Interaction**：不关联用户身份，不用于追踪，用途 **Analytics**。理由：会谈时长和次数离开了设备，并且被保存。
+   - 原来「Usage Data 不收集」那句要改。
+   - 第 36 行「Analytics 不勾」的理由要重写，因为现在有服务器端统计了。
+3. **Privacy manifest（`PrivacyInfo.xcprivacy`）**：对应加一项 `NSPrivacyCollectedDataTypeProductInteraction`（Linked: false, Tracking: false, Purposes: Analytics）。
+4. **Google Play · Data safety**：
+   - 很可能要加 **App activity → App interactions**：收集，不共享，可选还是必需按实际（`durationSec` 是 App 自动发的，算必需），用途 **Analytics**。
+   - 「临时处理」选否，因为汇总会保存。
+5. **如果 D-A1 选了按邀请码统计**：数据库会存邀请码的哈希。第 43 行「邀请码：服务端不保存……不算收集」要重新判断。我们的看法是：码按批次发，不对应个人，仍不算个人身份信息。最终请按商店定义核对。
+6. **错误计数算不算 Diagnostics**：我们按错误码统计出错次数（`model_unavailable`、`rate_limited` 等），不收崩溃日志、不收设备信息。Apple 的 Diagnostics 和 Google 的「App info and performance」是否要因此申报，请发布按当时商店的定义判断。我们倾向不算（只是服务端按错误码计数，不是从设备收集诊断数据），但以商店说明为准。
+7. **隐私政策**（[privacy-policy.md](./privacy-policy.md)）已经加了「使用统计」一行，第三方加了 Neon。申报和政策要一致。
+
 ## Apple · App Privacy（App Store Connect → App 隐私）
 
 Apple 的「收集」指：数据离开设备，并且我们或第三方能在超过实时处理所需的时间里接触到它。对话本身我们不留，但会转给第三方模型服务，它可能按自己的政策保留。所以我们**如实申报**。
@@ -41,7 +61,7 @@ Apple 的「收集」指：数据离开设备，并且我们或第三方能在�
   - Health & Fitness 不选：来访者是虚构的，对话不是用户本人的健康数据。我们也在 App 里要求用户不输入真实来访者信息。
   - Sensitive Info 不选，理由同上。审核员如果追问，按 [review-notes.md](./review-notes.md) 解释。
 - 邀请码：服务端不保存，只用于当次请求的鉴权和内存限流，不算收集。
-- 只存在设备上、从不发出的数据（练习记录、语言、「关于你」）：不算收集，不用申报。
+- 只存在设备上、从不发出的数据（练习记录、「关于你」）：不算收集，不用申报。界面语言会随每个请求发出，不在这一条里。
 
 **Tracking：** 否。`NSPrivacyTracking = false`，没有追踪域名。
 
