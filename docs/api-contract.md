@@ -79,9 +79,10 @@ way.
   Markdown, three sections: what went well, what to improve, what to practise next; the AI line
   last.
 - `mode: "live"`: short notes mid-session, from the conversation so far. No headings; 1–3 `- `
-  items in this order: a safety reminder (only when the client showed a risk cue and the
-  counselor hasn't asked about safety yet), one thing that went well (left out if there's none
-  yet), one thing to try next with `可以换成：` / `Try instead:` and a line to say. About 150–250
+  items, the first three of these that apply, in this order: a safety reminder (the client
+  showed a risk cue and the counselor hasn't asked about safety yet), a harmful remark by the
+  counselor (quoted, with a line to say instead), one thing that went well, one thing to try
+  next with `可以换成：` / `Try instead:` and a line to say. About 150–250
   characters (zh) or 100–170 words (en). **No AI line**: the app writes it. "At least 3 turns"
   and "at most 5 per session" are the app's rules; the server doesn't check them. `live` ignores
   `durationSec` and shares the rate limit with `final`.
