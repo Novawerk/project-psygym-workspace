@@ -41,7 +41,8 @@
    - 很可能要加 **App activity → App interactions**：收集，不共享，可选还是必需按实际（`durationSec` 是 App 自动发的，算必需），用途 **Analytics**。
    - 「临时处理」选否，因为汇总会保存。
 5. **如果 D-A1 选了按邀请码统计**：数据库会存邀请码的哈希。第 43 行「邀请码：服务端不保存……不算收集」要重新判断。我们的看法是：码按批次发，不对应个人，仍不算个人身份信息。最终请按商店定义核对。
-6. **隐私政策**（[privacy-policy.md](./privacy-policy.md)）已经加了「使用统计」一行，第三方加了 Neon。申报和政策要一致。
+6. **错误计数算不算 Diagnostics**：我们按错误码统计出错次数（`model_unavailable`、`rate_limited` 等），不收崩溃日志、不收设备信息。Apple 的 Diagnostics 和 Google 的「App info and performance」是否要因此申报，请发布按当时商店的定义判断。我们倾向不算（只是服务端按错误码计数，不是从设备收集诊断数据），但以商店说明为准。
+7. **隐私政策**（[privacy-policy.md](./privacy-policy.md)）已经加了「使用统计」一行，第三方加了 Neon。申报和政策要一致。
 
 ## Apple · App Privacy（App Store Connect → App 隐私）
 
@@ -60,7 +61,7 @@ Apple 的「收集」指：数据离开设备，并且我们或第三方能在�
   - Health & Fitness 不选：来访者是虚构的，对话不是用户本人的健康数据。我们也在 App 里要求用户不输入真实来访者信息。
   - Sensitive Info 不选，理由同上。审核员如果追问，按 [review-notes.md](./review-notes.md) 解释。
 - 邀请码：服务端不保存，只用于当次请求的鉴权和内存限流，不算收集。
-- 只存在设备上、从不发出的数据（练习记录、语言、「关于你」）：不算收集，不用申报。
+- 只存在设备上、从不发出的数据（练习记录、「关于你」）：不算收集，不用申报。界面语言会随每个请求发出，不在这一条里。
 
 **Tracking：** 否。`NSPrivacyTracking = false`，没有追踪域名。
 
