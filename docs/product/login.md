@@ -129,12 +129,17 @@ O1 欢迎 → O2 先说清楚（勾选同意）→ O3 准备开始（只选语�
 | login_code_resend_in | 重新发送（%1$d 秒） | Send again (%1$d s) |
 | login_code_resent | 新的验证码已发送。 | We sent a new code. |
 | login_code_invalid | 验证码不对或已失效。可以重新输入，或者重新发送一个。 | That code is wrong or no longer works. Try again, or send a new one. |
+| login_code_used_up | 这个验证码已经试了 5 次，请重新发送一个。 | You've tried this code 5 times. Send a new one. |
 
 服务器对「输错、过期、用过、输错 5 次」只回一个错误（`invalid_code`），所以 App 只显示这一句，不显示「还能试几次」。
+
+**App 自己计数：** App 记住当前这个验证码连续收到了几次 `invalid_code`（L3 收到的 `invite_invalid` 也算一次）。满 5 次以后，这个码在服务器上已经失效：App 不再允许提交，输入框旁只留「重新发送」，提示改成 `login_code_used_up`。重新发送后计数清零。L3 的「次数用完」也按这个计数判断。
 
 **邮件发不出去时：** 「发送验证码」总是立即成功，邮件在之后才发，所以发信失败时 App 收不到任何错误。用户没收到邮件，就点「重新发送」，L2 上「没收到？检查一下垃圾邮件。」这一行就是为此准备的。
 
 ### L3 输入邀请码（只有新邮箱）
+
+**邀请码的格式：** 注册用的邀请码至少 12 位随机字符，只用不易混的字母和数字（去掉 0/O、1/I/L）。显示和发给用户时分成 3 段（例如 `k7mp-x2qr-9wtd`）。输入时不区分大小写，短横线和空格可输可不输，App 提交前统一去掉短横线和空格、转小写。
 
 **布局：**
 
@@ -146,8 +151,9 @@ O1 欢迎 → O2 先说清楚（勾选同意）→ O3 准备开始（只选语�
 │ 发放。                       │
 │                            │
 │ ┌────────────────────────┐ │
-│ │ 邀请码                    │ │
+│ │ xxxx-xxxx-xxxx           │ │  ← 不区分大小写，短横线可输可不输
 │ └────────────────────────┘ │
+│ 12 位，不区分大小写；短横线可输可不输。 │
 │ （错误提示）                   │
 │                            │
 │ [        完成注册          ]   │
@@ -159,7 +165,8 @@ O1 欢迎 → O2 先说清楚（勾选同意）→ O3 准备开始（只选语�
 |-----|------|---------|
 | login_invite_title | 还差一步 | One more step |
 | login_invite_body | 测试期间需要邀请码。邀请码由聆镜团队发放。 | We need an invite code during testing. The 聆镜 (Lingjing) team hands them out. |
-| login_invite_hint | 邀请码 | Invite code |
+| login_invite_hint | xxxx-xxxx-xxxx | xxxx-xxxx-xxxx |
+| login_invite_format | 12 位，不区分大小写；短横线可输可不输。 | 12 characters, not case-sensitive. Dashes are optional. |
 | login_invite_submit | 完成注册 | Finish signing up |
 | login_invite_invalid | 这个邀请码不对，或者已经作废了。（服务器回 `403 invite_invalid`） | This invite code isn't valid or has been turned off. |
 | login_invite_code_used_up | 尝试次数用完了，请回到上一步重新发送验证码。 | Too many tries. Go back and send a new code. |
@@ -400,7 +407,8 @@ O1 欢迎 → O2 先说清楚（勾选同意）→ O3 准备开始（只选语�
 - **地址：** `novawerk.io/psygym/delete-account`。由总控另派人在 `apps/web` 里做。
 - **语言：** 英文（novawerk.io 只有英文），App 名写「PSYGYM」。
 - **内容：**
-  - 这是 PSYGYM（Novawerk 和 聆镜团队做的心理咨询练习 App）的账号删除说明。
+  - 页面全英文，不出现中文，团队名写「the Lingjing team」。
+  - This page explains how to delete a PSYGYM account (PSYGYM is a counseling practice app made by Novawerk and the Lingjing team).
   - 最快的办法：在 App 里 Me → Delete account。
   - 不能用 App 时：用注册邮箱发邮件到 info@novawerk.io，主题写「Delete my PSYGYM account」。我们人工处理，**30 天内删除**，删完回信确认。
   - 删除什么：邮箱、注册时间、邀请码批次、登录会话。不删什么：已经汇总的统计数字（不带账号）；Slack 里的反馈和举报（不带账号，认不出是谁的）。
