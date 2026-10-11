@@ -13,8 +13,7 @@ import io.novawerk.psygym.di.HistoryDir
 import io.novawerk.psygym.domain.screenshot.ScreenshotModeHolder
 import io.novawerk.psygym.screenshot.ScreenshotHooks
 import io.novawerk.psygym.screenshot.ScreenshotLaunch
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import io.novawerk.psygym.di.create
 import okio.Path.Companion.toPath
 
@@ -50,7 +49,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val screenshot = ScreenshotHooks.from(intent)
         val component = appComponent(this, screenshot)
-        screenshot?.language?.let { lang -> lifecycleScope.launch { component.settingsRepository.setLanguage(lang) } }
+        // Screenshot mode (debug builds only): set the language before the first frame, so the
+        // UI never starts in the previous language and switches mid-launch.
+        screenshot?.language?.let { lang -> runBlocking { component.settingsRepository.setLanguage(lang) } }
         setContent { App(component) }
     }
 }

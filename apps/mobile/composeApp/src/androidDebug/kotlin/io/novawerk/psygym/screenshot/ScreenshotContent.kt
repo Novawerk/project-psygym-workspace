@@ -107,22 +107,21 @@ internal object ScreenshotContent {
         Message(Role.Client, "…Okay. I can try."),
     )
 
+    // Short enough that all three parts and the closing line fit one screen.
     private val LIN_REPORT_ZH = """
         ## 做得好的地方
 
-        - 你说「听起来这段时间你过得挺累的。」先回应来访者的感受，再问时间线，有助于建立关系。
-        - 你说「“我又搞砸了”这个念头出现的时候，你有多相信它？如果 0 到 100 分的话。」把自动思维说具体，并请来访者打分，是识别自动思维的扎实做法。
+        - 你说「听起来这段时间你过得挺累的。」先回应感受，再问时间线，有助于建立关系。
+        - 你说「你有多相信它？如果 0 到 100 分的话。」把自动思维说具体，并请来访者打分。
 
         ## 需要改进的地方
 
-        - 你说「第二次面试没过的那天，你心里冒出来的第一个念头是什么？」时机合适，但在这之前还没有和来访者一起设定这次会谈的议程。可以换成：「在我们深入之前，今天你最希望我们一起聊些什么？」
-        - 你说「我们可以一起看看，支持和不支持这个想法的证据分别有哪些，你愿意试试吗？」时，紧接在反映之后，一轮里放了两件事，来访者的回应变短了。可以换成先停在反映上：「这两种想法放在一起，是什么感觉？」
+        - 你说「第二次面试没过的那天，你心里冒出来的第一个念头是什么？」之前，还没有和来访者一起设定议程。可以换成：「今天你最希望我们一起聊些什么？」
 
         ## 下次练什么
 
-        1. 会谈开始时，先和来访者共同设定议程。
-        2. 提出练习之前，多停留一轮反映感受，确认来访者跟上了。
-        3. 用苏格拉底式提问，检验一个自动思维的证据。
+        1. 会谈开始时，先共同设定议程。
+        2. 用苏格拉底式提问，检验一个自动思维的证据。
 
         这份反馈由 AI 生成，仅供练习参考。
     """.trimIndent()
@@ -130,19 +129,17 @@ internal object ScreenshotContent {
     private val LIN_REPORT_EN = """
         ## What went well
 
-        - You said "It sounds like these past months have been exhausting." You met her feelings first, then asked about the timeline, which builds rapport.
-        - You said "When the thought 'I've messed up again' shows up, how much do you believe it, from 0 to 100?" Pinning the automatic thought down and asking for a rating is a solid way to spot automatic thoughts.
+        - You said "It sounds like these past months have been exhausting." You met her feelings before asking for facts.
+        - You said "how much do you believe it, from 0 to 100?" Rating the thought makes it concrete.
 
         ## What to improve
 
-        - You said "On the day you heard about that interview, what was the first thought that went through your mind?" Good timing, but you hadn't set an agenda for the session together yet. Try instead: "Before we go deeper, what would you most like us to talk about today?"
-        - You said "Shall we look at the evidence for and against that thought together?" straight after a reflection, two things in one turn, and her answer got shorter. Try instead staying with the reflection first: "What is it like to hold both of those thoughts?"
+        - Before you said "what was the first thought that went through your mind?", you hadn't set an agenda together. Try instead: "What would you most like to talk about today?"
 
         ## What to practise next
 
-        1. Set an agenda together at the start of the session.
-        2. Stay with a reflection for one more turn before suggesting an exercise.
-        3. Use Socratic questions to test the evidence for one automatic thought.
+        1. Set an agenda together at the start.
+        2. Test the evidence for one automatic thought.
 
         This feedback is AI-generated, for practice only.
     """.trimIndent()

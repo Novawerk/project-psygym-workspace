@@ -19,7 +19,10 @@ class ScreenshotContentTest {
         val quotes = report.lines().filter { it.contains(said) }.mapNotNull { line ->
             quote.find(line.substringAfter(said))?.groupValues?.get(1)
         }
-        assertEquals(4, quotes.size, "every item quotes the counselor")
+        // "What to improve" quotes too, after "Before you said" / 你说 (counted above in zh).
+        val improveQuote = Regex("Before you said \"(.*?)\"").find(report)?.groupValues?.get(1)
+        improveQuote?.let { assertTrue(counselor.contains(it), "not word for word: $it") }
+        assertTrue(quotes.size >= 3, "items quote the counselor")
         quotes.forEach { assertTrue(counselor.contains(it), "not word for word: $it") }
         headings.forEach { assertTrue(report.contains("## $it"), "missing section: $it") }
         assertEquals(closing, report.lines().last { it.isNotBlank() })
@@ -37,8 +40,8 @@ class ScreenshotContentTest {
     @Test
     fun english() = check(
         ApiLocale.En,
-        said = "You said \"",
-        quote = Regex("^(.*?)\"(?: |$)"),
+        said = "said \"",
+        quote = Regex("^(.*?)\"(?=[\\s,.]|$)"),
         headings = listOf("What went well", "What to improve", "What to practise next"),
         closing = "This feedback is AI-generated, for practice only.",
     )
