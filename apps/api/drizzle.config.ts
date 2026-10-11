@@ -18,7 +18,7 @@ if (migrating && !url) {
 
 export default defineConfig({
   dialect: "postgresql",
-  schema: "./src/metrics/schema.ts",
+  schema: ["./src/metrics/schema.ts", "./src/auth/schema.ts"],
   out: "./drizzle",
   dbCredentials: { url: url ?? "" },
 });

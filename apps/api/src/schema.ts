@@ -39,7 +39,14 @@ export const SupervisionBody = base.extend({
     .transform((v) => (typeof v === "number" && Number.isInteger(v) && v >= 0 && v <= MAX_DURATION_SEC ? v : undefined)),
 });
 
-export type ErrorCode = "invalid_request" | "invite_required" | "case_not_found" | "rate_limited" | "model_unavailable";
+export type ErrorCode =
+  | "invalid_request"
+  | "invite_required"
+  | "case_not_found"
+  | "rate_limited"
+  | "model_unavailable"
+  | "session_expired"
+  | "update_required";
 
 /** Frames on the wire (data-only SSE, one JSON object each). */
 export type StreamEvent =

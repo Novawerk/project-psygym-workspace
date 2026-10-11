@@ -1,10 +1,9 @@
-# 0008 — Sign-in by email code (proposed)
+# 0008 — Sign-in by email code
 
-Date: 2026-10-11. Status: **proposed**, for review by the lead and mobile before any code. The
-product spec is [`product/login.md`](../product/login.md); the contract part is in
-[`api-contract.md`](../api-contract.md#sign-in-proposed-not-live-yet). Backend and product
-agreed the details together (2026-10-11); where this file and the product spec differ, say so
-in review.
+Date: 2026-10-11. Status: **accepted**; built behind `AUTH_MODE` (off by default). The product
+spec is [`product/login.md`](../product/login.md); the contract part is in
+[`api-contract.md`](../api-contract.md#sign-in). Backend and product agreed the details together
+(2026-10-11).
 
 **Supersedes** one line of ADR 0007: "no id of any kind". With sign-in on, the database also
 holds pseudonymous active-account records (below). They are pseudonymous, not anonymous: with

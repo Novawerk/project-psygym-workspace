@@ -20,7 +20,7 @@ in a PR that touches both sides, or not at all.
   anywhere beyond that is one passage the user reports with `POST /report`.
 - Header `X-Invite-Code: <code>` on every request. The server checks it only when
   `INVITE_CODES` is set; otherwise any value (or none) passes. With sign-in on, see
-  [Sign-in](#sign-in-proposed-not-live-yet): a session token replaces the invite code.
+  [Sign-in](#sign-in): a session token replaces the invite code.
 
 ## Models (shared shapes)
 
@@ -133,11 +133,11 @@ Same invite code check; same rate limit, its own bucket. Same delivery as `/feed
 either way, best effort, dropped when Slack isn't set up. Errors: `400 invalid_request`,
 `401 invite_required`, `404 case_not_found`, `429 rate_limited`.
 
-## Sign-in (proposed, not live yet)
+## Sign-in
 
-> **Draft for review.** Nothing below is live. The server keeps working exactly as described
-> above until `AUTH_MODE` is set. Product spec: [`product/login.md`](./product/login.md).
-> Decisions and storage: [`decisions/0008-sign-in.md`](./decisions/0008-sign-in.md).
+> **Built, off by default.** The server keeps working exactly as described above until
+> `AUTH_MODE=on`. Product spec: [`product/login.md`](./product/login.md). Decisions and
+> storage: [`decisions/0008-sign-in.md`](./decisions/0008-sign-in.md).
 
 Email and a one-time code; no passwords. The code arrives by email from
 `no-reply@novawerk.io`. The invite code is asked once, when an account is created.
@@ -285,10 +285,14 @@ The app shows a friendly message for each code, in the current language.
 
 ## Changes
 
+- **sign-in implementation (this PR)** — the Sign-in section is built, behind `AUTH_MODE` (off by
+  default: no change). Backend first; the app follows in its own PR, as with #62 and #70. With
+  `AUTH_MODE` off, `/auth/*` and `/me` are `404 not_found` even when `INVITE_CODES` is set.
+
 - **#70** — `POST /supervision` takes an optional `mode` (`"final"`,
   the default, or `"live"` for mid-session notes). Backend first; the app follows in a later PR,
   as allowed by the lead (old apps send no `mode` and get the report as before).
-- **(draft, #64)** — Sign-in: `AUTH_MODE`, `AUTH_REQUIRED_FROM`, `/auth/start`, `/auth/verify`,
+- **#64** — Sign-in contract (draft): `AUTH_MODE`, `AUTH_REQUIRED_FROM`, `/auth/start`, `/auth/verify`,
   `/auth/logout`, `GET /me`, `DELETE /me`, Bearer tokens, the move from invite codes, new error
   codes, `auth` in `/health`; Basics now mention pseudonymous active records. Proposed only;
   not live until the implementation PR, which touches both sides.

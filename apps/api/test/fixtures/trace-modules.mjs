@@ -13,4 +13,6 @@ registerHooks({
 process.on("exit", () => {
   const db = [...seen].filter((u) => /node_modules\/(?:\.pnpm\/[^/]+\/node_modules\/)?(?:drizzle-orm|pg|pg-pool|pg-protocol)\//.test(u));
   process.stdout.write(`DB_MODULES ${JSON.stringify(db.length)}\n`);
+  const auth = [...seen].filter((u) => /\/src\/auth\/(?!types)/.test(u));
+  process.stdout.write(`AUTH_MODULES ${JSON.stringify(auth.length)}\n`);
 });

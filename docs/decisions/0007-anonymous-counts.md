@@ -22,6 +22,8 @@ longer holds; 0008 adds pseudonymous active-account records that rotate daily an
   | `session_duration` | with `report_generated`, when the app sent `durationSec`; dim = 0–5, 5–10, 10–20, 20–40, 40+ minutes |
   | `feedback` | `/feedback`; dim = up / down |
   | `user_report` | `/report`; dim = reason |
+  | `auth` | (sign-in on) a `/chat` request; dim = `session` or `invite`, how it came in |
+  | `active_day`, `active_week` | (sign-in on) active accounts, rolled up from pseudonymous records when a day or ISO week is over (ADR 0008); no case, no language |
   | `error` | dim = error code: `invalid_request`, `case_not_found`, `model_unavailable`, `stream_error`, `internal`. No case, no language. Not `invite_required` or `rate_limited`: a 401 comes before the rate limit and a 429 comes from it, so counting them would let anyone make us write to the database without end. |
 
   A client that disconnects mid-stream isn't counted. Before anything is stored, a case id

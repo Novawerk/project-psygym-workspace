@@ -51,7 +51,7 @@ Blank values count as unset. `apps/api/.env` is read on start; shell variables w
 | `ANTHROPIC_EFFORT` | `medium` | Anthropic only: `low` … `max`. |
 | `CLIENT_LLM_PROVIDER` / `_MODEL` / `_BASE_URL` | — | Override for the AI client. |
 | `SUPERVISOR_LLM_PROVIDER` / `_MODEL` / `_BASE_URL` | — | Override for the AI supervisor. |
-| `INVITE_CODES` | — | Comma-separated. When set, every request but `/health` needs `X-Invite-Code` with one of them. |
+| `INVITE_CODES` | — | Comma-separated, each `code` or `code:batch`. Codes of 12+ characters also let a new account sign up (sign-in on). When set, every request but `/health` needs `X-Invite-Code` with one of them. |
 | `RATE_LIMIT_MAX` | `30` | `/chat` + `/supervision` requests per key per window; `/feedback` and `/report` each have their own bucket of the same size. Key: the invite code, else the IP. |
 | `RATE_LIMIT_WINDOW_SEC` | `60` | Window length. Over the limit → 429 `rate_limited` with `Retry-After`. |
 | `FEEDBACK_SLACK_WEBHOOK_URL` | — | Slack incoming webhook (https) for `POST /feedback` and `POST /report`. Unset → feedback and reports are dropped (still 204) with a `feedback dropped: not configured` / `report dropped: not configured` log line. |
@@ -59,6 +59,14 @@ Blank values count as unset. `apps/api/.env` is read on start; shell variables w
 | `DATABASE_URL` | — | Postgres for the counts (Neon Frankfurt; Vercel injects it). |
 | `DATABASE_URL_UNPOOLED` | — | Neon's direct URL; only `db:migrate` uses it (falls back to `DATABASE_URL`). |
 | `ADMIN_STATS_TOKEN` | — | Bearer token for `GET /admin/stats`. Unset → the endpoint answers 404. |
+| `AUTH_MODE` | `off` | `on` turns sign-in on (needs `DATABASE_URL` and `AUTH_SECRET`). Off: nothing changes, no auth code loads. |
+| `AUTH_REQUIRED_FROM` | — | UTC date-time (ISO 8601). From then on a request needs a session token (`426 update_required` without). Unset: `optional`. |
+| `AUTH_SECRET` | — | 32+ characters. Key for code MACs and rate-counter keys. |
+| `METRICS_ID_SECRET` | — | 32+ characters. Key for the pseudonymous active-account records. Unset: no active counts. |
+| `RESEND_API_KEY` | — | Sends the code email. Unset: no email (a log line says so). |
+| `AUTH_EMAIL_FROM` | `聆镜 PSYGYM <no-reply@novawerk.io>` | The code email's sender. |
+| `REVIEW_LOGIN_EMAIL`, `REVIEW_LOGIN_CODE` | — | The store reviewer: one address, one fixed 6-digit code. Clear both after review. |
+| `ADMIN_TOKEN` | — | Bearer token for `POST /admin/accounts/delete`. Unset → 404. |
 | `PORT` | `8787` | Local server only. Port 8787 is often taken by another project on our machines; pick a free one (`PORT=8790`). |
 
 A role with no provider, or no key for its provider, answers 503 `model_unavailable`. So does
@@ -141,6 +149,45 @@ reason and an optional note. It's the only request whose conversation text we pa
 passage (≤ 2000 characters) goes to the same private Slack channel as feedback, marked as a
 report, in plain_text. Our server stores nothing; Slack keeps the message. The log has ids,
 reasons and lengths only. See [`docs/decisions/0006-report.md`](../../docs/decisions/0006-report.md).
+
+## Sign-in
+
+Email and a one-time code, behind `AUTH_MODE` (off by default: the server behaves as before and a
+cold start loads no auth code). The contract is the Sign-in section of
+[`docs/api-contract.md`](../../docs/api-contract.md#sign-in); decisions and storage in
+[`docs/decisions/0008-sign-in.md`](../../docs/decisions/0008-sign-in.md).
+
+- `POST /auth/start`, `POST /auth/verify` (with `inviteCode` for a new account),
+  `POST /auth/logout`, `GET /me`, `DELETE /me`; `POST /admin/accounts/delete` for us.
+- We keep the email, the sign-up time, the invite batch and sessions (90 days from the last
+  use). Codes, tokens and IPs only as MACs or hashes. The log never has an email, a code, a token
+  or an IP.
+- With counting on too, active accounts per day and per ISO week, through pseudonyms that change
+  every day and every week; rolled up into `daily_counts` (`active_day`, `active_week`) and
+  deleted when the day or week is over.
+
+Locally, with the throwaway Postgres from "Anonymous counts" (migrated), and no Resend key, use
+the reviewer address to sign in:
+
+```bash
+LLM_PROVIDER=mock AUTH_MODE=on DATABASE_URL=postgres://psygym:psygym@127.0.0.1:55432/psygym \
+  AUTH_SECRET=$(openssl rand -hex 32) REVIEW_LOGIN_EMAIL=review@example.com REVIEW_LOGIN_CODE=246810 \
+  PORT=8790 pnpm dev
+curl -s localhost:8790/auth/verify -H 'Content-Type: application/json' -d '{"email":"review@example.com","code":"246810"}'
+```
+
+### Going live with sign-in
+
+1. Migrate (adds `drizzle/0001_sign_in.sql`), as in "Going live (once)" below.
+2. Set (Production): `AUTH_SECRET` and `METRICS_ID_SECRET` (each `openssl rand -hex 32`),
+   `RESEND_API_KEY`, `ADMIN_TOKEN`; new sign-up invite codes in `INVITE_CODES` (12+ random
+   characters, `code:batch`), next to the old ones.
+3. With the signed-in app: `AUTH_MODE=on`, redeploy. The start-up log says
+   `{"msg":"sign-in","enabled":true}`; `/health` says `"auth":"optional"`.
+4. About 14 days later, watching the `auth` counts (`session` vs `invite`): set
+   `AUTH_REQUIRED_FROM`, announce it, and remove the old 6-character codes before that time.
+5. Store review: set `REVIEW_LOGIN_EMAIL` and a new `REVIEW_LOGIN_CODE` per submission; clear
+   both afterwards.
 
 ## Anonymous counts
 
