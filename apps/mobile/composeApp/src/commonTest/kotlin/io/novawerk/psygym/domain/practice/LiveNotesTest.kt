@@ -118,4 +118,23 @@ class LiveNotesTest {
         assertFalse(n.writing)
         assertTrue(n.text.contains("接下来"))
     }
+
+    @Test
+    fun aFailedRewriteKeepsTheLastNotesAndTheDot() = runTest {
+        val n = notes()
+        assertFalse(n.hasContent, "nothing to show yet: the sheet stays closed")
+        n.open("c1", ApiLocale.Zh, transcript(3), 3)
+        advanceUntilIdle()
+        val good = n.text
+        failNext = true
+        n.open("c1", ApiLocale.Zh, transcript(4), 4)
+        advanceUntilIdle()
+        assertEquals(good, n.text)
+        assertEquals(good, n.shownText)
+        assertEquals(3, n.turn)
+        assertEquals(3, n.shownTurn)
+        assertTrue(n.hasNew(4), "the dot stays: turn 4 hasn't been looked at")
+        assertEquals(1, n.made)
+        assertTrue(n.hasContent)
+    }
 }

@@ -26,13 +26,25 @@ import kotlinx.coroutines.launch
  */
 class LiveNotes(private val api: PsygymApi, private val scope: CoroutineScope) {
 
-    /** The latest notes, Markdown "- " items. Empty until the first ones arrive. */
+    /** The latest notes that came back whole, Markdown "- " items. Empty until then. */
     var text by mutableStateOf("")
         private set
 
-    /** The turn the latest notes looked at; 0 = none yet. */
+    /** The turn [text] looked at; 0 = none yet. */
     var turn by mutableStateOf(0)
         private set
+
+    /** Notes being written now, and their turn. They replace [text] only once they come back whole. */
+    private var pending by mutableStateOf("")
+    private var pendingTurn by mutableStateOf(0)
+
+    /** What the sheet shows: the notes being written while writing, else the last good ones. */
+    val shownText: String get() = if (writing) pending else text
+
+    val shownTurn: Int get() = if (writing) pendingTurn else turn
+
+    /** Something to show: the sheet doesn't open empty (e.g. after the process was killed). */
+    val hasContent: Boolean get() = writing || text.isNotEmpty() || error != null
 
     /** Notes made so far this session (only the ones that came back count). */
     var made by mutableStateOf(0)
@@ -75,19 +87,26 @@ class LiveNotes(private val api: PsygymApi, private val scope: CoroutineScope) {
     private fun write(caseId: String, locale: ApiLocale, transcript: List<Message>, turns: Int) {
         val request = TurnRequest(caseId, locale, transcript, mode = MODE)
         error = null
+        // The sheet shows "reading…" until the new notes start to arrive; the old ones (and the
+        // chip's turn and dot) stay until the new ones are whole.
+        pending = ""
+        pendingTurn = turns
         writing = true
-        // New notes replace the old: the sheet shows "reading…" until they start to arrive.
-        text = ""
-        turn = turns
         job?.cancel()
         job = scope.launch {
             val notes = StringBuilder()
             try {
                 api.supervision(request).collect {
                     notes.append(it)
-                    text = notes.toString()
+                    pending = notes.toString()
                 }
-                if (notes.isEmpty()) error = ApiError(ApiErrorCode.Unknown) else made += 1
+                if (notes.isEmpty()) {
+                    error = ApiError(ApiErrorCode.Unknown)
+                } else {
+                    text = notes.toString()
+                    turn = turns
+                    made += 1
+                }
             } catch (e: ApiException) {
                 error = e.toError()
             } finally {

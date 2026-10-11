@@ -141,7 +141,7 @@ fun PracticeScreen(
 
     // Back opens S2 instead of leaving (information-architecture.md). While S2 is open,
     // back belongs to the sheet, so it closes.
-    BackHandler(enabled = !showEndSheet && !showLive) { showEndSheet = true }
+    BackHandler(enabled = !showEndSheet && !(showLive && viewModel.live.hasContent)) { showEndSheet = true }
 
     val clock by produceState("00:00") {
         while (true) {
@@ -276,7 +276,9 @@ fun PracticeScreen(
         }
     }
 
-    if (showLive) {
+    // Only with something to show: after the process was killed the notes are gone, so a
+    // remembered "open" mustn't bring back an empty sheet.
+    if (showLive && viewModel.live.hasContent) {
         LiveSheet(notes = viewModel.live, onRetry = { viewModel.retryLive(locale) }, onDismiss = { showLive = false })
     }
 

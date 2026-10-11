@@ -206,6 +206,8 @@ class KtorPsygymApiStreamTest {
         }
         api().supervision(request.copy(durationSec = 754)).toList()
         assertTrue(lastRequestBody.contains("\"durationSec\":754"), lastRequestBody)
+        // The full report never says a mode (the server's default is "final").
+        assertTrue("mode" !in lastRequestBody, lastRequestBody)
     }
 
     @Test

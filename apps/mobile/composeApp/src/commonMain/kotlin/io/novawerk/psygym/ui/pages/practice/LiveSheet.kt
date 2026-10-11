@@ -30,8 +30,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -65,18 +64,20 @@ fun LiveChip(notes: LiveNotes, turns: Int, enabled: Boolean, onOpen: () -> Unit,
         else -> stringResource(Res.string.live_chip)
     }
     val hasNew = notes.hasNew(turns)
-    val cd = stringResource(Res.string.live_chip_cd) + if (hasNew) ", " + stringResource(Res.string.live_new_cd) else ""
+    // Read the visible label (turn, times seen) without the "·", then the dot; the action says
+    // what tapping does.
+    val read = label.replace(" · ", ", ") + if (hasNew) ", " + stringResource(Res.string.live_new_cd) else ""
+    val action = stringResource(Res.string.live_chip_cd)
     Row(
         modifier
             .heightIn(min = 48.dp)
             // Greyed while the client is replying (live-supervision.md §1).
             .alpha(if (enabled) 1f else 0.5f)
             .clip(CircleShape)
-            .clickable(enabled = enabled, onClick = onOpen)
-            .semantics(mergeDescendants = true) {
-                contentDescription = cd
-                role = Role.Button
-            },
+            // The button role, the action label and "disabled" come from clickable; the text
+            // inside is replaced by one readable line.
+            .clickable(enabled = enabled, onClickLabel = action, role = Role.Button, onClick = onOpen)
+            .clearAndSetSemantics { contentDescription = read },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Row(
@@ -103,7 +104,7 @@ fun LiveSheet(notes: LiveNotes, onRetry: () -> Unit, onDismiss: () -> Unit) {
         Column(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, bottom = 24.dp)) {
             Text(stringResource(Res.string.live_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Text(
-                stringResource(Res.string.live_subtitle, notes.turn),
+                stringResource(Res.string.live_subtitle, notes.shownTurn),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 2.dp, bottom = 12.dp),
@@ -111,7 +112,7 @@ fun LiveSheet(notes: LiveNotes, onRetry: () -> Unit, onDismiss: () -> Unit) {
             Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 when {
                     // Only this one line while waiting: no other status labels (decided 2026-10-11).
-                    notes.writing && notes.text.isEmpty() -> Row(
+                    notes.writing && notes.shownText.isEmpty() -> Row(
                         Modifier
                             .fillMaxWidth()
                             .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
@@ -122,7 +123,7 @@ fun LiveSheet(notes: LiveNotes, onRetry: () -> Unit, onDismiss: () -> Unit) {
                         CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
                         Text(stringResource(Res.string.live_generating), style = MaterialTheme.typography.bodyMedium)
                     }
-                    notes.text.isNotEmpty() -> liveItems(notes.text).forEach { NoteItem(it) }
+                    notes.shownText.isNotEmpty() -> liveItems(notes.shownText).forEach { NoteItem(it) }
                 }
                 notes.error?.let { ErrorCard(it, onRetry = onRetry) }
                 if (notes.usedUp) {
@@ -186,9 +187,13 @@ fun liveItems(text: String): List<LiveItem> {
     }
     // The risk reminder comes first when there is one; as on the report, it's the first item
     // quoting only the client (product, 2026-10-11). A later item quoting the client isn't one.
+    // Quote markers, as ReportParser reads them: 「你说」 inside a suggested line isn't a quote.
     return items.mapIndexed { i, raw ->
-        val clientQuote = "来访者说" in raw || raw.contains("the client said", ignoreCase = true)
-        val ownQuote = "你说" in raw || raw.contains("you said", ignoreCase = true)
+        val clientQuote = CLIENT_QUOTE.containsMatchIn(raw)
+        val ownQuote = OWN_QUOTE.containsMatchIn(raw)
         LiveItem(raw, risk = i == 0 && clientQuote && !ownQuote)
     }
 }
+
+private val CLIENT_QUOTE = Regex("""来访者说[：:]?\s*「|the client said[：:,]?\s*[“"]""", RegexOption.IGNORE_CASE)
+private val OWN_QUOTE = Regex("""你说[：:]?\s*「|you said[：:,]?\s*[“"]""", RegexOption.IGNORE_CASE)

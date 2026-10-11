@@ -57,4 +57,15 @@ class LiveItemsTest {
         val items = liveItems("- 你说「好」，好在开放。\n- 来访者说「累」，可以多问问。可以换成：怎么累？")
         assertEquals(listOf(false, false), items.map { it.risk })
     }
+
+    @Test
+    fun yourWordsInASuggestedLineDontHideTheShield() {
+        // "你说的这些" here is the suggested line, not a quote of the counselor.
+        val zh = liveItems("- 来访者说「觉得没意义」，可以找机会问一下安全。可以换成：你说的这些让我有点担心，你有没有想过伤害自己？")
+        assertTrue(zh.single().risk)
+        val en = liveItems("- The client said “It feels pointless”; find a moment to ask about safety. Try instead: What you said worries me a little.")
+        assertTrue(en.single().risk)
+        // A real quote of the counselor does.
+        assertEquals(false, liveItems("- 来访者说「累」。你说「早点睡」，太快给建议了。").single().risk)
+    }
 }
