@@ -1,0 +1,34 @@
+---
+// Google Play's web deletion entry. Wording follows docs/product/login.md (deleting an account);
+// the product will replace it with the final copy.
+import Base from "../../layouts/Base.astro";
+import { LOCALES, strings, type Locale } from "../../lib/i18n";
+
+export const getStaticPaths = () => LOCALES.map((lang) => ({ params: { lang } }));
+const lang = Astro.params.lang as Locale;
+const t = strings[lang];
+
+const copy = {
+  zh: {
+    inApp: "在 App 里删除：打开「我的」→「删除账号」。我们服务器上的邮箱、注册时间、邀请码批次和登录会话会马上删除。",
+    noApp: "不能用 App？用你注册时的邮箱写信到",
+    noAppAfter: "说明要删除账号。我们会回信确认，并在 30 天内删除。",
+    stays: "统计里已经汇总的数字不受影响，它们认不出你。你以前发出的报告评价和举报在我们内部的 Slack 频道里，不带邮箱；要删，也请写信给我们。",
+  },
+  en: {
+    inApp: "In the app: open Me → Delete account. We delete your email, sign-up date, invite batch and sessions from our server right away.",
+    noApp: "Can't use the app? Email",
+    noAppAfter: "from the address you signed up with and ask us to delete your account. We reply to confirm and delete it within 30 days.",
+    stays: "Totals already counted stay; they can't identify you. Ratings and reports you sent earlier are in our internal Slack channel, without your email; to remove them, email us too.",
+  },
+}[lang];
+---
+
+<Base lang={lang} path="/delete-account" title={`${t.deleteAccount} · ${t.siteName}`}>
+  <h1 class="text-3xl font-semibold tracking-tight">{t.deleteAccount}</h1>
+  <div class="mt-6 space-y-4 leading-relaxed text-zinc-800">
+    <p>{copy.inApp}</p>
+    <p>{copy.noApp} <a class="underline" href="mailto:info@novawerk.io">info@novawerk.io</a> {copy.noAppAfter}</p>
+    <p class="text-zinc-600">{copy.stays}</p>
+  </div>
+</Base>

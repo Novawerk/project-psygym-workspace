@@ -1,0 +1,28 @@
+---
+// A bare path ("/", "/privacy", "/delete-account"): send the browser to its language. A few lines
+// of our own script, no cookie, nothing stored. Without JavaScript, two plain links.
+interface Props {
+  /** The path without the language prefix, e.g. "/privacy" ("" for home). */
+  path: string;
+}
+const { path } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>聆镜 PSYGYM</title>
+    <link rel="alternate" hreflang="zh" href={new URL(`/zh${path}`, Astro.site)} />
+    <link rel="alternate" hreflang="en" href={new URL(`/en${path}`, Astro.site)} />
+    <script is:inline define:vars={{ path }}>
+      var langs = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || "en"];
+      var zh = String(langs[0] || "").toLowerCase().indexOf("zh") === 0;
+      location.replace("/" + (zh ? "zh" : "en") + path + location.search + location.hash);
+    </script>
+  </head>
+  <body style="font-family: system-ui, sans-serif; padding: 2rem; color: #09090b">
+    <p><a href={`/zh${path}`} lang="zh-CN">中文</a> · <a href={`/en${path}`} lang="en">English</a></p>
+  </body>
+</html>
