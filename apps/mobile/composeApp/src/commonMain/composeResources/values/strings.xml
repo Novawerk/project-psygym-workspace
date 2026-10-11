@@ -39,11 +39,6 @@
     <string name="onb_ready_title">Almost ready</string>
     <string name="onb_ready_language_title">Language</string>
     <string name="onb_ready_language_note">Cases are written in Chinese for now. With the English interface, the client and the report are in English.</string>
-    <string name="onb_ready_invite_title">Invite code</string>
-    <string name="onb_ready_invite_body">We need an invite code during testing. No code? Skip for now.</string>
-    <string name="onb_ready_invite_hint">Enter invite code</string>
-    <string name="onb_ready_start">Start practising</string>
-    <string name="onb_ready_skip">Skip for now</string>
 
     <!-- Home (H1) -->
     <string name="home_greeting">Ready for a session?</string>
@@ -70,7 +65,7 @@
     <string name="brief_focus">What to practise</string>
     <string name="brief_client">The client</string>
     <string name="brief_setup">Session</string>
-    <string name="brief_setup_body">15–30 turns suggested · about 15 min · end any time.</string>
+    <string name="brief_setup_body">First session · 15–30 turns suggested · about 15 min · end any time.</string>
     <string name="brief_content_note">This session may touch on depression, anxiety and dark thoughts. The client is fictional. A third-party AI model processes the conversation; our servers don’t store it.</string>
     <string name="brief_start">Start session</string>
 
@@ -130,11 +125,6 @@
     <string name="settings_language_zh">中文</string>
     <string name="settings_language_en">English</string>
     <string name="settings_language_note">If you set a language for this app in your phone’s settings, that one wins.</string>
-    <string name="settings_invite">Invite code</string>
-    <string name="settings_invite_hint">Enter invite code</string>
-    <string name="settings_invite_desc">You get one from the 聆镜 (Lingjing) team. It lets the app reach our server.</string>
-    <string name="settings_invite_save">Save</string>
-    <string name="settings_invite_saved">Saved</string>
     <string name="settings_help_section">Help</string>
     <string name="settings_replay_onboarding">Replay the intro</string>
     <string name="settings_privacy">Privacy</string>
@@ -165,15 +155,14 @@
     <string name="privacy_q_device">Is it stored on my phone?</string>
     <string name="privacy_a_device">Yes. Each session and its report are saved, unencrypted, in the app’s own space on this phone. Nothing is uploaded or backed up to the cloud. Turn saving off or delete everything under Me; delete a single session from your practice history. Uninstalling the app deletes everything.</string>
     <string name="privacy_q_collect">What do you collect?</string>
-    <string name="privacy_a_collect">Your invite code: sent to our server with each request, to check it and limit load; our server doesn’t store it. Your interface language: also sent with each request, so the client and the report use it. No account. We don’t collect your name, phone number or location.</string>
+    <string name="privacy_a_collect">Your email (to sign in), your sign-up date, the invite batch you signed up with, and your sessions. Your interface language is sent with each request. We don’t collect your name, phone number or location.</string>
     <string name="privacy_q_stats">What do you count?</string>
-    <string name="privacy_a_stats">On our server we count anonymous numbers per day, split by case and interface language: sessions started, sessions the client ended, reports written, turns per session, how long a session lasts, errors, and 👍/👎 ratings and reports received. Only numbers: no conversation, nothing that could identify you.</string>
+    <string name="privacy_a_stats">On our server we count numbers per day, split by case and interface language: sessions started, sessions the client ended, reports written, turns per session, how long a session lasts, errors, and 👍/👎 ratings and reports. Active users are counted with pseudonyms that change every day and every week, never with your email, and the details are summed up and deleted soon after. No conversation.</string>
     <string name="privacy_q_real">Can I enter real client information?</string>
     <string name="privacy_a_real">No. Please use it for practice only.</string>
 
     <!-- Errors (screens.md, plus Retry-After and the timeout wording from testing) -->
     <string name="error_network">Can’t reach the server. Check your connection and try again.</string>
-    <string name="error_invite_required">You need a valid invite code.</string>
     <string name="error_rate_limited">Too many requests. Try again in a little while.</string>
     <string name="error_rate_limited_seconds">Too many requests. Try again in %1$d seconds.</string>
     <string name="error_model_unavailable">The AI is unavailable right now. Try again in a few minutes.</string>
@@ -181,7 +170,6 @@
     <string name="error_invalid_request">This session is already long. End it and see what the supervisor says.</string>
     <string name="error_timeout">No response for too long. Try again.</string>
     <string name="error_unknown">Something went wrong. Try again.</string>
-    <string name="error_open_settings">Go to Me</string>
     <string name="error_other_case">Try another case</string>
     <string name="error_retry_in">Try again (%1$d)</string>
     <string name="tab_practice">Practise</string>
@@ -217,4 +205,64 @@
         <item quantity="one">%1$d turn</item>
         <item quantity="other">%1$d turns</item>
     </plurals>
+    <string name="onb_ready_continue">Continue</string>
+    <string name="login_email_title">Sign in with email</string>
+    <string name="login_email_subtitle">We'll email you a 6-digit code.</string>
+    <string name="login_email_hint">Email</string>
+    <string name="login_email_placeholder">name@example.com</string>
+    <string name="login_email_send">Send code</string>
+    <string name="login_email_invalid">That email doesn’t look right. Please check it.</string>
+    <string name="login_email_rate_limited">Too many requests. Try again in %1$d s.</string>
+    <string name="login_privacy_note">By signing in you agree to the %1$s.</string>
+    <string name="login_privacy_link">privacy notice</string>
+    <string name="login_migration_note">You now sign in with email. Your practice history stays on this phone.</string>
+    <string name="login_code_title">Enter the code</string>
+    <string name="login_code_field_cd">Code, 6 digits</string>
+    <string name="login_code_sent_to">Sent to %1$s</string>
+    <string name="login_code_change_email">Change email</string>
+    <string name="login_code_submit">Sign in</string>
+    <string name="login_code_not_received">Didn’t get it? Check your spam folder.</string>
+    <string name="login_code_resend">Send again</string>
+    <string name="login_code_resend_in">Send again (%1$d s)</string>
+    <string name="login_code_resent">We sent a new code.</string>
+    <string name="login_code_invalid">That code is wrong or no longer works. Try again, or send a new one.</string>
+    <string name="login_code_used_up">You’ve tried this code 5 times. Send a new one.</string>
+    <string name="login_invite_title">One more step</string>
+    <string name="login_invite_body">We need an invite code during testing. The 聆镜 (Lingjing) team hands them out.</string>
+    <string name="login_invite_label">Invite code</string>
+    <string name="login_invite_hint">xxxx-xxxx-xxxx</string>
+    <string name="login_invite_format">12 characters, not case-sensitive. Dashes are optional.</string>
+    <string name="login_invite_submit">Finish signing up</string>
+    <string name="login_invite_invalid">This invite code isn’t valid or has been turned off.</string>
+    <string name="login_invite_code_used_up">Too many tries. Go back and send a new code.</string>
+    <string name="login_invite_none">No invite code? Go back</string>
+    <string name="me_account_section">Account</string>
+    <string name="me_account_email">Email</string>
+    <string name="me_logout">Sign out</string>
+    <string name="me_delete_account">Delete account</string>
+    <string name="logout_title">Sign out?</string>
+    <string name="logout_body">Your practice history isn’t deleted. It shows again when you sign in with the same email. It isn’t encrypted: when someone else signs in on this phone it’s hidden from the list, but it’s still on the phone. If you don’t want to keep it, delete it under Me first.</string>
+    <string name="logout_confirm">Sign out</string>
+    <string name="logout_cancel">Cancel</string>
+    <string name="delete_title">Delete account</string>
+    <string name="delete_after">After you delete:</string>
+    <string name="delete_server">We delete your email, sign-up date, invite batch and sessions from our server right away.</string>
+    <string name="delete_local">Practice history for this account on this phone is deleted too.</string>
+    <string name="delete_stats">Totals already counted stay. They don’t carry your account.</string>
+    <string name="delete_slack">Ratings and reports you sent earlier are in our Slack channel without your account or email. We can’t tell which are yours, so we can’t delete them by account.</string>
+    <string name="delete_irreversible">This can’t be undone. You can sign up again with the same email, but you’ll need a new invite code.</string>
+    <string name="delete_continue">Continue</string>
+    <string name="delete_confirm_title">Delete your account?</string>
+    <string name="delete_confirm_body">Type the first 3 characters of %1$s to confirm.</string>
+    <string name="delete_confirm_field_cd">Confirmation characters</string>
+    <string name="delete_confirm_action">Delete</string>
+    <string name="delete_done">Your account has been deleted.</string>
+    <string name="error_session_expired">Your session has expired. Please sign in again.</string>
+    <string name="error_sign_in_required">Please sign in first.</string>
+    <string name="privacy_q_account">What does my account store?</string>
+    <string name="privacy_a_account">Only your email, sign-up date, the invite batch you used and your sessions. Practice conversations and reports aren’t on our server, only on your phone.</string>
+    <string name="privacy_q_delete">How do I delete my account?</string>
+    <string name="privacy_a_delete">Go to Me → Delete account. We delete your account data from our server right away, and this account’s practice history on this phone too. If you can’t use the app, follow the steps at novawerk.io/psygym/delete-account.</string>
+    <string name="brief_session_first">First session</string>
+    <string name="brief_session_first_note">The main tasks of a first session: screen for risk, and decide whether you can take this client on.</string>
 </resources>

@@ -15,6 +15,7 @@ import io.novawerk.psygym.domain.model.CaseSummary
 import io.novawerk.psygym.domain.history.HistoryRepository
 import io.novawerk.psygym.domain.history.SavedSession
 import io.novawerk.psygym.domain.model.TurnRequest
+import io.novawerk.psygym.domain.model.durationSec
 import io.novawerk.psygym.domain.practice.PracticeSession
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
@@ -72,7 +73,8 @@ class SupervisionViewModel(
 
     fun load(locale: ApiLocale) {
         val caseId = case?.id ?: return
-        val request = TurnRequest(caseId, locale, transcript)
+        // The clock stopped when the client ended the session (PracticeSession.elapsed).
+        val request = TurnRequest(caseId, locale, transcript, durationSec = durationSec(duration))
         report = ""
         error = null
         streaming = true

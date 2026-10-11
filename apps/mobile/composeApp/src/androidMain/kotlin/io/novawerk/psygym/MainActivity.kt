@@ -1,5 +1,6 @@
 package io.novawerk.psygym
 
+import io.novawerk.psygym.data.auth.KeystoreSecureStore
 import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -34,6 +35,7 @@ private fun appComponent(context: Context, screenshot: ScreenshotLaunch?): AppCo
             HistoryDir(context.applicationContext.filesDir.resolve("history").absolutePath),
             // Always null in release builds (see ScreenshotHooks in src/androidRelease).
             ScreenshotModeHolder(screenshot?.mode),
+            KeystoreSecureStore(context),
         ).also { sharedComponent = it }
     }
 }

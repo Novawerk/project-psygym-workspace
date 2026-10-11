@@ -80,7 +80,6 @@ fun SupervisionScreen(
     onOtherCase: () -> Unit,
     onSessionLost: () -> Unit,
     onHelp: () -> Unit,
-    onOpenSettings: () -> Unit,
 ) {
     val locale = rememberApiLocale()
     LaunchedEffect(Unit) {
@@ -181,7 +180,6 @@ fun SupervisionScreen(
                 ErrorCard(
                     error = error,
                     onRetry = { viewModel.load(locale) },
-                    onOpenSettings = onOpenSettings,
                     onOtherCase = onOtherCase,
                 )
             }

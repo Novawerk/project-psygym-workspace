@@ -25,6 +25,7 @@ class KtorPsygymApiStreamTest {
     private var status = 200
     private var headers = mapOf("Content-Type" to "text/event-stream")
     private var lastRequestBody = ""
+    private var lastAuth: String? = null
     private var lastInvite: String? = null
 
     /** What the server writes after the headers. Frames are flushed one by one. */
@@ -44,6 +45,7 @@ class KtorPsygymApiStreamTest {
     fun start() {
         server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
         server.createContext("/") { exchange ->
+            lastAuth = exchange.requestHeaders.getFirst("Authorization")
             lastInvite = exchange.requestHeaders.getFirst("X-Invite-Code")
             lastRequestBody = exchange.requestBody.readBytes().decodeToString()
             headers.forEach { (k, v) -> exchange.responseHeaders.add(k, v) }
@@ -60,7 +62,7 @@ class KtorPsygymApiStreamTest {
 
     private fun api(idleTimeoutMillis: Long = 30_000) = KtorPsygymApi(
         baseUrl = "http://127.0.0.1:${server.address.port}",
-        inviteCode = { "code-1" },
+        token = { "tok-1" },
         engineClient = HttpClient(OkHttp),
         idleTimeoutMillis = idleTimeoutMillis,
     )
@@ -78,8 +80,12 @@ class KtorPsygymApiStreamTest {
         }
 
         assertEquals(listOf(ChatEvent.Delta("我"), ChatEvent.Delta("还好")), api().chat(request).toList())
-        assertEquals("code-1", lastInvite)
+        // The session token on every request; never an invite code (contract "Sign-in").
+        assertEquals("Bearer tok-1", lastAuth)
+        assertEquals(null, lastInvite)
         assertTrue(lastRequestBody.contains("\"caseId\":\"demo\""))
+        // durationSec is for /supervision; left out when not set.
+        assertTrue("durationSec" !in lastRequestBody)
         assertTrue(lastRequestBody.contains("\"locale\":\"zh\""))
         assertTrue(lastRequestBody.contains("\"role\":\"counselor\""))
     }
@@ -161,7 +167,8 @@ class KtorPsygymApiStreamTest {
         headers = mapOf("Content-Type" to "application/json")
         val cases = mapOf(
             400 to ("invalid_request" to ApiErrorCode.InvalidRequest),
-            401 to ("invite_required" to ApiErrorCode.InviteRequired),
+            401 to ("session_expired" to ApiErrorCode.SessionExpired),
+            426 to ("update_required" to ApiErrorCode.UpdateRequired),
             404 to ("case_not_found" to ApiErrorCode.CaseNotFound),
             429 to ("rate_limited" to ApiErrorCode.RateLimited),
             503 to ("model_unavailable" to ApiErrorCode.ModelUnavailable),
@@ -189,5 +196,15 @@ class KtorPsygymApiStreamTest {
         server.stop(0)
         val e = assertFailsWith<ApiException> { api().chat(request).toList() }
         assertEquals(ApiErrorCode.Network, e.code)
+    }
+
+    @Test
+    fun supervisionSendsTheSessionLength() = runBlocking {
+        script = {
+            it.frame("""{"type":"text_delta","text":"报告"}""")
+            it.frame("""{"type":"turn_end"}""")
+        }
+        api().supervision(request.copy(durationSec = 754)).toList()
+        assertTrue(lastRequestBody.contains("\"durationSec\":754"), lastRequestBody)
     }
 }

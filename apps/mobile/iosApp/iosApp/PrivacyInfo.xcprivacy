@@ -6,11 +6,12 @@
 	<false/>
 	<key>NSPrivacyTrackingDomains</key>
 	<array/>
-	<!-- What the user types goes to our server and on to a third-party AI model service,
-	     which may keep it under its own policy. Not linked to identity, not for tracking,
-	     only to make the app work. Keep in step with docs/release/privacy-labels.md. -->
+	<!-- Keep in step with docs/release/privacy-labels.md and docs/product/login.md §6.
+	     None of it is used for tracking. -->
 	<key>NSPrivacyCollectedDataTypes</key>
 	<array>
+		<!-- What the user types goes to our server and on to a third-party AI model service,
+		     which may keep it under its own policy. Not linked to identity, only to make the app work. -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypeOtherUserContent</string>
@@ -21,6 +22,46 @@
 			<key>NSPrivacyCollectedDataTypePurposes</key>
 			<array>
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<!-- The email: to send the sign-in code and to sign in. -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeEmailAddress</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<!-- The account id and its sessions (login.md §6: App Functionality). -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeUserID</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<!-- Daily counts and session length (durationSec); active users by daily and weekly
+		     pseudonyms computed from the account, so linked to identity. -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeProductInteraction</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
 			</array>
 		</dict>
 	</array>

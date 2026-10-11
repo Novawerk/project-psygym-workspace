@@ -25,14 +25,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.novawerk.psygym.data.api.ApiError
 import io.novawerk.psygym.data.api.ApiErrorCode
+import io.novawerk.psygym.data.api.needsSignIn
 import io.novawerk.psygym.resources.Res
 import io.novawerk.psygym.resources.error_case_not_found
 import io.novawerk.psygym.resources.error_cases_load
 import io.novawerk.psygym.resources.error_invalid_request
-import io.novawerk.psygym.resources.error_invite_required
+import io.novawerk.psygym.resources.error_session_expired
+import io.novawerk.psygym.resources.error_sign_in_required
 import io.novawerk.psygym.resources.error_model_unavailable
 import io.novawerk.psygym.resources.error_network
-import io.novawerk.psygym.resources.error_open_settings
 import io.novawerk.psygym.resources.error_other_case
 import io.novawerk.psygym.resources.error_rate_limited
 import io.novawerk.psygym.resources.error_rate_limited_seconds
@@ -46,12 +47,12 @@ import org.jetbrains.compose.resources.stringResource
 
 /**
  * For the case list ([casesList]), anything that isn't the user's to fix (connection,
- * invite code, too many requests) reads "couldn't load the cases": a 404 on the list is
+ * sign-in, too many requests) reads "couldn't load the cases": a 404 on the list is
  * not "this case is unavailable" (audit E).
  */
 @Composable
 fun ApiError.message(casesList: Boolean = false): String = when {
-    casesList && code !in listOf(ApiErrorCode.Network, ApiErrorCode.InviteRequired, ApiErrorCode.RateLimited, ApiErrorCode.Timeout) ->
+    casesList && !code.needsSignIn && code !in listOf(ApiErrorCode.Network, ApiErrorCode.RateLimited, ApiErrorCode.Timeout) ->
         stringResource(Res.string.error_cases_load)
     else -> message()
 }
@@ -59,7 +60,10 @@ fun ApiError.message(casesList: Boolean = false): String = when {
 @Composable
 private fun ApiError.message(): String = when (code) {
     ApiErrorCode.InvalidRequest -> stringResource(Res.string.error_invalid_request)
-    ApiErrorCode.InviteRequired -> stringResource(Res.string.error_invite_required)
+    ApiErrorCode.SessionExpired, ApiErrorCode.UpdateRequired -> stringResource(Res.string.error_session_expired)
+    ApiErrorCode.SignInRequired -> stringResource(Res.string.error_sign_in_required)
+    // Sign-in only: L1–L3 show their own messages for these.
+    ApiErrorCode.InviteRequired, ApiErrorCode.InviteInvalid, ApiErrorCode.InvalidCode -> stringResource(Res.string.error_unknown)
     ApiErrorCode.CaseNotFound -> stringResource(Res.string.error_case_not_found)
     ApiErrorCode.RateLimited -> retryAfterSeconds
         ?.let { stringResource(Res.string.error_rate_limited_seconds, it) }
@@ -72,14 +76,14 @@ private fun ApiError.message(): String = when (code) {
 
 /**
  * Icon, one sentence, one button (screens.md, "错误"). The button is the next step:
- * Settings for a bad invite code, another case for a missing one, ending a session
- * that's too long, otherwise retry. Never shows codes or raw server text.
+ * another case for a missing one, ending a session that's too long, otherwise retry.
+ * When the session expired, the app has already gone to sign-in; back here, Retry
+ * resends. Never shows codes or raw server text.
  */
 @Composable
 fun ErrorCard(
     error: ApiError,
     onRetry: (() -> Unit)?,
-    onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
     onOtherCase: (() -> Unit)? = null,
     onEndSession: (() -> Unit)? = null,
@@ -101,13 +105,8 @@ fun ErrorCard(
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 when {
-                    casesList && error.code != ApiErrorCode.InviteRequired && error.code != ApiErrorCode.RateLimited && onRetry != null ->
+                    casesList && error.code != ApiErrorCode.RateLimited && onRetry != null ->
                         TextButton(onClick = onRetry) { Text(stringResource(Res.string.retry)) }
-                    // Fix the code in Settings, come back, try again (acceptance D2).
-                    error.code == ApiErrorCode.InviteRequired -> {
-                        TextButton(onClick = onOpenSettings) { Text(stringResource(Res.string.error_open_settings)) }
-                        if (onRetry != null) TextButton(onClick = onRetry) { Text(stringResource(Res.string.retry)) }
-                    }
                     error.code == ApiErrorCode.CaseNotFound && onOtherCase != null ->
                         TextButton(onClick = onOtherCase) { Text(stringResource(Res.string.error_other_case)) }
                     error.code == ApiErrorCode.InvalidRequest && onEndSession != null ->

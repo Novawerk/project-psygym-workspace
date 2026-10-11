@@ -38,6 +38,10 @@ import io.novawerk.psygym.resources.privacy_q_stats
 import io.novawerk.psygym.resources.privacy_q_store
 import io.novawerk.psygym.resources.privacy_q_vendor
 import io.novawerk.psygym.resources.privacy_q_where
+import io.novawerk.psygym.resources.privacy_q_account
+import io.novawerk.psygym.resources.privacy_a_account
+import io.novawerk.psygym.resources.privacy_q_delete
+import io.novawerk.psygym.resources.privacy_a_delete
 import io.novawerk.psygym.resources.privacy_title
 import io.novawerk.psygym.resources.privacy_vendor
 import io.novawerk.psygym.ui.components.GrayCard
@@ -74,6 +78,9 @@ fun PrivacyScreen(onBack: () -> Unit) {
             Qa(stringResource(Res.string.privacy_q_device), stringResource(Res.string.privacy_a_device))
             Qa(stringResource(Res.string.privacy_q_collect), stringResource(Res.string.privacy_a_collect))
             Qa(stringResource(Res.string.privacy_q_stats), stringResource(Res.string.privacy_a_stats))
+            // Sign-in (login.md §6): what the account holds, and how to delete it.
+            Qa(stringResource(Res.string.privacy_q_account), stringResource(Res.string.privacy_a_account))
+            Qa(stringResource(Res.string.privacy_q_delete), stringResource(Res.string.privacy_a_delete))
             Qa(stringResource(Res.string.privacy_q_real), stringResource(Res.string.privacy_a_real))
         }
     }

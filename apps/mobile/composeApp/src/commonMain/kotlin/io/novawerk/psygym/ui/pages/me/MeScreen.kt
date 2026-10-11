@@ -2,6 +2,7 @@ package io.novawerk.psygym.ui.pages.me
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -27,6 +28,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -46,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.novawerk.psygym.AppConfig
@@ -55,6 +58,14 @@ import io.novawerk.psygym.resources.Res
 import io.novawerk.psygym.resources.back
 import io.novawerk.psygym.resources.help_link
 import io.novawerk.psygym.resources.history_cancel
+import io.novawerk.psygym.resources.logout_body
+import io.novawerk.psygym.resources.logout_cancel
+import io.novawerk.psygym.resources.logout_confirm
+import io.novawerk.psygym.resources.logout_title
+import io.novawerk.psygym.resources.me_account_email
+import io.novawerk.psygym.resources.me_account_section
+import io.novawerk.psygym.resources.me_delete_account
+import io.novawerk.psygym.resources.me_logout
 import io.novawerk.psygym.resources.me_settings_section
 import io.novawerk.psygym.resources.me_title
 import io.novawerk.psygym.resources.settings_debug
@@ -67,11 +78,6 @@ import io.novawerk.psygym.resources.settings_history_delete_confirm
 import io.novawerk.psygym.resources.settings_history_section
 import io.novawerk.psygym.resources.settings_history_toggle
 import io.novawerk.psygym.resources.settings_history_toggle_desc
-import io.novawerk.psygym.resources.settings_invite
-import io.novawerk.psygym.resources.settings_invite_desc
-import io.novawerk.psygym.resources.settings_invite_hint
-import io.novawerk.psygym.resources.settings_invite_save
-import io.novawerk.psygym.resources.settings_invite_saved
 import io.novawerk.psygym.resources.settings_language
 import io.novawerk.psygym.resources.settings_language_en
 import io.novawerk.psygym.resources.settings_language_note
@@ -80,9 +86,9 @@ import io.novawerk.psygym.resources.settings_language_zh
 import io.novawerk.psygym.resources.settings_privacy
 import io.novawerk.psygym.resources.settings_replay_onboarding
 import io.novawerk.psygym.resources.settings_version
-import io.novawerk.psygym.domain.settings.normalizeInviteCode
 import io.novawerk.psygym.ui.components.BottomBar
-import io.novawerk.psygym.ui.components.InviteCodeKeyboard
+import io.novawerk.psygym.ui.components.PrimaryButton
+import io.novawerk.psygym.ui.components.SecondaryButton
 import io.novawerk.psygym.ui.theme.cardBorder
 import io.novawerk.psygym.ui.components.TopTab
 import org.jetbrains.compose.resources.StringResource
@@ -93,11 +99,13 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun MeScreen(
     language: AppLanguage,
-    inviteCode: String,
+    /** The signed-in email. */
+    email: String?,
     saveHistory: Boolean,
     useFakeApi: Boolean,
     onLanguageChange: (AppLanguage) -> Unit,
-    onInviteCodeSave: (String) -> Unit,
+    onSignOut: () -> Unit,
+    onDeleteAccount: () -> Unit,
     onSaveHistoryChange: (Boolean) -> Unit,
     onDeleteAllHistory: () -> Unit,
     onUseFakeApiChange: (Boolean) -> Unit,
@@ -105,26 +113,18 @@ fun MeScreen(
     onHelp: () -> Unit,
     onPrivacy: () -> Unit,
     onTab: (TopTab) -> Unit,
-    /** Set when opened on top of a flow (from an error card): back arrow, no bottom bar. */
-    onBack: (() -> Unit)? = null,
 ) {
     var confirmDeleteAll by rememberSaveable { mutableStateOf(false) }
+    var confirmSignOut by rememberSaveable { mutableStateOf(false) }
     var pickLanguage by rememberSaveable { mutableStateOf(false) }
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(Res.string.me_title)) },
-                navigationIcon = {
-                    if (onBack != null) {
-                        IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back))
-                        }
-                    }
-                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
             )
         },
-        bottomBar = { if (onBack == null) BottomBar(TopTab.Me, onTab) },
+        bottomBar = { BottomBar(TopTab.Me, onTab) },
     ) { padding ->
         Column(
             Modifier
@@ -132,13 +132,20 @@ fun MeScreen(
                 .padding(padding)
                 .verticalScroll(rememberScrollState()),
         ) {
-            // Each group is a bordered card with lines between rows (design P1).
+            // Each group is a bordered card with lines between rows (design P1). The account
+            // comes first; the invite code is gone: it's asked once, at sign-up (login.md §2).
+            SectionTitle(Res.string.me_account_section)
+            GroupCard {
+                InfoRow(Res.string.me_account_email, email.orEmpty())
+                RowDivider()
+                LinkRow(Res.string.me_logout) { confirmSignOut = true }
+                RowDivider()
+                LinkRow(Res.string.me_delete_account, danger = true, onClick = onDeleteAccount)
+            }
+
             SectionTitle(Res.string.me_settings_section)
             GroupCard {
                 ValueRow(Res.string.settings_language, stringResource(languageLabel(language))) { pickLanguage = true }
-                RowDivider()
-                ItemTitle(Res.string.settings_invite, top = 14.dp)
-                InviteCodeField(inviteCode, onInviteCodeSave)
             }
 
             SectionTitle(Res.string.settings_history_section)
@@ -163,14 +170,11 @@ fun MeScreen(
 
             SectionTitle(Res.string.settings_help_section)
             GroupCard {
-                LinkRow(Res.string.help_link, onHelp)
+                LinkRow(Res.string.help_link, onClick = onHelp)
                 RowDivider()
-                LinkRow(Res.string.settings_privacy, onPrivacy)
-                // Not on top of a session or report: finishing the intro clears the back stack.
-                if (onBack == null) {
-                    RowDivider()
-                    LinkRow(Res.string.settings_replay_onboarding, onReplayOnboarding)
-                }
+                LinkRow(Res.string.settings_privacy, onClick = onPrivacy)
+                RowDivider()
+                LinkRow(Res.string.settings_replay_onboarding, onClick = onReplayOnboarding)
             }
 
             if (AppConfig.isDebug) {
@@ -196,6 +200,11 @@ fun MeScreen(
             Spacer(Modifier.height(24.dp))
         }
     }
+
+    if (confirmSignOut) SignOutSheet(onDismiss = { confirmSignOut = false }, onConfirm = {
+        confirmSignOut = false
+        onSignOut()
+    })
 
     if (pickLanguage) {
         // Picked in a dialog; the "follows your system" note lives here (design P1).
@@ -283,15 +292,6 @@ private fun SectionTitle(res: StringResource) {
 }
 
 @Composable
-private fun ItemTitle(res: StringResource, top: androidx.compose.ui.unit.Dp = 0.dp) {
-    Text(
-        stringResource(res),
-        style = MaterialTheme.typography.titleSmall,
-        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = top, bottom = 4.dp),
-    )
-}
-
-@Composable
 private fun SwitchRow(title: StringResource, description: StringResource, checked: Boolean, onChange: (Boolean) -> Unit) {
     Row(
         Modifier
@@ -310,12 +310,18 @@ private fun SwitchRow(title: StringResource, description: StringResource, checke
 }
 
 @Composable
-private fun LinkRow(label: StringResource, onClick: () -> Unit) {
+private fun LinkRow(label: StringResource, danger: Boolean = false, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 14.dp),
+        Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = onClick).padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(stringResource(label), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        Text(
+            stringResource(label),
+            style = MaterialTheme.typography.bodyLarge,
+            // Red for the destructive one, as "delete all practice history" (login.md P1).
+            color = if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f),
+        )
         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
@@ -335,32 +341,30 @@ private fun LanguageRow(value: AppLanguage, label: StringResource, selected: App
     }
 }
 
+/** A label and a value that can't be changed here, like the email. */
 @Composable
-private fun InviteCodeField(saved: String, onSave: (String) -> Unit) {
-    var draft by remember { mutableStateOf(saved) }
-    LaunchedEffect(saved) { draft = saved }
-    val dirty = normalizeInviteCode(draft) != saved
-    Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
-        Text(
-            stringResource(Res.string.settings_invite_desc),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.height(12.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
-                value = draft,
-                onValueChange = { draft = it },
-                singleLine = true,
-                shape = MaterialTheme.shapes.small,
-                placeholder = { Text(stringResource(Res.string.settings_invite_hint)) },
-                keyboardOptions = InviteCodeKeyboard,
-                modifier = Modifier.weight(1f),
+private fun InfoRow(label: StringResource, value: String) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(stringResource(label), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        Text(value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+/** Sign out? (bottom sheet, login.md "退出登录"). History stays on the phone. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SignOutSheet(onDismiss: () -> Unit, onConfirm: () -> Unit) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = MaterialTheme.colorScheme.background) {
+        Column(Modifier.padding(start = 20.dp, end = 20.dp, bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(stringResource(Res.string.logout_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(
+                stringResource(Res.string.logout_body),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 12.dp),
             )
-            Spacer(Modifier.width(12.dp))
-            Button(onClick = { onSave(draft) }, enabled = dirty, shape = MaterialTheme.shapes.small) {
-                Text(stringResource(if (!dirty && saved.isNotEmpty()) Res.string.settings_invite_saved else Res.string.settings_invite_save))
-            }
+            PrimaryButton(stringResource(Res.string.logout_confirm), onConfirm)
+            SecondaryButton(stringResource(Res.string.logout_cancel), onDismiss)
         }
     }
 }

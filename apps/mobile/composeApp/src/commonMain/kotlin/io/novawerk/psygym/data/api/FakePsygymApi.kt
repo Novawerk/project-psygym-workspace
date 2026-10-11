@@ -18,7 +18,19 @@ import kotlinx.coroutines.flow.flow
  */
 class FakePsygymApi(
     private val charDelayMillis: Long = 25,
-) : PsygymApi {
+) : Backend {
+
+    // Built on first use: the report tests use this class in release unit tests too, and the
+    // demo sign-in refuses to exist in a release build.
+    private val auth by lazy { FakeAuthApi() }
+
+    override suspend fun startSignIn(email: String, locale: ApiLocale) = auth.startSignIn(email, locale)
+
+    override suspend fun verify(email: String, code: String, inviteCode: String?) = auth.verify(email, code, inviteCode)
+
+    override suspend fun signOut() = auth.signOut()
+
+    override suspend fun deleteAccount() = auth.deleteAccount()
 
     override suspend fun cases(): List<CaseSummary> {
         delay(400)

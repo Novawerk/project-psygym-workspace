@@ -18,8 +18,8 @@ class SmallRulesTest {
     }
 
     @Test
-    fun inviteCodesLoseWhitespace() {
-        assertEquals("testcode1", io.novawerk.psygym.domain.settings.normalizeInviteCode(" test code1\n"))
+    fun inviteCodesLoseDashesSpacesAndCase() {
+        assertEquals("k7mpx2qr9wtd", io.novawerk.psygym.domain.auth.LoginFlow.normalizeInvite(" K7MP-x2qr 9wtd\n"))
     }
 
     @Test

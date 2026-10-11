@@ -1,5 +1,6 @@
 package io.novawerk.psygym
 
+import io.novawerk.psygym.data.auth.KeychainSecureStore
 import androidx.compose.ui.window.ComposeUIViewController
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import io.novawerk.psygym.di.AppComponent
@@ -23,6 +24,7 @@ private val component: AppComponent by lazy {
         HistoryDir(appSupportPath("history")),
         // Store-screenshot mode is Android-debug only.
         ScreenshotModeHolder(null),
+        KeychainSecureStore(),
     )
 }
 

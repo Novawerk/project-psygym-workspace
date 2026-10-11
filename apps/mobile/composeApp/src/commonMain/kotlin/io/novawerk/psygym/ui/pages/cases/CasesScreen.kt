@@ -46,7 +46,6 @@ fun CasesScreen(
     onBack: () -> Unit,
     onPick: (CaseSummary) -> Unit,
     onRetry: () -> Unit,
-    onOpenSettings: () -> Unit,
 ) {
     val locale = rememberApiLocale()
     Scaffold(
@@ -76,7 +75,7 @@ fun CasesScreen(
                 )
             }
             when {
-                error != null -> item { ErrorCard(error, onRetry = onRetry, onOpenSettings = onOpenSettings, casesList = true) }
+                error != null -> item { ErrorCard(error, onRetry = onRetry, casesList = true) }
                 cases == null -> items(3) { CaseCardSkeleton(Modifier.fillMaxWidth()) }
                 cases.isEmpty() -> item {
                     Text(

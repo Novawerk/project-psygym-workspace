@@ -72,7 +72,6 @@ fun HomeScreen(
     onPickCase: (CaseSummary) -> Unit,
     onAllCases: () -> Unit,
     onRetryCases: () -> Unit,
-    onOpenSettings: () -> Unit,
     onHelp: () -> Unit,
     onTab: (TopTab) -> Unit,
     practiceLost: Boolean = false,
@@ -126,7 +125,7 @@ fun HomeScreen(
             }
             Spacer(Modifier.height(8.dp))
             when {
-                casesError != null -> ErrorCard(casesError, onRetry = onRetryCases, onOpenSettings = onOpenSettings, casesList = true)
+                casesError != null -> ErrorCard(casesError, onRetry = onRetryCases, casesList = true)
                 cases == null -> Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     CaseCardSkeleton(Modifier.weight(1f))
                     CaseCardSkeleton(Modifier.weight(1f))
