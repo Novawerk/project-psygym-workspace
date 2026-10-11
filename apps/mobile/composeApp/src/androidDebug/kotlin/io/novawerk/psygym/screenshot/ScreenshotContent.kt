@@ -129,7 +129,7 @@ internal object ScreenshotContent {
     private val LIN_REPORT_EN = """
         ## What went well
 
-        - You said "It sounds like these past months have been exhausting." You met her feelings before asking for facts.
+        - You said "It sounds like these past months have been exhausting." You met the client's feelings before asking for facts.
         - You said "how much do you believe it, from 0 to 100?" Rating the thought makes it concrete.
 
         ## What to improve
