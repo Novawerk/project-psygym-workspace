@@ -55,7 +55,11 @@ Blank values count as unset. `apps/api/.env` is read on start; shell variables w
 | `RATE_LIMIT_MAX` | `30` | `/chat` + `/supervision` requests per key per window; `/feedback` and `/report` each have their own bucket of the same size. Key: the invite code, else the IP. |
 | `RATE_LIMIT_WINDOW_SEC` | `60` | Window length. Over the limit → 429 `rate_limited` with `Retry-After`. |
 | `FEEDBACK_SLACK_WEBHOOK_URL` | — | Slack incoming webhook (https) for `POST /feedback` and `POST /report`. Unset → feedback and reports are dropped (still 204) with a `feedback dropped: not configured` / `report dropped: not configured` log line. |
-| `PORT` | `8787` | Local server only. |
+| `METRICS_ENABLED` | off | `true` turns on the anonymous daily counts. Needs `DATABASE_URL` too, or it stays off. |
+| `DATABASE_URL` | — | Postgres for the counts (Neon Frankfurt; Vercel injects it). |
+| `DATABASE_URL_UNPOOLED` | — | Neon's direct URL; only `db:migrate` uses it (falls back to `DATABASE_URL`). |
+| `ADMIN_STATS_TOKEN` | — | Bearer token for `GET /admin/stats`. Unset → the endpoint answers 404. |
+| `PORT` | `8787` | Local server only. Port 8787 is often taken by another project on our machines; pick a free one (`PORT=8790`). |
 
 A role with no provider, or no key for its provider, answers 503 `model_unavailable`. So does
 a misspelt provider (`LLM_PROVIDER=claude`): the start-up log prints one `config error` line
@@ -134,6 +138,67 @@ reason and an optional note. It's the only request whose conversation text we pa
 passage (≤ 2000 characters) goes to the same private Slack channel as feedback, marked as a
 report, in plain_text. Our server stores nothing; Slack keeps the message. The log has ids,
 reasons and lengths only. See [`docs/decisions/0006-report.md`](../../docs/decisions/0006-report.md).
+
+## Anonymous counts
+
+With `METRICS_ENABLED=true` and a `DATABASE_URL`, the server counts per day (UTC), case and
+language: sessions started, chat turns, sessions the client ended, reports (by turns, with the
+session length the app sends as `durationSec`), failed reports, 👍/👎, reports by reason, and
+errors by code. One table, `daily_counts`; no text, no invite code, no IP, no id of any kind.
+Writes are fire and forget: a failed write is one `count failed` log line, the request goes on.
+See [`docs/decisions/0007-anonymous-counts.md`](../../docs/decisions/0007-anonymous-counts.md).
+
+Read them with:
+
+```bash
+curl -s https://psygym-api.novawerk.io/admin/stats -H "Authorization: Bearer $ADMIN_STATS_TOKEN"
+curl -s "https://psygym-api.novawerk.io/admin/stats?from=2026-10-12&to=2026-10-18" -H "Authorization: Bearer $ADMIN_STATS_TOKEN"
+```
+
+`cells` are day × case × language × event × dimension; any under 5 shows `"<5"`, and if only
+one in a group is under 5, the next smallest is hidden too. `totals` (per event and dimension,
+over the range) are exact. Default range: the last 30 days; at most 366 days.
+
+Locally, against a throwaway Postgres (Docker) on a free port:
+
+```bash
+docker run -d --rm --name psygym-pg -e POSTGRES_USER=psygym -e POSTGRES_PASSWORD=psygym -e POSTGRES_DB=psygym -p 55432:5432 postgres:17-alpine
+cd apps/api
+DATABASE_URL=postgres://psygym:psygym@127.0.0.1:55432/psygym pnpm db:migrate
+LLM_PROVIDER=mock METRICS_ENABLED=true DATABASE_URL=postgres://psygym:psygym@127.0.0.1:55432/psygym ADMIN_STATS_TOKEN=local PORT=8790 pnpm dev
+```
+
+The tests use PGlite with the same migrations; no database needed for `pnpm test`.
+
+### Changing the table
+
+Edit `src/metrics/schema.ts`, then `pnpm db:generate` and commit the new file in `drizzle/`.
+Migrations never run at deploy; run them by hand (below) before the code that needs them.
+
+### Going live (once)
+
+1. **Database.** Vercel → psygym-api → Storage → Neon, region Frankfurt, Production. Vercel
+   injects `DATABASE_URL` and `DATABASE_URL_UNPOOLED`.
+2. **Migrate**, from `apps/api`, with the Vercel CLI linked to `psygym-api`:
+
+   ```bash
+   vercel env pull .env.production.local --environment=production
+   pnpm db:migrate:prod
+   rm .env.production.local
+   ```
+
+   `db:migrate:prod` reads `DATABASE_URL_UNPOOLED` from that file and applies `drizzle/`. The
+   file holds every production secret: delete it right after (it's git-ignored either way).
+   Running it twice is safe: drizzle-kit skips what's applied.
+3. **Token.** Set `ADMIN_STATS_TOKEN` (Production) to a long random string, e.g.
+   `openssl rand -base64 32`.
+4. **Switch on.** Set `METRICS_ENABLED=true` (Production) and redeploy. The start-up log says
+   `{"msg":"metrics","enabled":true}`.
+5. **Check.** Use the app once, then `GET /admin/stats` with the token: a `session_started`
+   cell for today. No `count failed` lines in the log.
+
+To switch off: remove `METRICS_ENABLED` (or set it to `false`) and redeploy. Nothing else
+changes; the table stays.
 
 ## Deploy (Vercel)
 
