@@ -213,4 +213,20 @@ class LoginFlowTest {
         assertEquals(LoginStep.Code, f.step)
         assertTrue(!f.busy)
     }
+
+    @Test
+    fun codeDigitsKeepAsciiAndFullWidthDigitsOnly() {
+        assertEquals("482719", LoginFlow.codeDigits(" 48-27 19\n"))
+        assertEquals("482719", LoginFlow.codeDigits("４８２７１９"))
+        // Other scripts' digits (Arabic-Indic here) aren't code digits.
+        assertEquals("12", LoginFlow.codeDigits("1\u0663\u06642"))
+    }
+
+    @Test
+    fun fullWidthDigitsSignIn() = runTest {
+        val f = atCode()
+        f.submitCode("１２３４５６")
+        assertEquals("123456", auth.verifies.single().second)
+        assertEquals(LoginStep.Done, f.step)
+    }
 }

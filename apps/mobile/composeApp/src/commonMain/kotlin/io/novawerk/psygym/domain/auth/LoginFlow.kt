@@ -112,7 +112,7 @@ class LoginFlow(
 
     /** L2: the 6 digits (spaces and other characters are dropped). Signs in, or moves to L3. */
     suspend fun submitCode(input: String) {
-        val digits = input.filter { it.isDigit() }
+        val digits = codeDigits(input)
         if (digits.length != CODE_LENGTH || codeUsedUp) return
         code = digits
         resent = false
@@ -230,6 +230,19 @@ class LoginFlow(
          */
         fun returnsToPage(returnBack: Boolean, expiredAccount: String?, signedIn: String?): Boolean =
             returnBack && expiredAccount != null && expiredAccount == signedIn
+
+        /**
+         * The code's digits: ASCII 0–9 only, full-width ０–９ (Chinese keyboards) turned into
+         * them, everything else dropped. Not isDigit(): that accepts other scripts' digits too.
+         */
+        fun codeDigits(input: String): String = buildString {
+            input.forEach { c ->
+                when (c) {
+                    in '0'..'9' -> append(c)
+                    in '０'..'９' -> append('0' + (c - '０'))
+                }
+            }
+        }
 
         /** Invite codes: dashes and spaces optional, not case-sensitive (login.md L3). */
         fun normalizeInvite(code: String): String = code.filterNot { it == '-' || it.isWhitespace() }.lowercase()

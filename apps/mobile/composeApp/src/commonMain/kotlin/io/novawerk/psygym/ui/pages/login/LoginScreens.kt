@@ -47,6 +47,7 @@ import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.contentType
 import androidx.compose.ui.semantics.semantics
@@ -201,11 +202,14 @@ fun LoginCodeScreen(flow: LoginFlow, onChangeEmail: () -> Unit) {
         CodeBoxes(
             code = code,
             onCode = { typed ->
-                // Paste and autofill bring spaces or dashes: keep the digits only.
-                val digits = typed.filter { it.isDigit() }.take(6)
-                code = digits
-                flow.clearError()
-                if (digits.length == 6 && !flow.codeUsedUp) scope.launch { flow.submitCode(digits) }
+                // Paste and autofill bring spaces or dashes; Chinese keyboards may give full-width
+                // digits. A 7th digit on a full code changes nothing: no second submit.
+                val digits = LoginFlow.codeDigits(typed).take(LoginFlow.CODE_LENGTH)
+                if (digits != code) {
+                    code = digits
+                    flow.clearError()
+                    if (digits.length == LoginFlow.CODE_LENGTH && !flow.codeUsedUp) scope.launch { flow.submitCode(digits) }
+                }
             },
             isError = flow.error != null && flow.error !is LoginError.RateLimited,
             enabled = !flow.codeUsedUp,
@@ -439,7 +443,8 @@ private fun CodeBoxes(code: String, onCode: (String) -> Unit, isError: Boolean, 
             // cursor, the paste menu and the platform's one-time-code autofill.
             Box {
                 Box(Modifier.matchParentSize().alpha(0f)) { innerTextField() }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Drawing only: screen readers read the one real field ("Code, 6 digits").
+            Row(Modifier.clearAndSetSemantics {}, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 repeat(6) { i ->
                     val color = when {
                         isError -> MaterialTheme.colorScheme.error
