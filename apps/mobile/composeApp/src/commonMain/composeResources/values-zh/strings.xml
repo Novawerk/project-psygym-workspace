@@ -253,4 +253,16 @@
     <string name="privacy_a_delete">在「我的」→「删除账号」。删除后，服务器上的账号信息马上删掉，这台手机上这个账号的练习记录也一起删掉。不方便用 App 时，也可以按 psygym.novawerk.io/delete-account 上的说明申请。</string>
     <string name="brief_session_first">初次会谈</string>
     <string name="brief_session_first_note">初次会谈的主要任务：做风险筛查，判断能不能承接这位来访者。</string>
+    <string name="live_chip">督导怎么看</string>
+    <string name="live_chip_seen">督导 · 第 %1$d 轮</string>
+    <string name="live_chip_used_up">督导 · 已看 %1$d 次</string>
+    <string name="live_chip_cd">看看督导现在怎么说</string>
+    <string name="live_new_cd">有新的内容可以看</string>
+    <string name="live_title">督导的提示</string>
+    <string name="live_subtitle">第 %1$d 轮 · 对话还在进行</string>
+    <string name="live_generating">督导正在看你们的对话…</string>
+    <string name="live_footer">这是会谈中途的简短提示，结束后有完整报告。</string>
+    <string name="live_back">回到对话</string>
+    <string name="live_used_up">这场会谈的中途提示已经用完，结束后看完整报告。</string>
+    <string name="live_setting">会谈中显示督导提示</string>
 </resources>

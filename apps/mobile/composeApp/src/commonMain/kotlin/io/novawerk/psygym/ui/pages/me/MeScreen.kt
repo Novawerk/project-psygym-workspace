@@ -59,6 +59,7 @@ import io.novawerk.psygym.resources.Res
 import io.novawerk.psygym.resources.back
 import io.novawerk.psygym.resources.help_link
 import io.novawerk.psygym.resources.history_cancel
+import io.novawerk.psygym.resources.live_setting
 import io.novawerk.psygym.resources.logout_body
 import io.novawerk.psygym.resources.logout_cancel
 import io.novawerk.psygym.resources.logout_confirm
@@ -110,6 +111,8 @@ fun MeScreen(
     onSaveHistoryChange: (Boolean) -> Unit,
     onDeleteAllHistory: () -> Unit,
     onUseFakeApiChange: (Boolean) -> Unit,
+    liveNotes: Boolean,
+    onLiveNotesChange: (Boolean) -> Unit,
     onReplayOnboarding: () -> Unit,
     onHelp: () -> Unit,
     onPrivacy: () -> Unit,
@@ -147,6 +150,9 @@ fun MeScreen(
             SectionTitle(Res.string.me_settings_section)
             GroupCard {
                 ValueRow(Res.string.settings_language, stringResource(languageLabel(language))) { pickLanguage = true }
+                RowDivider()
+                // Mid-session supervisor notes (live-supervision.md L-3). On by default.
+                SwitchRow(Res.string.live_setting, null, liveNotes, onLiveNotesChange)
             }
 
             SectionTitle(Res.string.settings_history_section)
@@ -293,7 +299,7 @@ private fun SectionTitle(res: StringResource) {
 }
 
 @Composable
-private fun SwitchRow(title: StringResource, description: StringResource, checked: Boolean, onChange: (Boolean) -> Unit) {
+private fun SwitchRow(title: StringResource, description: StringResource?, checked: Boolean, onChange: (Boolean) -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -303,7 +309,7 @@ private fun SwitchRow(title: StringResource, description: StringResource, checke
     ) {
         Column(Modifier.weight(1f)) {
             Text(stringResource(title), style = MaterialTheme.typography.bodyLarge)
-            Text(stringResource(description), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            description?.let { Text(stringResource(it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
         Spacer(Modifier.width(12.dp))
         Switch(checked = checked, onCheckedChange = null)

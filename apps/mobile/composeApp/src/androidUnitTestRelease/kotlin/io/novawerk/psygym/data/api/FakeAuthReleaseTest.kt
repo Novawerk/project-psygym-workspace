@@ -29,4 +29,9 @@ class FakeAuthReleaseTest {
         // Cases and reports still work for the report tests; signing in doesn't.
         assertFailsWith<IllegalStateException> { FakePsygymApi().verify("lin@example.com", "123456") }
     }
+
+    @Test
+    fun theDemoDataSwitchIsNotOnTheSignInScreen() {
+        assertFalse(AppConfig.demoSwitchOnSignIn)
+    }
 }
