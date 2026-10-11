@@ -1,0 +1,36 @@
+---
+// Google Play's web deletion entry (docs/product/landing.md §4, points from login.md). Google Play
+// links psygym.novawerk.io/delete-account, which sends the browser here.
+import Base from "../../layouts/Base.astro";
+import { LOCALES, mailto, strings, type Locale } from "../../lib/i18n";
+
+export const getStaticPaths = () => LOCALES.map((lang) => ({ params: { lang } }));
+const lang = Astro.params.lang as Locale;
+const t = strings[lang];
+const d = t.del;
+const h2 = "mt-10 text-xl font-bold md:text-2xl";
+const body = "mt-3 text-base leading-[1.75] text-zinc-700 dark:text-zinc-300";
+---
+
+<Base lang={lang} path="/delete-account" title={`${d.navTitle} · ${t.siteName}`} description={d.intro}>
+  <div class="max-w-[760px] pt-8 pb-16 md:pt-14">
+    <h1 class="text-[32px] leading-tight font-bold md:text-[44px]">{d.title}</h1>
+    <p class="mt-4 text-base leading-[1.75] text-zinc-700 md:text-lg dark:text-zinc-300">{d.intro}</p>
+
+    <h2 class={h2}>{d.h1}</h2>
+    <p class={body}>{d.b1}</p>
+
+    <h2 class={h2}>{d.h2}</h2>
+    <p class={body}>{d.b2}</p>
+    <a href={mailto(d.subject)} class="mt-5 inline-flex h-12 items-center rounded-lg bg-zinc-900 px-[22px] text-base font-bold text-white no-underline hover:bg-zinc-700 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200">{d.btn}</a>
+
+    <div class="mt-10 grid grid-cols-1 gap-4 md:grid-cols-3">
+      {[[d.h3, d.b3], [d.h4, d.b4], [d.h5, d.b5]].map(([title, text]) => (
+        <div class="rounded-xl bg-zinc-100 p-5 dark:bg-zinc-900">
+          <h2 class="text-base font-bold">{title}</h2>
+          <p class="mt-1.5 text-[15px] leading-[1.7] text-zinc-700 dark:text-zinc-300">{text}</p>
+        </div>
+      ))}
+    </div>
+  </div>
+</Base>

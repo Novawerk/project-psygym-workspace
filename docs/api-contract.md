@@ -228,7 +228,7 @@ totalled stay (they hold no account). Feedback and reports already sent to our S
 never carried the email either. Needs the token; same `401` errors as `GET /me`. Afterwards
 the account's other devices get `401 session_expired`.
 
-Without the app (Google Play asks for this): the page `novawerk.io/psygym/delete-account`
+Without the app (Google Play asks for this): the page `psygym.novawerk.io/delete-account`
 explains it; the request goes by email to `info@novawerk.io`, from the account's address. We
 delete within 30 days (ADR 0008).
 

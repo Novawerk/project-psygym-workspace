@@ -1,0 +1,96 @@
+---
+// The home page: docs/product/landing.md §2, design ⑨ (desktop and phone).
+import PhoneMock from "../../components/PhoneMock.astro";
+import Base from "../../layouts/Base.astro";
+import { LOCALES, REPO, mailto, strings, type Locale } from "../../lib/i18n";
+
+export const getStaticPaths = () => LOCALES.map((lang) => ({ params: { lang } }));
+const lang = Astro.params.lang as Locale;
+const t = strings[lang].home;
+
+const section = "flex flex-col gap-5 border-t border-zinc-200 py-11 md:py-16 dark:border-zinc-800";
+const h2 = "m-0 text-2xl font-bold md:text-[30px]";
+const card = "rounded-xl bg-zinc-100 p-5 dark:bg-zinc-900";
+const cardTitle = "mb-1.5 text-base font-bold";
+const cardBody = "text-[15px] leading-[1.7] text-zinc-700 dark:text-zinc-300";
+const primary = "inline-flex h-12 items-center rounded-lg bg-zinc-900 px-[22px] text-base font-bold text-white no-underline hover:bg-zinc-700 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200";
+const textLink = "text-[15px] font-semibold text-zinc-900 underline-offset-4 hover:underline dark:text-zinc-50";
+---
+
+<Base lang={lang} path="" title={t.title} description={t.description}>
+  <section class="flex flex-col items-center gap-8 pt-8 pb-12 md:flex-row md:gap-16 md:pt-[72px] md:pb-20">
+    <div class="flex min-w-0 flex-1 flex-col gap-5">
+      <h1 class="m-0 text-[32px] leading-[1.2] font-bold text-balance md:text-[52px]">{t.h1}</h1>
+      <p class="m-0 text-base leading-[1.7] text-zinc-700 md:text-[19px] dark:text-zinc-300">{t.sub}</p>
+      <div class="mt-2 flex flex-wrap gap-3">
+        <a href="#beta" class={primary}>{t.cta1}</a>
+        <a href="#how" class="inline-flex h-12 items-center rounded-lg border border-zinc-200 px-[22px] text-base text-zinc-950 no-underline hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-50 dark:hover:bg-zinc-900">{t.cta2}</a>
+      </div>
+      <p class="m-0 text-[13px] text-zinc-500 dark:text-zinc-400">{t.small}</p>
+    </div>
+    <PhoneMock lang={lang} />
+  </section>
+
+  <section id="how" class={section}>
+    <h2 class={h2}>{t.how}</h2>
+    <ol class="m-0 grid list-none grid-cols-1 gap-4 p-0 md:grid-cols-3">
+      {t.steps.map(([title, body], i) => (
+        <li class={card}>
+          <span class="mb-3 inline-flex size-7 items-center justify-center rounded-full bg-zinc-900 text-sm font-bold text-white dark:bg-zinc-50 dark:text-zinc-950" aria-hidden="true">{i + 1}</span>
+          <p class={cardTitle}>{title}</p>
+          <p class={cardBody}>{body}</p>
+        </li>
+      ))}
+    </ol>
+  </section>
+
+  <section class={section}>
+    <h2 class:list={[h2, "flex items-center gap-2.5"]}>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6z"></path></svg>
+      {t.safe}
+    </h2>
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+      {t.bounds.map(([title, body]) => (
+        <div class={card}>
+          <p class={cardTitle}>{title}</p>
+          <p class={cardBody}>{body}</p>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <section class={section}>
+    <h2 class={h2}>{t.priv}</h2>
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+      {t.points.map(([title, body]) => (
+        <div class={card}>
+          <p class={cardTitle}>{title}</p>
+          <p class={cardBody}>{body}</p>
+        </div>
+      ))}
+      <div class={card}>
+        <p class={cardTitle}>{t.deleteT}</p>
+        <p class={cardBody}>{t.deleteBefore}<a class="underline underline-offset-2" href={`/${lang}/delete-account`}>{t.deleteLink}</a>{t.deleteAfter}</p>
+      </div>
+    </div>
+    <a href={`/${lang}/privacy`} class={textLink}>{t.plink}</a>
+  </section>
+
+  <section id="beta" class={section}>
+    <div class="flex flex-col items-start gap-3.5 rounded-xl border border-zinc-200 p-6 md:p-10 dark:border-zinc-800">
+      <h2 class="m-0 rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-normal text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">{t.beta}</h2>
+      <p class="m-0 max-w-[640px] text-base leading-[1.7] text-zinc-700 dark:text-zinc-300">{t.betaBody}</p>
+      <a href={mailto(t.betaSubject)} class={primary}>{t.betaBtn}</a>
+      <p class="m-0 text-[13px] text-zinc-500 dark:text-zinc-400">info@novawerk.io</p>
+    </div>
+  </section>
+
+  <section class={section}>
+    <h2 class={h2}>{t.who}</h2>
+    <p class="m-0 max-w-[720px] text-base leading-[1.75] text-zinc-700 dark:text-zinc-300">{t.whoBody}</p>
+    <div class="flex gap-5">
+      <a href={REPO} class={textLink}>GitHub →</a>
+      <a href="https://novawerk.io" class={textLink}>Novawerk →</a>
+    </div>
+  </section>
+</Base>

@@ -1,0 +1,102 @@
+---
+// One layout for every page (design ⑨): zinc, dark mode follows the system, the font is served
+// from this site. No analytics, no cookies. The only script remembers the language a visitor
+// picks, so the bare paths send them back to it.
+import "@fontsource-variable/noto-sans-sc";
+import "../styles/global.css";
+import Logo from "../components/Logo.astro";
+import { EMAIL, LOCALES, REPO, strings, type Locale } from "../lib/i18n";
+
+interface Props {
+  lang: Locale;
+  /** The path without the language prefix, e.g. "/privacy" ("" for home). */
+  path: string;
+  title: string;
+  description?: string;
+  noindex?: boolean;
+}
+const { lang, path, title, description, noindex = false } = Astro.props;
+const t = strings[lang];
+const href = (l: Locale, p = path) => `/${l}${p}`;
+const abs = (p: string) => new URL(p, Astro.site).href;
+const ogImage = abs(`/og-${lang}.png`);
+const label: Record<Locale, string> = { zh: "中", en: "EN" };
+---
+
+<!doctype html>
+<html lang={t.htmlLang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>{title}</title>
+    {description && <meta name="description" content={description} />}
+    {noindex && <meta name="robots" content="noindex" />}
+    <link rel="canonical" href={abs(href(lang))} />
+    <link rel="alternate" hreflang="zh-CN" href={abs(href("zh"))} />
+    <link rel="alternate" hreflang="en" href={abs(href("en"))} />
+    <link rel="alternate" hreflang="x-default" href={abs(path || "/")} />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={t.siteName} />
+    <meta property="og:locale" content={t.ogLocale} />
+    <meta property="og:url" content={abs(href(lang))} />
+    <meta property="og:title" content={title} />
+    {description && <meta property="og:description" content={description} />}
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    {description && <meta name="twitter:description" content={description} />}
+    <meta name="twitter:image" content={ogImage} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  </head>
+  <body class="min-h-dvh bg-white font-sans text-zinc-950 antialiased dark:bg-zinc-950 dark:text-zinc-50">
+    <div class="mx-auto max-w-[1080px] px-5 md:px-8">
+      <header class="flex h-[72px] items-center justify-between gap-4">
+        <a href={href(lang, "")} class="flex items-center gap-2.5 no-underline">
+          <Logo />
+          <span class="text-base font-bold">{t.siteName}</span>
+        </a>
+        <nav aria-label={t.langLabel} class="flex rounded-full bg-zinc-100 p-[3px] text-[13px] dark:bg-zinc-800">
+          {LOCALES.map((l) => (
+            <a
+              href={href(l)}
+              hreflang={l}
+              lang={strings[l].htmlLang}
+              data-lang={l}
+              aria-current={l === lang ? "true" : undefined}
+              class:list={[
+                "rounded-full px-3 py-1.5 no-underline",
+                l === lang ? "bg-white text-zinc-950 shadow-sm dark:bg-zinc-950 dark:text-zinc-50" : "text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-zinc-50",
+              ]}
+            >{label[l]}</a>
+          ))}
+        </nav>
+      </header>
+
+      <main>
+        <slot />
+      </main>
+
+      <footer class="flex flex-col gap-3 border-t border-zinc-200 pt-7 pb-10 text-sm text-zinc-500 md:flex-row md:justify-between dark:border-zinc-800 dark:text-zinc-400">
+        <div class="flex flex-wrap gap-4">
+          <a class="text-zinc-700 no-underline hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-zinc-50" href={href(lang, "/privacy")}>{t.footer.privacy}</a>
+          <a class="text-zinc-700 no-underline hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-zinc-50" href={href(lang, "/delete-account")}>{t.footer.del}</a>
+          <a class="text-zinc-700 no-underline hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-zinc-50" href={REPO}>GitHub</a>
+          <a class="text-zinc-500 no-underline hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-zinc-50" href={`mailto:${EMAIL}`}>{EMAIL}</a>
+        </div>
+        <span>{t.footer.copy}</span>
+      </footer>
+    </div>
+    <script is:inline>
+      // A language preference, nothing else: read by the bare paths ("/", "/privacy", …).
+      document.querySelectorAll("a[data-lang]").forEach(function (a) {
+        a.addEventListener("click", function () {
+          try { localStorage.setItem("lang", a.getAttribute("data-lang")); } catch (e) {}
+        });
+      });
+    </script>
+  </body>
+</html>
