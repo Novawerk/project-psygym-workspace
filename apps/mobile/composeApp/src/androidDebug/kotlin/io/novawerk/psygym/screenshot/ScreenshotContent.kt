@@ -107,21 +107,23 @@ internal object ScreenshotContent {
         Message(Role.Client, "…Okay. I can try."),
     )
 
-    // Short enough that all three parts and the closing line fit one screen.
+    // In the report's card format (apps/api/prompts/supervisor.md): "to improve" goes problem →
+    // quote → suggestion, and the suggestion has no quote marks. Short enough to read in one
+    // screen and a scroll.
     private val LIN_REPORT_ZH = """
         ## 做得好的地方
 
-        - 你说「听起来这段时间你过得挺累的。」先回应感受，再问时间线，有助于建立关系。
-        - 你说「你有多相信它？如果 0 到 100 分的话。」把自动思维说具体，并请来访者打分。
+        - 你说「听起来这段时间你过得挺累的。」，好在先回应感受，再问时间线，有助于建立关系。
+        - 你说「你有多相信它？如果 0 到 100 分的话。」，好在把自动思维说具体，并请来访者打分。
 
         ## 需要改进的地方
 
-        - 你说「第二次面试没过的那天，你心里冒出来的第一个念头是什么？」之前，还没有和来访者一起设定议程。可以换成：「今天你最希望我们一起聊些什么？」
+        - 问到具体的念头之前，还没有和来访者一起设定议程。你说：「第二次面试没过的那天，你心里冒出来的第一个念头是什么？」。可以换成：今天你最希望我们一起聊些什么？
 
         ## 下次练什么
 
-        1. 会谈开始时，先共同设定议程。
-        2. 用苏格拉底式提问，检验一个自动思维的证据。
+        - 会谈开始时，先共同设定议程。
+        - 用苏格拉底式提问，检验一个自动思维的证据。
 
         这份反馈由 AI 生成，仅供练习参考。
     """.trimIndent()
@@ -129,17 +131,17 @@ internal object ScreenshotContent {
     private val LIN_REPORT_EN = """
         ## What went well
 
-        - You said "It sounds like these past months have been exhausting." You met the client's feelings before asking for facts.
-        - You said "how much do you believe it, from 0 to 100?" Rating the thought makes it concrete.
+        - You said “It sounds like these past months have been exhausting.”, which met the client's feelings before asking for facts.
+        - You said “how much do you believe it, from 0 to 100?”, which made the thought concrete by rating it.
 
         ## What to improve
 
-        - Before you said "what was the first thought that went through your mind?", you hadn't set an agenda together. Try instead: "What would you most like to talk about today?"
+        - Before asking about the thought, you hadn't set an agenda together. You said: “what was the first thought that went through your mind?”. Try instead: What would you most like to talk about today?
 
         ## What to practise next
 
-        1. Set an agenda together at the start.
-        2. Test the evidence for one automatic thought.
+        - Set an agenda together at the start.
+        - Test the evidence for one automatic thought.
 
         This feedback is AI-generated, for practice only.
     """.trimIndent()

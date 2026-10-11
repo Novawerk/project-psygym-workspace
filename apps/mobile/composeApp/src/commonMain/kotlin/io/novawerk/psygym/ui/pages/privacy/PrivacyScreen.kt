@@ -2,8 +2,10 @@ package io.novawerk.psygym.ui.pages.privacy
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -38,7 +40,7 @@ import io.novawerk.psygym.resources.privacy_q_vendor
 import io.novawerk.psygym.resources.privacy_q_where
 import io.novawerk.psygym.resources.privacy_title
 import io.novawerk.psygym.resources.privacy_vendor
-import io.novawerk.psygym.ui.components.BorderedCard
+import io.novawerk.psygym.ui.components.GrayCard
 import org.jetbrains.compose.resources.stringResource
 
 /** P3 · Privacy, as questions and short answers (screens.md). */
@@ -79,10 +81,10 @@ fun PrivacyScreen(onBack: () -> Unit) {
 
 @Composable
 private fun Qa(q: String, a: String) {
-    BorderedCard(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(q, style = MaterialTheme.typography.titleSmall)
-            Text(a, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
+    // Grey card, no border (design P3).
+    GrayCard {
+        Text(q, style = MaterialTheme.typography.titleSmall)
+        Spacer(Modifier.height(2.dp))
+        Text(a, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

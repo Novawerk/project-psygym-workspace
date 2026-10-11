@@ -30,7 +30,6 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.outlined.Support
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.HorizontalDivider
@@ -96,6 +95,7 @@ import io.novawerk.psygym.resources.practice_role_client
 import io.novawerk.psygym.resources.practice_role_counselor
 import io.novawerk.psygym.resources.practice_send
 import io.novawerk.psygym.resources.practice_timer_cd
+import io.novawerk.psygym.ui.components.ShieldAlert
 import io.novawerk.psygym.ui.components.BorderedCard
 import io.novawerk.psygym.ui.components.ErrorCard
 import io.novawerk.psygym.ui.components.PrimaryButton
@@ -181,7 +181,7 @@ fun PracticeScreen(
                 },
                 actions = {
                     IconButton(onClick = onHelp) {
-                        Icon(Icons.Outlined.Support, contentDescription = stringResource(Res.string.practice_help_cd))
+                        Icon(ShieldAlert, contentDescription = stringResource(Res.string.practice_help_cd))
                     }
                     if (!viewModel.clientEnded) {
                         val endCd = stringResource(Res.string.practice_end_cd)
