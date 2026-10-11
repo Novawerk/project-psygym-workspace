@@ -16,7 +16,7 @@
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:migrate:prod": "node --env-file=.env.production.local ./node_modules/drizzle-kit/bin.cjs migrate"
+    "db:migrate:prod": "MIGRATE_TARGET=production drizzle-kit migrate"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.133.0",

@@ -47,6 +47,27 @@ describe.skipIf(env.expectModelUnavailable)("POST /supervision, any shape of ses
   });
 });
 
+describe.skipIf(env.expectModelUnavailable)("POST /supervision, durationSec (optional, 0–7200 whole seconds)", () => {
+  // A valid value is taken; anything else is ignored, never a 400. It never changes the report.
+  it.each([
+    ["a valid value", 600],
+    ["0", 0],
+    ["7200", 7200],
+    ["over 7200", 7201],
+    ["negative", -5],
+    ["not whole", 1.5],
+    ["a string", "600"],
+    ["null", null],
+  ])("%s → 200 and a full report", async (_name, durationSec) => {
+    const body = { ...(await validBody("zh", conversation(2).reverse())), durationSec };
+    const res = await call("/supervision", { body });
+    expect(res.status, await peek(res)).toBe(200);
+    const r = await readStream(res, env.streamTimeoutMs);
+    expect(frameProblems(r, { sessionEnd: false })).toEqual([]);
+    expect(r.frames[r.frames.length - 1]).toMatchObject({ type: "turn_end" });
+  });
+});
+
 describe.skipIf(env.expectModelUnavailable || !env.endTrigger)("session_end (END_TRIGGER set, mock model)", () => {
   const ending = () => conversation(3).map((m, i, a) => (i === a.length - 1 ? { ...m, text: `好的。${env.endTrigger}` } : m));
 

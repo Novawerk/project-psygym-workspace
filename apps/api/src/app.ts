@@ -8,7 +8,7 @@
 //   POST /report       → 204, one reported AI passage, forwarded to Slack (or dropped)
 //
 // Stateless. We store no transcript, and the log never carries message text.
-import { timingSafeEqual } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 
 import { Hono, type Context } from "hono";
 import { cors } from "hono/cors";
@@ -20,7 +20,7 @@ import { publicSummary, type Case, type Prompts } from "./content.js";
 import { createProvider, type ModelProvider } from "./llm/index.js";
 import type { ModelRequest } from "./llm/types.js";
 import { FeedbackBody, postToSlack, slackMessage, type FetchLike } from "./feedback.js";
-import { disabledCounter, normalizeEvent, turnBucket, type Counter, type MetricsStore } from "./metrics/index.js";
+import { disabledCounter, durationBucket, normalizeEvent, turnBucket, type Counter, type MetricsStore } from "./metrics/counter.js";
 import { statsView } from "./metrics/stats.js";
 import { FixedWindowLimiter, clientIp } from "./rate-limit.js";
 import { ReportBody, reportSlackMessage } from "./report.js";
@@ -110,11 +110,11 @@ async function readBody(req: Request): Promise<BodyRead> {
   return { tooLarge: false, text: Buffer.concat(chunks).toString("utf8") };
 }
 
-/** Constant-time comparison for the admin token. */
+/** Constant-time comparison for the admin token; hashing first hides its length too. */
 function sameToken(given: string, expected: string): boolean {
-  const a = Buffer.from(given);
-  const b = Buffer.from(expected);
-  return a.length === b.length && timingSafeEqual(a, b);
+  const a = createHash("sha256").update(given).digest();
+  const b = createHash("sha256").update(expected).digest();
+  return timingSafeEqual(a, b);
 }
 
 const DAY_MS = 86_400_000;
@@ -150,9 +150,13 @@ export function createApp(deps: AppDeps) {
   const rawCounter = deps.counter ?? disabledCounter;
   // Every count goes through normalizeEvent: unknown case ids and languages become "unknown".
   const counter: Counter = { enabled: rawCounter.enabled, count: (e) => rawCounter.count(normalizeEvent(e, cases)) };
-  /** The error answer, counted by its code only (no case, language, invite code or IP). */
+  /**
+   * The error answer, counted by its code only (no case, language, invite code or IP).
+   * 401 and 429 are not counted: they come before or from the rate limit, so anyone could make
+   * us write to the database without end.
+   */
   const failCounted = (c: Context, status: 400 | 401 | 404 | 429 | 503, code: ErrorCode, message?: string) => {
-    counter.count({ metric: "error", dim: code });
+    if (code !== "invite_required" && code !== "rate_limited") counter.count({ metric: "error", dim: code });
     return fail(c, status, code, message);
   };
   const limiter = new FixedWindowLimiter(config.rateLimit.max, config.rateLimit.windowMs, deps.now);
@@ -285,6 +289,7 @@ export function createApp(deps: AppDeps) {
             }
           } else if (o.ok) {
             counter.count({ metric: "report_generated", ...at, dim: turnBucket(messages.length), durationSec });
+            if (durationSec !== undefined) counter.count({ metric: "session_duration", ...at, dim: durationBucket(durationSec) });
           } else {
             counter.count({ metric: "report_failed", ...at });
           }

@@ -143,8 +143,8 @@ reasons and lengths only. See [`docs/decisions/0006-report.md`](../../docs/decis
 
 With `METRICS_ENABLED=true` and a `DATABASE_URL`, the server counts per day (UTC), case and
 language: sessions started, chat turns, sessions the client ended, reports (by turns, with the
-session length the app sends as `durationSec`), failed reports, 👍/👎, reports by reason, and
-errors by code. One table, `daily_counts`; no text, no invite code, no IP, no id of any kind.
+session length the app sends as `durationSec`, also in five length buckets), failed reports,
+👍/👎, reports by reason, and errors by code (not 401 or 429: anyone could trigger those). One table, `daily_counts`; no text, no invite code, no IP, no id of any kind.
 Writes are fire and forget: a failed write is one `count failed` log line, the request goes on.
 See [`docs/decisions/0007-anonymous-counts.md`](../../docs/decisions/0007-anonymous-counts.md).
 
@@ -155,9 +155,13 @@ curl -s https://psygym-api.novawerk.io/admin/stats -H "Authorization: Bearer $AD
 curl -s "https://psygym-api.novawerk.io/admin/stats?from=2026-10-12&to=2026-10-18" -H "Authorization: Bearer $ADMIN_STATS_TOKEN"
 ```
 
-`cells` are day × case × language × event × dimension; any under 5 shows `"<5"`, and if only
-one in a group is under 5, the next smallest is hidden too. `totals` (per event and dimension,
-over the range) are exact. Default range: the last 30 days; at most 366 days.
+`cells` are day × case × language × event × dimension; `totals` are per event and dimension
+over the range. Any cell or total under 5 shows `"<5"`, and if only one cell in a group is
+under 5, the next smallest is hidden too. This holds within one response; subtracting
+different ranges can still reveal a cell (ADR 0007). Default range: the last 30 days; at most
+366 days.
+
+With counting off (the default), a cold start loads no database code at all.
 
 Locally, against a throwaway Postgres (Docker) on a free port:
 
@@ -172,24 +176,35 @@ The tests use PGlite with the same migrations; no database needed for `pnpm test
 
 ### Changing the table
 
-Edit `src/metrics/schema.ts`, then `pnpm db:generate` and commit the new file in `drizzle/`.
+Edit `src/metrics/schema.ts`, then `pnpm db:generate` (no database needed) and commit the new
+file in `drizzle/`.
 Migrations never run at deploy; run them by hand (below) before the code that needs them.
 
 ### Going live (once)
 
 1. **Database.** Vercel → psygym-api → Storage → Neon, region Frankfurt, Production. Vercel
    injects `DATABASE_URL` and `DATABASE_URL_UNPOOLED`.
-2. **Migrate**, from `apps/api`, with the Vercel CLI linked to `psygym-api`:
+2. **Migrate** (by hand, never at deploy), from `apps/api`, with the Vercel CLI logged in:
 
    ```bash
-   vercel env pull .env.production.local --environment=production
-   pnpm db:migrate:prod
-   rm .env.production.local
+   vercel env run -e production --project psygym-api --scope novawerk -- pnpm db:migrate:prod
    ```
 
-   `db:migrate:prod` reads `DATABASE_URL_UNPOOLED` from that file and applies `drizzle/`. The
-   file holds every production secret: delete it right after (it's git-ignored either way).
-   Running it twice is safe: drizzle-kit skips what's applied.
+   Nothing is written to disk: the CLI hands the production variables to that one command.
+   `db:migrate:prod` sets `MIGRATE_TARGET=production`, and then the config accepts only
+   `DATABASE_URL_UNPOOLED` (Neon's direct connection); it never falls back to the pooled
+   `DATABASE_URL`. Running it twice is safe: drizzle-kit skips what's applied.
+
+   **If it stops with "DATABASE_URL_UNPOOLED is empty"** (a variable marked Sensitive can't be
+   read back by the CLI): open Vercel → psygym-api → Storage → psygym-db → Open in Neon →
+   Connect, turn connection pooling off, copy the connection string, then:
+
+   ```bash
+   read -rs DATABASE_URL_UNPOOLED && export DATABASE_URL_UNPOOLED   # paste, Enter: not shown, not in history
+   pnpm db:migrate:prod
+   unset DATABASE_URL_UNPOOLED
+   ```
+
 3. **Token.** Set `ADMIN_STATS_TOKEN` (Production) to a long random string, e.g.
    `openssl rand -base64 32`.
 4. **Switch on.** Set `METRICS_ENABLED=true` (Production) and redeploy. The start-up log says

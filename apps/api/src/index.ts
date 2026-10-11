@@ -4,13 +4,13 @@ import { waitUntil } from "@vercel/functions";
 import { consoleLogger, createApp } from "./app.js";
 import { loadConfig } from "./config.js";
 import { loadCases, loadPrompts } from "./content.js";
-import { createCounter, disabledCounter } from "./metrics/index.js";
-import { postgresStore } from "./metrics/db.js";
+import { createCounter, disabledCounter } from "./metrics/counter.js";
 
-export function appFromEnv(env: Record<string, string | undefined> = process.env) {
+export async function appFromEnv(env: Record<string, string | undefined> = process.env) {
   const config = loadConfig(env);
   const logger = consoleLogger;
-  const metricsStore = config.metrics ? postgresStore(config.metrics.databaseUrl) : null;
+  // The database code (drizzle-orm, pg) is loaded only when counting is on.
+  const metricsStore = config.metrics ? (await import("./metrics/db.js")).postgresStore(config.metrics.databaseUrl) : null;
   const counter = metricsStore
     ? createCounter({
         store: metricsStore,
@@ -24,4 +24,4 @@ export function appFromEnv(env: Record<string, string | undefined> = process.env
   return createApp({ config, cases: loadCases(), prompts: loadPrompts(), logger, counter, metricsStore });
 }
 
-export default appFromEnv();
+export default await appFromEnv();

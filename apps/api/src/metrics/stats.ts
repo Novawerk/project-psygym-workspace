@@ -1,11 +1,13 @@
 // GET /admin/stats: the counts, with small cells hidden. Any cell under 5 shows "<5" so a
-// quiet day on one case can't point at one person. Totals over the range stay exact, so within
-// each metric × dim group we never hide just one cell: if only one is hidden, the next smallest
-// is hidden too, or the total minus the rest would give it away. Durations follow the same rule.
-import type { dailyCounts } from "./schema.js";
+// quiet day on one case can't point at one person. Totals under 5 show "<5" too (a group of one
+// small cell would otherwise give it away). Within each metric × dim group we never hide just
+// one cell: if only one is hidden, the next smallest is hidden too, or the total minus the rest
+// would give it away. Durations follow the same rules. This holds for one response only:
+// subtracting results across different from/to ranges can still reveal a hidden cell (see ADR 0007).
+import type { CountRow } from "./counter.js";
 
 export const MIN_SHOWN = 5;
-type Row = typeof dailyCounts.$inferSelect;
+type Row = CountRow;
 /**
  * Which rows of one group get hidden, by `size`: everything under MIN_SHOWN, and, if that is
  * exactly one row while others are shown, the smallest shown row as well.
@@ -54,8 +56,10 @@ export function statsView(from: string, to: string, rows: Row[]) {
     return {
       metric: g[0]!.metric,
       dim: g[0]!.dim,
-      count,
-      ...(durN ? { durationSec: { sessions: durN, avgSec: Math.round(durSum / durN) } } : {}),
+      count: count < MIN_SHOWN ? ("<5" as const) : count,
+      ...(durN
+        ? { durationSec: durN < MIN_SHOWN ? { sessions: "<5" as const, avgSec: null } : { sessions: durN, avgSec: Math.round(durSum / durN) } }
+        : {}),
     };
   });
 

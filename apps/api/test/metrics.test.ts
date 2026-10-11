@@ -13,15 +13,8 @@ import { loadCases, loadPrompts } from "../src/content.js";
 import { MockProvider } from "../src/llm/mock.js";
 import type { ModelProvider } from "../src/llm/types.js";
 import { postgresStore } from "../src/metrics/db.js";
-import {
-  createCounter,
-  disabledCounter,
-  DrizzleMetricsStore,
-  normalizeEvent,
-  type CountEvent,
-  type MetricsDb,
-  type MetricsStore,
-} from "../src/metrics/index.js";
+import { DrizzleMetricsStore, type MetricsDb } from "../src/metrics/store.js";
+import { createCounter, disabledCounter, normalizeEvent, type CountEvent, type MetricsStore } from "../src/metrics/counter.js";
 import { statsView } from "../src/metrics/stats.js";
 import { dailyCounts } from "../src/metrics/schema.js";
 
@@ -114,6 +107,20 @@ describe("what we count", () => {
     expect(find(r, "chat_turn").reduce((n, x) => n + x.count, 0)).toBe(3);
     expect(find(r, "session_ended_by_client")).toMatchObject([{ caseId: CASE_ID, locale: "zh", count: 1 }]);
     expect(find(r, "report_generated", "1-5")).toMatchObject([{ caseId: CASE_ID, locale: "zh", count: 2, durationSumSec: 1800, durationCount: 2 }]);
+    // 600 s is 10 minutes (10–20); 1200 s is 20 minutes (20–40).
+    expect(find(r, "session_duration", "10-20m")).toMatchObject([{ count: 1 }]);
+    expect(find(r, "session_duration", "20-40m")).toMatchObject([{ count: 1 }]);
+  });
+
+  it("duration buckets: 0–5, 5–10, 10–20, 20–40, 40+ minutes; none without durationSec", async () => {
+    const { app, flush } = makeApp(s.store);
+    for (const d of [0, 299, 300, 599, 600, 1199, 1200, 2399, 2400, 7200, undefined]) {
+      const res = await app.request("/supervision", json({ ...chat([{ role: "counselor", text: "你好" }]), ...(d === undefined ? {} : { durationSec: d }) }));
+      await res.text();
+    }
+    await flush();
+    const r = (await rows(s.db)).filter((x) => x.metric === "session_duration");
+    expect(Object.fromEntries(r.map((x) => [x.dim, x.count]))).toEqual({ "0-5m": 2, "5-10m": 2, "10-20m": 2, "20-40m": 2, "40m+": 2 });
   });
 
   it("turn buckets: 1–5, 6–15, 16–30, 31+", async () => {
@@ -155,7 +162,7 @@ describe("what we count", () => {
     expect(find(r, "user_report", "out_of_role")).toMatchObject([{ caseId: CASE_ID, locale: "zh", count: 1 }]);
   });
 
-  it("errors by code only: no case, no language", async () => {
+  it("errors by code only: no case, no language; 401 and 429 aren't counted", async () => {
     const { app, flush } = makeApp(s.store, { env: { INVITE_CODES: INVITE, RATE_LIMIT_MAX: "1" } });
     const ok = { "X-Invite-Code": INVITE };
     await app.request("/cases"); // 401
@@ -165,7 +172,8 @@ describe("what we count", () => {
     await app.request("/report", json({ caseId: CASE_ID }, ok)); // 400
     await flush();
     const errs = (await rows(s.db)).filter((x) => x.metric === "error");
-    expect(Object.fromEntries(errs.map((x) => [x.dim, x.count]))).toEqual({ invite_required: 1, rate_limited: 1, case_not_found: 1, invalid_request: 1 });
+    // 401 (before the rate limit) and 429 would let anyone write to the database without end.
+    expect(Object.fromEntries(errs.map((x) => [x.dim, x.count]))).toEqual({ case_not_found: 1, invalid_request: 1 });
     for (const e of errs) expect([e.caseId, e.locale]).toEqual(["", ""]);
   });
 
@@ -337,7 +345,7 @@ describe("GET /admin/stats", () => {
     expect(await rows(s.db)).toEqual([]);
   });
 
-  it("cells under 5 show <5; totals are exact; duration averages hide under 5 sessions", async () => {
+  it("cells and totals under 5 show <5; duration averages hide under 5 sessions", async () => {
     const s = await seeded();
     const { app } = makeApp(s.store);
     const res = await app.request("/admin/stats?from=2026-10-16&to=2026-10-17", { headers: auth });
@@ -359,8 +367,10 @@ describe("GET /admin/stats", () => {
     expect(cell("feedback", { dim: "up" })).toMatchObject({ day: "2026-10-17", count: "<5" });
     const total = (metric: string, dim = "") => body.totals.find((t) => t.metric === metric && t.dim === dim);
     expect(total("session_started")).toEqual({ metric: "session_started", dim: "", count: 9 });
-    expect(total("report_generated", "6-15")).toEqual({ metric: "report_generated", dim: "6-15", count: 3, durationSec: { sessions: 3, avgSec: 900 } });
-    expect(total("feedback", "up")).toMatchObject({ count: 1 });
+    // Totals under 5 are hidden too: a group of one small cell would give it away.
+    expect(total("report_generated", "6-15")).toEqual({ metric: "report_generated", dim: "6-15", count: "<5", durationSec: { sessions: "<5", avgSec: null } });
+    expect(total("report_generated", "1-5")).toEqual({ metric: "report_generated", dim: "1-5", count: 6, durationSec: { sessions: 6, avgSec: 600 } });
+    expect(total("feedback", "up")).toMatchObject({ count: "<5" });
   });
 
   it("never hides just one cell in a group; leaves the rest alone", () => {

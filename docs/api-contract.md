@@ -150,3 +150,9 @@ JSON `{ "error": { "code": string, "message": string } }` with:
 In a stream, `error` with `model_unavailable` also covers a model that returned an empty reply.
 
 The app shows a friendly message for each code, in the current language.
+
+## Changes
+
+- **#62** — `POST /supervision` takes an optional `durationSec`. Backend first; the app sends it
+  in a later PR. An exception to "both sides in one PR", allowed by the lead: the field is
+  optional and old apps work unchanged.

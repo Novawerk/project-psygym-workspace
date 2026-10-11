@@ -1,10 +1,10 @@
 // Anonymous counts: fire and forget. A failed write is one log line and never touches the
 // request. Nothing here sees message text, invite codes or IPs: callers pass only an event
 // name, a case id, a language, one enum-like dimension and (for reports) a duration.
-import { and, gte, lte, sql } from "drizzle-orm";
-import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
-
-import { dailyCounts } from "./schema.js";
+//
+// No database code in this file on purpose: the app imports it on every cold start, and with
+// counting off it must not pull in drizzle-orm or pg. The store lives in ./store.ts and is
+// loaded only when counting is on (src/index.ts).
 
 export const METRICS = [
   "session_started", // /chat with the counselor's first line
@@ -12,6 +12,7 @@ export const METRICS = [
   "session_ended_by_client", // a /chat stream that carried session_end
   "report_generated", // a /supervision stream that ended with turn_end; dim = turn bucket
   "report_failed", // a /supervision stream that ended with an error frame
+  "session_duration", // with report_generated, when the app sent durationSec; dim = length bucket
   "feedback", // dim = up | down
   "user_report", // dim = reason
   "error", // dim = error code (pre-stream codes, or stream_error)
@@ -47,52 +48,33 @@ export function turnBucket(messages: number): string {
   return "31+";
 }
 
+/** Session length, bucketed (docs/product/admin.md): 0–5, 5–10, 10–20, 20–40, 40+ minutes. */
+export function durationBucket(sec: number): string {
+  const min = sec / 60;
+  if (min < 5) return "0-5m";
+  if (min < 10) return "5-10m";
+  if (min < 20) return "10-20m";
+  if (min < 40) return "20-40m";
+  return "40m+";
+}
+
 export const utcDay = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 
-// Any Drizzle Postgres database: node-postgres in production, PGlite in tests.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type MetricsDb = PgDatabase<PgQueryResultHKT, any>;
+/** One row of daily_counts, as the store returns it (mirrors ./schema.ts). */
+export interface CountRow {
+  day: string;
+  metric: string;
+  caseId: string;
+  locale: string;
+  dim: string;
+  count: number;
+  durationSumSec: number;
+  durationCount: number;
+}
 
 export interface MetricsStore {
   increment(day: string, e: CountEvent): Promise<void>;
-  rows(from: string, to: string): Promise<(typeof dailyCounts.$inferSelect)[]>;
-}
-
-export class DrizzleMetricsStore implements MetricsStore {
-  constructor(private readonly db: MetricsDb) {}
-
-  async increment(day: string, e: CountEvent): Promise<void> {
-    const d = e.durationSec;
-    const withDuration = d !== undefined ? 1 : 0;
-    await this.db
-      .insert(dailyCounts)
-      .values({
-        day,
-        metric: e.metric,
-        caseId: e.caseId ?? "",
-        locale: e.locale ?? "",
-        dim: e.dim ?? "",
-        count: 1,
-        durationSumSec: d ?? 0,
-        durationCount: withDuration,
-      })
-      .onConflictDoUpdate({
-        target: [dailyCounts.day, dailyCounts.metric, dailyCounts.caseId, dailyCounts.locale, dailyCounts.dim],
-        set: {
-          count: sql`${dailyCounts.count} + 1`,
-          durationSumSec: sql`${dailyCounts.durationSumSec} + ${d ?? 0}`,
-          durationCount: sql`${dailyCounts.durationCount} + ${withDuration}`,
-        },
-      });
-  }
-
-  rows(from: string, to: string) {
-    return this.db
-      .select()
-      .from(dailyCounts)
-      .where(and(gte(dailyCounts.day, from), lte(dailyCounts.day, to)))
-      .orderBy(dailyCounts.day, dailyCounts.metric, dailyCounts.caseId, dailyCounts.locale, dailyCounts.dim);
-  }
+  rows(from: string, to: string): Promise<CountRow[]>;
 }
 
 export interface Counter {
