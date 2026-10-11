@@ -37,7 +37,7 @@ class PracticeViewModelTest {
         override suspend fun cases() = listOf(demoCase)
         override fun chat(request: TurnRequest): Flow<ChatEvent> {
             requests += request
-            return replies.removeFirst()
+            return replies.removeAt(0)
         }
         override fun supervision(request: TurnRequest): Flow<String> = flow { }
     }

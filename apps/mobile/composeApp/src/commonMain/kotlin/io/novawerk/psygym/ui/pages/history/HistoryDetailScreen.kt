@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -20,9 +19,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -35,11 +31,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.mikepenz.markdown.m3.Markdown
-import com.mikepenz.markdown.m3.markdownTypography
 import io.novawerk.psygym.domain.history.SavedSession
 import io.novawerk.psygym.resources.Res
 import io.novawerk.psygym.resources.back
@@ -51,6 +44,8 @@ import io.novawerk.psygym.resources.history_detail_chat
 import io.novawerk.psygym.resources.history_detail_report
 import io.novawerk.psygym.resources.history_no_report
 import io.novawerk.psygym.resources.supervision_again
+import io.novawerk.psygym.ui.components.ReportView
+import io.novawerk.psygym.ui.components.PillToggle
 import io.novawerk.psygym.ui.components.BottomActions
 import io.novawerk.psygym.ui.components.PrimaryButton
 import io.novawerk.psygym.ui.components.displayTitle
@@ -101,47 +96,20 @@ fun HistoryDetailScreen(
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             val labels = listOf(Res.string.history_detail_report, Res.string.history_detail_chat)
-            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
-                labels.forEachIndexed { i, label ->
-                    SegmentedButton(
-                        selected = tab == i,
-                        onClick = { tab = i },
-                        shape = SegmentedButtonDefaults.itemShape(i, labels.size),
-                        // Selected = white (the page colour) and bold on a muted track, light
-                        // border (design M2, audit M).
-                        colors = SegmentedButtonDefaults.colors(
-                            activeContainerColor = MaterialTheme.colorScheme.background,
-                            activeContentColor = MaterialTheme.colorScheme.onSurface,
-                            inactiveContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            activeBorderColor = MaterialTheme.colorScheme.outline,
-                            inactiveBorderColor = MaterialTheme.colorScheme.outline,
-                        ),
-                        icon = {},
-                    ) {
-                        Text(
-                            stringResource(label),
-                            fontWeight = if (tab == i) FontWeight.SemiBold else FontWeight.Normal,
-                        )
-                    }
-                }
-            }
+            // Pill toggle: the chosen one white and bold on a light grey track (design M2, audit M).
+            PillToggle(
+                options = labels.mapIndexed { i, label -> i to stringResource(label) },
+                selected = tab,
+                onSelect = { tab = it },
+                fill = true,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
+            )
             if (tab == 0) {
                 Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp)) {
                     if (session.report.isBlank()) {
                         Text(stringResource(Res.string.history_no_report), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     } else {
-                        val type = MaterialTheme.typography
-                        SelectionContainer {
-                            Markdown(
-                                content = session.report,
-                                typography = markdownTypography(
-                                    h1 = type.headlineSmall, h2 = type.titleLarge, h3 = type.titleMedium, h4 = type.titleSmall,
-                                    text = type.bodyLarge, paragraph = type.bodyLarge, bullet = type.bodyLarge, list = type.bodyLarge, ordered = type.bodyLarge,
-                                ),
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                        }
+                        ReportView(session.report, Modifier.fillMaxWidth())
                     }
                 }
             } else {

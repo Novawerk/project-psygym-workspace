@@ -22,16 +22,12 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material.icons.outlined.Masks
-import androidx.compose.material.icons.outlined.PersonOff
-import androidx.compose.material.icons.outlined.RateReview
 import androidx.compose.material.icons.outlined.Shield
-import androidx.compose.material.icons.outlined.SmartToy
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -47,13 +43,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.novawerk.psygym.domain.settings.AppLanguage
 import io.novawerk.psygym.resources.Res
-import io.novawerk.psygym.resources.app_name
+import io.novawerk.psygym.resources.help_link
 import io.novawerk.psygym.resources.onb_consent_1_body
 import io.novawerk.psygym.resources.onb_consent_1_title
 import io.novawerk.psygym.resources.onb_consent_2_body
@@ -90,11 +85,11 @@ import io.novawerk.psygym.resources.settings_language_en
 import io.novawerk.psygym.resources.settings_language_system
 import io.novawerk.psygym.resources.settings_language_zh
 import io.novawerk.psygym.ui.components.BottomActions
-import io.novawerk.psygym.ui.components.HelpLink
+import io.novawerk.psygym.ui.components.GrayCard
+import io.novawerk.psygym.ui.components.UnderlinedLink
 import io.novawerk.psygym.ui.components.InviteCodeKeyboard
 import io.novawerk.psygym.ui.components.LanguageToggle
 import io.novawerk.psygym.ui.components.PrimaryButton
-import io.novawerk.psygym.ui.components.SecondaryButton
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -109,10 +104,11 @@ private fun OnboardingTopBar(page: Int, onSkip: (() -> Unit)?, onLanguage: ((App
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            // The current page is a short pill, the others dots (design O1–O3).
             repeat(3) { i ->
                 Box(
-                    Modifier.size(if (i == page) 8.dp else 6.dp).background(
-                        if (i == page) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline,
+                    Modifier.size(width = if (i == page) 20.dp else 6.dp, height = 6.dp).background(
+                        if (i == page) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
                         CircleShape,
                     ),
                 )
@@ -166,12 +162,7 @@ fun WelcomeScreen(onContinue: () -> Unit, onSkip: () -> Unit, onLanguage: (AppLa
             }
         },
     ) {
-        Text(
-            stringResource(Res.string.app_name),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(16.dp))
         WelcomeArt()
         Spacer(Modifier.height(32.dp))
         Text(stringResource(Res.string.onb_welcome_title), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
@@ -230,9 +221,9 @@ private fun WelcomeArt() {
 private fun Step(n: Int, title: StringResource, body: StringResource) {
     Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         Box(
-            Modifier.size(28.dp).background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
+            Modifier.size(28.dp).background(MaterialTheme.colorScheme.primary, CircleShape),
             contentAlignment = Alignment.Center,
-        ) { Text("$n", style = MaterialTheme.typography.labelLarge) }
+        ) { Text("$n", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onPrimary) }
         Column {
             Text(stringResource(title), style = MaterialTheme.typography.titleSmall)
             Text(stringResource(body), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -254,6 +245,11 @@ fun ConsentScreen(
         onSkip = null,
         onLanguage = onLanguage,
         bottom = {
+            // Links, then the tick box, then the button (design O2).
+            Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
+                UnderlinedLink(stringResource(Res.string.onb_link_privacy), onPrivacy)
+                UnderlinedLink(stringResource(Res.string.help_link), onHelp)
+            }
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -266,36 +262,30 @@ fun ConsentScreen(
                 Text(stringResource(Res.string.onb_consent_check), style = MaterialTheme.typography.bodyMedium)
             }
             PrimaryButton(stringResource(Res.string.onb_consent_accept), onAccept, enabled = checked)
-            Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
-                TextButton(onClick = onPrivacy) {
-                    Text(stringResource(Res.string.onb_link_privacy), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                HelpLink(onHelp)
-            }
         },
     ) {
-        Icon(Icons.Outlined.Shield, contentDescription = null, modifier = Modifier.size(28.dp))
-        Spacer(Modifier.height(12.dp))
-        Text(stringResource(Res.string.onb_consent_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Box(Modifier.size(40.dp).background(MaterialTheme.colorScheme.surfaceVariant, CircleShape), contentAlignment = Alignment.Center) {
+                Icon(Icons.Outlined.Shield, contentDescription = null, modifier = Modifier.size(22.dp))
+            }
+            Text(stringResource(Res.string.onb_consent_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+        }
         Spacer(Modifier.height(20.dp))
-        Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
-            Point(Icons.Outlined.PersonOff, Res.string.onb_consent_1_title, Res.string.onb_consent_1_body)
-            Point(Icons.Outlined.Masks, Res.string.onb_consent_2_title, Res.string.onb_consent_2_body)
-            Point(Icons.Outlined.SmartToy, Res.string.onb_consent_3_title, Res.string.onb_consent_3_body)
-            Point(Icons.Outlined.Lock, Res.string.onb_consent_4_title, Res.string.onb_consent_4_body)
-            Point(Icons.Outlined.RateReview, Res.string.onb_consent_5_title, Res.string.onb_consent_5_body)
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Point(1, Res.string.onb_consent_1_title, Res.string.onb_consent_1_body)
+            Point(2, Res.string.onb_consent_2_title, Res.string.onb_consent_2_body)
+            Point(3, Res.string.onb_consent_3_title, Res.string.onb_consent_3_body)
+            Point(4, Res.string.onb_consent_4_title, Res.string.onb_consent_4_body)
+            Point(5, Res.string.onb_consent_5_title, Res.string.onb_consent_5_body)
         }
     }
 }
 
 @Composable
-private fun Point(icon: ImageVector, title: StringResource, body: StringResource) {
-    Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-        Icon(icon, contentDescription = null, modifier = Modifier.size(22.dp).padding(top = 2.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(stringResource(title), style = MaterialTheme.typography.titleSmall)
-            Text(stringResource(body), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
+private fun Point(n: Int, title: StringResource, body: StringResource) {
+    GrayCard {
+        Text("$n\u3000${stringResource(title)}", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+        Text(stringResource(body), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -317,54 +307,64 @@ fun ReadyScreen(
         onLanguage = onLanguage,
         bottom = {
             PrimaryButton(stringResource(Res.string.onb_ready_start), { onStart(code) })
-            SecondaryButton(stringResource(Res.string.onb_ready_skip), onSkip)
+            TextButton(onClick = onSkip) {
+                Text(stringResource(Res.string.onb_ready_skip), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         },
     ) {
         Text(stringResource(Res.string.onb_ready_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(24.dp))
-        Text(stringResource(Res.string.onb_ready_language_title), style = MaterialTheme.typography.titleSmall)
-        Spacer(Modifier.height(4.dp))
-        Column(Modifier.selectableGroup()) {
-            listOf(
-                AppLanguage.System to Res.string.settings_language_system,
-                AppLanguage.Zh to Res.string.settings_language_zh,
-                AppLanguage.En to Res.string.settings_language_en,
-            ).forEach { (value, label) ->
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .selectable(selected = value == language, onClick = { onLanguage(value) }, role = Role.RadioButton)
-                        .padding(vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    RadioButton(selected = value == language, onClick = null)
-                    Spacer(Modifier.width(12.dp))
-                    Text(stringResource(label), style = MaterialTheme.typography.bodyLarge)
+        GrayCard {
+            Text(stringResource(Res.string.onb_ready_language_title), style = MaterialTheme.typography.titleSmall)
+            Spacer(Modifier.height(4.dp))
+            Column(Modifier.selectableGroup()) {
+                listOf(
+                    AppLanguage.System to Res.string.settings_language_system,
+                    AppLanguage.Zh to Res.string.settings_language_zh,
+                    AppLanguage.En to Res.string.settings_language_en,
+                ).forEach { (value, label) ->
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .selectable(selected = value == language, onClick = { onLanguage(value) }, role = Role.RadioButton)
+                            .padding(vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(selected = value == language, onClick = null)
+                        Spacer(Modifier.width(12.dp))
+                        Text(stringResource(label), style = MaterialTheme.typography.bodyLarge)
+                    }
                 }
             }
+            Text(
+                stringResource(Res.string.onb_ready_language_note),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
-        Text(
-            stringResource(Res.string.onb_ready_language_note),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.height(28.dp))
-        Text(stringResource(Res.string.onb_ready_invite_title), style = MaterialTheme.typography.titleSmall)
-        Spacer(Modifier.height(4.dp))
-        Text(
-            stringResource(Res.string.onb_ready_invite_body),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
         Spacer(Modifier.height(12.dp))
-        OutlinedTextField(
-            value = code,
-            onValueChange = { code = it },
-            singleLine = true,
-            placeholder = { Text(stringResource(Res.string.onb_ready_invite_hint)) },
-            shape = MaterialTheme.shapes.small,
-            keyboardOptions = InviteCodeKeyboard,
-            modifier = Modifier.fillMaxWidth(),
-        )
+        GrayCard {
+            Text(stringResource(Res.string.onb_ready_invite_title), style = MaterialTheme.typography.titleSmall)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                stringResource(Res.string.onb_ready_invite_body),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(12.dp))
+            OutlinedTextField(
+                value = code,
+                onValueChange = { code = it },
+                singleLine = true,
+                placeholder = { Text(stringResource(Res.string.onb_ready_invite_hint)) },
+                shape = MaterialTheme.shapes.small,
+                keyboardOptions = InviteCodeKeyboard,
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedContainerColor = MaterialTheme.colorScheme.background,
+                    focusedContainerColor = MaterialTheme.colorScheme.background,
+                ),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 }

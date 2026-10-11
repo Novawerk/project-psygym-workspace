@@ -49,6 +49,7 @@ import io.novawerk.psygym.resources.home_start_card_button
 import io.novawerk.psygym.resources.home_start_card_meta
 import io.novawerk.psygym.resources.home_start_card_title
 import io.novawerk.psygym.resources.home_tagline
+import io.novawerk.psygym.ui.components.LogoMark
 import io.novawerk.psygym.ui.components.BottomBar
 import io.novawerk.psygym.ui.components.CaseCard
 import io.novawerk.psygym.ui.components.TopTab
@@ -93,6 +94,7 @@ fun HomeScreen(
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        LogoMark()
                         Text(stringResource(Res.string.app_name), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                         if (demoData) DemoBadge()
                     }

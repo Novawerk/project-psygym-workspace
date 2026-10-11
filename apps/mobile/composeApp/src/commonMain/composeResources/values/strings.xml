@@ -10,8 +10,6 @@
     <string name="retry">Try again</string>
     <string name="demo_badge">Demo data</string>
     <string name="help_link">Need help?</string>
-    <string name="lang_toggle">中</string>
-    <string name="lang_toggle_cd">Switch to Chinese</string>
 
     <!-- Onboarding (O1–O3) -->
     <string name="onb_skip">Skip</string>
@@ -145,6 +143,10 @@
     <string name="error_cases_load">Couldn’t load the cases. Try again in a moment.</string>
     <string name="history_deleted">Session deleted</string>
     <string name="supervision_still_writing">Your supervisor is still writing…</string>
+    <string name="report_you_said">You said</string>
+    <string name="report_client_said">The client said</string>
+    <string name="report_try_instead">Try instead:</string>
+    <string name="report_risk_cd">Risk screening</string>
     <string name="practice_lost">We couldn’t keep your last session.</string>
     <string name="settings_debug">Developer</string>
     <string name="settings_fake_api">Use demo data</string>

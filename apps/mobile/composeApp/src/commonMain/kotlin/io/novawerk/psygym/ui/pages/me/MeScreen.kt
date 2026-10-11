@@ -1,7 +1,9 @@
 package io.novawerk.psygym.ui.pages.me
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
@@ -41,7 +44,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.novawerk.psygym.AppConfig
 import io.novawerk.psygym.BuildKonfig
@@ -78,6 +83,7 @@ import io.novawerk.psygym.resources.settings_version
 import io.novawerk.psygym.domain.settings.normalizeInviteCode
 import io.novawerk.psygym.ui.components.BottomBar
 import io.novawerk.psygym.ui.components.InviteCodeKeyboard
+import io.novawerk.psygym.ui.theme.cardBorder
 import io.novawerk.psygym.ui.components.TopTab
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
@@ -103,6 +109,7 @@ fun MeScreen(
     onBack: (() -> Unit)? = null,
 ) {
     var confirmDeleteAll by rememberSaveable { mutableStateOf(false) }
+    var pickLanguage by rememberSaveable { mutableStateOf(false) }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -125,67 +132,97 @@ fun MeScreen(
                 .padding(padding)
                 .verticalScroll(rememberScrollState()),
         ) {
+            // Each group is a bordered card with lines between rows (design P1).
             SectionTitle(Res.string.me_settings_section)
-            ItemTitle(Res.string.settings_language)
-            Column(Modifier.selectableGroup()) {
-                LanguageRow(AppLanguage.System, Res.string.settings_language_system, language, onLanguageChange)
-                LanguageRow(AppLanguage.Zh, Res.string.settings_language_zh, language, onLanguageChange)
-                LanguageRow(AppLanguage.En, Res.string.settings_language_en, language, onLanguageChange)
+            GroupCard {
+                ValueRow(Res.string.settings_language, stringResource(languageLabel(language))) { pickLanguage = true }
+                RowDivider()
+                ItemTitle(Res.string.settings_invite, top = 14.dp)
+                InviteCodeField(inviteCode, onInviteCodeSave)
             }
-            Text(
-                stringResource(Res.string.settings_language_note),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-            )
-            ItemTitle(Res.string.settings_invite, top = 12.dp)
-            InviteCodeField(inviteCode, onInviteCodeSave)
 
-            Divider()
             SectionTitle(Res.string.settings_history_section)
-            SwitchRow(
-                title = Res.string.settings_history_toggle,
-                description = Res.string.settings_history_toggle_desc,
-                checked = saveHistory,
-                onChange = onSaveHistoryChange,
-            )
-            Row(
-                Modifier.fillMaxWidth().clickable { confirmDeleteAll = true }.padding(horizontal = 16.dp, vertical = 14.dp),
-            ) {
-                Text(
-                    stringResource(Res.string.settings_history_delete_all),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.error,
+            GroupCard {
+                SwitchRow(
+                    title = Res.string.settings_history_toggle,
+                    description = Res.string.settings_history_toggle_desc,
+                    checked = saveHistory,
+                    onChange = onSaveHistoryChange,
                 )
+                RowDivider()
+                Row(
+                    Modifier.fillMaxWidth().clickable { confirmDeleteAll = true }.padding(horizontal = 16.dp, vertical = 14.dp),
+                ) {
+                    Text(
+                        stringResource(Res.string.settings_history_delete_all),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
             }
 
-            Divider()
             SectionTitle(Res.string.settings_help_section)
-            // Not on top of a session or report: finishing the intro clears the back stack.
-            if (onBack == null) LinkRow(Res.string.settings_replay_onboarding, onReplayOnboarding)
-            LinkRow(Res.string.help_link, onHelp)
-            LinkRow(Res.string.settings_privacy, onPrivacy)
+            GroupCard {
+                LinkRow(Res.string.help_link, onHelp)
+                RowDivider()
+                LinkRow(Res.string.settings_privacy, onPrivacy)
+                // Not on top of a session or report: finishing the intro clears the back stack.
+                if (onBack == null) {
+                    RowDivider()
+                    LinkRow(Res.string.settings_replay_onboarding, onReplayOnboarding)
+                }
+            }
 
             if (AppConfig.isDebug) {
-                Divider()
                 SectionTitle(Res.string.settings_debug)
-                SwitchRow(Res.string.settings_fake_api, Res.string.settings_fake_api_desc, useFakeApi, onUseFakeApiChange)
-                Text(
-                    AppConfig.apiBaseUrl,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                )
+                GroupCard {
+                    SwitchRow(Res.string.settings_fake_api, Res.string.settings_fake_api_desc, useFakeApi, onUseFakeApiChange)
+                    Text(
+                        AppConfig.apiBaseUrl,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
+                    )
+                }
             }
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(24.dp))
             Text(
                 stringResource(Res.string.settings_version, BuildKonfig.VERSION_NAME),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(24.dp))
         }
+    }
+
+    if (pickLanguage) {
+        // Picked in a dialog; the "follows your system" note lives here (design P1).
+        AlertDialog(
+            onDismissRequest = { pickLanguage = false },
+            title = { Text(stringResource(Res.string.settings_language)) },
+            text = {
+                Column {
+                    Column(Modifier.selectableGroup()) {
+                        listOf(AppLanguage.System, AppLanguage.Zh, AppLanguage.En).forEach { value ->
+                            LanguageRow(value, languageLabel(value), language) {
+                                pickLanguage = false
+                                onLanguageChange(it)
+                            }
+                        }
+                    }
+                    Text(
+                        stringResource(Res.string.settings_language_note),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+                }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { pickLanguage = false }) { Text(stringResource(Res.string.history_cancel)) } },
+        )
     }
 
     if (confirmDeleteAll) {
@@ -204,8 +241,36 @@ fun MeScreen(
     }
 }
 
+private fun languageLabel(language: AppLanguage): StringResource = when (language) {
+    AppLanguage.System -> Res.string.settings_language_system
+    AppLanguage.Zh -> Res.string.settings_language_zh
+    AppLanguage.En -> Res.string.settings_language_en
+}
+
 @Composable
-private fun Divider() = HorizontalDivider(Modifier.padding(top = 12.dp, bottom = 4.dp), color = MaterialTheme.colorScheme.outline)
+private fun GroupCard(content: @Composable ColumnScope.() -> Unit) {
+    val shape = RoundedCornerShape(12.dp)
+    Column(
+        Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(shape).border(cardBorder, shape),
+        content = content,
+    )
+}
+
+@Composable
+private fun RowDivider() = HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+
+/** A row with a label and its current value, like "Language  Follow system ›". */
+@Composable
+private fun ValueRow(label: StringResource, value: String, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = onClick).padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(stringResource(label), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        Text(value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
 
 @Composable
 private fun SectionTitle(res: StringResource) {
@@ -213,7 +278,7 @@ private fun SectionTitle(res: StringResource) {
         stringResource(res),
         style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
+        modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 8.dp),
     )
 }
 
@@ -261,7 +326,7 @@ private fun LanguageRow(value: AppLanguage, label: StringResource, selected: App
         Modifier
             .fillMaxWidth()
             .selectable(selected = value == selected, onClick = { onSelect(value) }, role = Role.RadioButton)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         RadioButton(selected = value == selected, onClick = null)
@@ -275,7 +340,7 @@ private fun InviteCodeField(saved: String, onSave: (String) -> Unit) {
     var draft by remember { mutableStateOf(saved) }
     LaunchedEffect(saved) { draft = saved }
     val dirty = normalizeInviteCode(draft) != saved
-    Column(Modifier.padding(horizontal = 16.dp)) {
+    Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
         Text(
             stringResource(Res.string.settings_invite_desc),
             style = MaterialTheme.typography.bodyMedium,

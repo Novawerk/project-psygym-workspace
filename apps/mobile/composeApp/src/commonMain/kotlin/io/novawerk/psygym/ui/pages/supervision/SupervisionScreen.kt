@@ -10,10 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Support
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -36,8 +33,6 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.unit.dp
-import com.mikepenz.markdown.m3.Markdown
-import com.mikepenz.markdown.m3.markdownTypography
 import io.novawerk.psygym.domain.model.ApiLocale
 import io.novawerk.psygym.resources.Res
 import io.novawerk.psygym.resources.practice_help_cd
@@ -53,6 +48,8 @@ import io.novawerk.psygym.resources.supervision_meta
 import io.novawerk.psygym.resources.supervision_other_case
 import io.novawerk.psygym.resources.supervision_still_writing
 import io.novawerk.psygym.resources.supervision_title
+import io.novawerk.psygym.ui.components.ReportView
+import io.novawerk.psygym.ui.components.ShieldAlert
 import io.novawerk.psygym.ui.components.BorderedCard
 import io.novawerk.psygym.ui.components.BottomActions
 import io.novawerk.psygym.ui.components.DemoBadge
@@ -115,7 +112,7 @@ fun SupervisionScreen(
                 actions = {
                     if (demoData) DemoBadge()
                     IconButton(onClick = onHelp) {
-                        Icon(Icons.Outlined.Support, contentDescription = stringResource(Res.string.practice_help_cd))
+                        Icon(ShieldAlert, contentDescription = stringResource(Res.string.practice_help_cd))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
@@ -163,25 +160,8 @@ fun SupervisionScreen(
                 }
             }
             if (viewModel.report.isNotEmpty()) {
-                val type = MaterialTheme.typography
-                // Long press selects and copies (screens.md R1).
-                SelectionContainer {
-                    Markdown(
-                        content = viewModel.report,
-                        typography = markdownTypography(
-                            h1 = type.headlineSmall,
-                            h2 = type.titleLarge,
-                            h3 = type.titleMedium,
-                            h4 = type.titleSmall,
-                            text = type.bodyLarge,
-                            paragraph = type.bodyLarge,
-                            bullet = type.bodyLarge,
-                            list = type.bodyLarge,
-                            ordered = type.bodyLarge,
-                        ),
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
+                // Cards in the backend's format, plain Markdown otherwise (screens.md R1).
+                ReportView(viewModel.report, Modifier.fillMaxWidth())
                 // Until the report ends, say it's still being written (audit D): real reports
                 // take tens of seconds and can pause mid-way.
                 if (viewModel.streaming) {

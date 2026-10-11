@@ -8,8 +8,6 @@
     <string name="retry">重试</string>
     <string name="demo_badge">演示数据</string>
     <string name="help_link">需要帮助？</string>
-    <string name="lang_toggle">EN</string>
-    <string name="lang_toggle_cd">切换到英文</string>
 
     <string name="onb_skip">跳过</string>
     <string name="onb_continue">继续</string>
@@ -136,6 +134,10 @@
     <string name="error_cases_load">病例加载不出来，请稍后再试。</string>
     <string name="history_deleted">已删除</string>
     <string name="supervision_still_writing">督导还在写…</string>
+    <string name="report_you_said">你说</string>
+    <string name="report_client_said">来访者说</string>
+    <string name="report_try_instead">可以换成：</string>
+    <string name="report_risk_cd">风险筛查</string>
     <string name="practice_lost">上次的会谈没能保留。</string>
     <string name="settings_debug">开发者</string>
     <string name="settings_fake_api">使用演示数据</string>

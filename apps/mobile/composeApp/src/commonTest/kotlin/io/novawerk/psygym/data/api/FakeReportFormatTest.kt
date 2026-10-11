@@ -4,6 +4,10 @@ import io.novawerk.psygym.domain.model.ApiLocale
 import io.novawerk.psygym.domain.model.Message
 import io.novawerk.psygym.domain.model.Role
 import io.novawerk.psygym.domain.model.TurnRequest
+import io.novawerk.psygym.domain.report.ReportItem
+import io.novawerk.psygym.domain.report.ReportParser
+import io.novawerk.psygym.domain.report.ReportSection
+import io.novawerk.psygym.domain.report.Speaker
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -37,9 +41,20 @@ class FakeReportFormatTest {
     fun english() = runTest {
         val r = report(ApiLocale.En)
         assertEquals(listOf(2, 3, 2), listOf("What went well", "What to improve", "What to practise next").map { itemsUnder(r, it).size })
-        assertTrue(r.contains("\"$long\""))
+        assertTrue(r.contains("“$long”"))
         assertTrue(Regex("Try instead: [\"“]").find(r) == null)
         assertTrue(r.trimEnd().endsWith("This feedback is AI-generated, for practice only."))
+    }
+
+    @Test
+    fun readsAsCards() = runTest {
+        for (locale in ApiLocale.entries) {
+            val parsed = ReportParser.parse(report(locale))!!
+            val improve = parsed.parts.first { it.section == ReportSection.Improve }.items.map { it as ReportItem.Parsed }
+            assertEquals(listOf(true, false, false), improve.map { it.risk }, "$locale: the first item is the risk item")
+            assertEquals(listOf(Speaker.Client, Speaker.Counselor), improve[1].quotes.map { it.speaker }, "$locale: two quotes")
+            assertTrue(parsed.parts.flatMap { it.items }.none { it is ReportItem.Plain }, "$locale: every item reads")
+        }
     }
 
     @Test
@@ -51,6 +66,6 @@ class FakeReportFormatTest {
         )
         val r = FakePsygymApi(charDelayMillis = 0).supervision(withEnd).toList().joinToString("")
         assertTrue("#end" !in r)
-        assertTrue(r.contains("Before you said \"$long\""), "the last real message is quoted instead")
+        assertTrue(r.contains("You said: “$long”"), "the last real message is quoted instead")
     }
 }

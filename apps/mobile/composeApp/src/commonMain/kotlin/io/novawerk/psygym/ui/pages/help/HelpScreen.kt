@@ -20,13 +20,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import io.novawerk.psygym.resources.Res
 import io.novawerk.psygym.resources.close
 import io.novawerk.psygym.resources.help_body
 import io.novawerk.psygym.resources.help_hard_time
 import io.novawerk.psygym.resources.help_practice_note
 import io.novawerk.psygym.resources.help_title
-import io.novawerk.psygym.ui.components.SafetyNote
+import io.novawerk.psygym.ui.components.BottomActions
+import io.novawerk.psygym.ui.components.GrayCard
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -48,6 +50,18 @@ fun HelpScreen(onClose: () -> Unit) {
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
             )
         },
+        // The practice note sits at the bottom in a grey card (design X1).
+        bottomBar = {
+            BottomActions {
+                GrayCard {
+                    Text(
+                        stringResource(Res.string.help_practice_note),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        },
     ) { padding ->
         Column(
             Modifier
@@ -58,15 +72,9 @@ fun HelpScreen(onClose: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(stringResource(Res.string.help_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-            SafetyNote {
-                Text(stringResource(Res.string.help_body), style = MaterialTheme.typography.bodyLarge)
-            }
+            // Plain text, one size up from the body (design X1).
+            Text(stringResource(Res.string.help_body), style = MaterialTheme.typography.bodyLarge.copy(fontSize = 18.sp, lineHeight = 27.sp))
             Text(stringResource(Res.string.help_hard_time), style = MaterialTheme.typography.bodyLarge)
-            Text(
-                stringResource(Res.string.help_practice_note),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
 }
