@@ -117,6 +117,9 @@ you set `CLIENT_LLM_MODEL` / `SUPERVISOR_LLM_MODEL` (and `_BASE_URL`).
   title, no summary), so the report rests only on what was said; every quote in it must appear
   word for word in the transcript. The whole transcript goes in as one
   user message, numbered `[1] 咨询师：…` for the model; the report itself carries no numbers.
+  When the counselor wrote 15 or more messages, the server also adds a one-sentence "intake
+  decision" reminder rule for "What to practise next" (a placeholder until 聆镜's standard;
+  `src/session.ts`). The server counts, not the model.
   Temperature 0.3 where the model accepts it (DeepSeek yes; current Claude models reject
   sampling parameters, so we leave it out there).
 - Cases: `content/cases/<id>.md`. Frontmatter `id`, `school`, `title.zh/en`, `summary.zh/en`
