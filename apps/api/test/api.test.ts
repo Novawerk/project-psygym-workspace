@@ -220,7 +220,7 @@ describe("what the supervisor sees", () => {
     expect(quoteRule).toBeLessThan(prompts.supervisor.indexOf("## 报告结构"));
     expect(prompts.supervisor).toContain("一个字都不改，不省略，不拼接");
     expect(prompts.supervisor).toContain("| 错 | 对 |");
-    expect(prompts.supervisor).toContain("| 你没有「留在来访者身上」 | 你没有留在来访者身上 |");
+    expect(prompts.supervisor).toContain("| 你没有「〔一个技能名〕」 | 你没有〔一个技能名〕（不加引号） |");
     expect(prompts.supervisor).toContain("只写在「可以换成：」/ \"Try instead:\" 后面，**不加引号**");
     // The risk-screening check is the first rule, before the transcript note and the structure,
     // and the structure repeats it.
@@ -247,12 +247,19 @@ describe("what the supervisor sees", () => {
     expect(prompts.supervisor).toContain("**风险筛查和伤害性的话永远保留**");
     // Quotes: word for word, person included; only the risk item quotes the client.
     expect(prompts.supervisor).toContain("**一个字都不改，包括人称**");
-    expect(prompts.supervisor).toContain("**只有风险筛查那一条**引用来访者的话");
+    // Any item may quote the client for context, word for word; each still quotes the counselor.
+    expect(prompts.supervisor).toContain("**每一条都还要引用咨询师自己说的原话**（风险筛查那条除外）");
     // The alternative is a line to say, also after a probe like "are you an AI".
     expect(prompts.supervisor).toContain("**「可以换成：」后面必须是一句咨询师可以直接对来访者说出口的话**");
     expect(prompts.supervisor).toContain("**咨询师试探来访者**");
-    // A checklist before handing in, last before the tone section.
+    // A checklist before handing in, kept out of the report, last before the tone section.
     expect(prompts.supervisor.indexOf("## 写完后，交出前检查一遍")).toBeGreaterThan(prompts.supervisor.indexOf("## 报告结构"));
+    expect(prompts.supervisor).toContain("**只在心里检查，不要把这份清单写进报告。**");
+    expect(prompts.supervisor).toContain("咨询师说过伤害性的话时，「需要改进」里有它，没有被删掉。");
+    expect(prompts.supervisor).toContain("指来访者时用「来访者」，没有用「他」「她」。");
+    // Examples carry placeholders, never content a model could copy as if it had been said.
+    expect(prompts.supervisor).toContain("**示例里的〔方括号〕是占位**");
+    for (const copied of ["睡不好", "一直绷着", "我也不太确定", "有点慌"]) expect(prompts.supervisor).not.toContain(copied);
     expect(prompts.supervisor).not.toContain("（「可以换成：……」");
   });
 });

@@ -8,7 +8,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { joinedText, frameProblems, readStream } from "../src/sse.ts";
-import { BREAKS_ROLE, CLAIMS_PROMPT, GIVES_ADVICE, promptOverlap, reportSectionFlags, reportShapeFlags, unverifiedQuotes } from "../src/quality-flags.ts";
+import { BREAKS_ROLE, CLAIMS_PROMPT, GIVES_ADVICE, isHint, promptOverlap, reportSectionFlags, reportShapeFlags, unverifiedQuotes } from "../src/quality-flags.ts";
 
 type Locale = "zh" | "en";
 type Message = { role: "counselor" | "client"; text: string };
@@ -172,10 +172,12 @@ for (const c of cases.filter((c) => !ONLY_CASE || c.id === ONLY_CASE)) {
   md.push(`## ${L.flags}`, ``, ...(flags.length ? flags.map((f) => `- ${f}`) : ["- none"]), ``);
   md.push(`## ${L.timing}`, ``, ...timingLines(timings), ``);
   writeFileSync(join(outDir, `${c.id}.md`), md.join("\n"));
-  if (flags.length) flagged++;
+  // Hints ("hint …") are for a person to look at; only the rest fail the run.
+  if (flags.some((f) => !isHint(f))) flagged++;
   summary.push(`## ${c.id}`, ``, ...(flags.length ? flags.map((f) => `- ${f}`) : ["- no automatic flags"]), ``);
   summary.push(`### Timing (first text / total)`, ``, ...timingLines(timings), ``);
-  console.log(`${c.id}: ${flags.length ? flags.length + " flag(s)" : "ok"}`);
+  const hard = flags.filter((f) => !isHint(f)).length;
+  console.log(`${c.id}: ${hard ? hard + " flag(s)" : "ok"}${flags.length > hard ? `, ${flags.length - hard} hint(s)` : ""}`);
 }
 
 writeFileSync(join(outDir, "SUMMARY.md"), summary.join("\n"));

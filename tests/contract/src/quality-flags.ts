@@ -90,11 +90,16 @@ const SHAPE = {
   en: { maxLength: 450, unit: "words", alt: /Try instead\s*:/i, altLabel: "Try instead:", closing: "This feedback is AI-generated, for practice only." },
 } as const;
 
+// Advice to the counselor talks about the client in the third person, or opens with an
+// instruction. A line to say talks to the client ("别急，慢慢说" is fine).
 const ADVICE = {
-  zh: /^(?:先|应该|应当|可以先|试着|尝试|建议|不要|别|把|多用|少用|回到|引导|承认|解释)/,
-  en: /^(?:Acknowledge|Redirect|Gently|Explain|Name|Return|Use|Avoid|Try to|Instead|Bring|Steer|Reflect|Validate|Ask|Don't)\b/,
+  zh: /来访者|对方|^(?:应该|应当|建议|试着|尝试|引导|承认|解释|先接住|先回到|回到主题)/,
+  en: /\bthe client\b|\btheir\b|^(?:Acknowledge|Redirect|Gently|Explain|Name the|Return to|Use|Avoid|Try to|Instead|Bring|Steer|Reflect|Validate|Don't)\b/i,
 } as const;
 const CLIENT_QUOTE = { zh: /来访者(?:说|提到|讲)[:：]?\s*「/, en: /The client said:?\s*“/i } as const;
+const COUNSELOR_QUOTE = { zh: /你(?:说|问|提到|回应)[:：]?\s*「/, en: /You (?:said|asked):?\s*“/i } as const;
+// The risk-screening item is about safety; it quotes the client instead of the counselor.
+const RISK_ITEM = { zh: /风险|安全|自伤|伤害自己|自杀|不想活/, en: /risk|safety|self-harm|suicid|hurt(?:ing)? (?:your|them)sel/i } as const;
 
 export function reportShapeFlags(report: string, locale: "zh" | "en"): string[] {
   const { maxLength, unit, alt, altLabel, closing } = SHAPE[locale];
@@ -118,15 +123,21 @@ export function reportShapeFlags(report: string, locale: "zh" | "en"): string[] 
           const line = l.slice(m.index + m[0].length).trim();
           if (/^[「“"]/.test(line)) flags.push(`G: improvement ${j + 1} quotes its alternative; want it unquoted`);
           // A line to say, not advice about what to do. A hint for a person to check.
-          if (ADVICE[locale].test(line)) flags.push(`C4?: improvement ${j + 1}'s alternative reads like advice, not a line to say — "${line.slice(0, 40)}"`);
+          if (ADVICE[locale].test(line)) flags.push(`hint C4?: improvement ${j + 1}'s alternative may be advice, not a line to say — "${line.slice(0, 40)}"`);
         }
-        // Only the risk item (the first, when there is one) quotes the client.
-        if (j > 0 && CLIENT_QUOTE[locale].test(l)) flags.push(`C2: improvement ${j + 1} quotes the client; only the risk item may`);
+        // Any item may quote the client for context, but each (risk item aside) quotes the counselor.
+        const isRisk = j === 0 && RISK_ITEM[locale].test(l);
+        if (!isRisk && CLIENT_QUOTE[locale].test(l) && !COUNSELOR_QUOTE[locale].test(l)) {
+          flags.push(`hint Q-client: improvement ${j + 1} quotes the client but not the counselor`);
+        }
       });
     }
   });
   return flags;
 }
+
+/** Flags that start with "hint " are for a person to look at; they never fail a run. */
+export const isHint = (flag: string) => flag.startsWith("hint ");
 
 // C1: the three "## " sections, all there, in order, none empty.
 const SECTION_NAMES = {
