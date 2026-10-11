@@ -26,7 +26,7 @@
     <string name="onb_step3_body">It quotes your words: what went well, what to change.</string>
     <string name="onb_consent_title">Before we start</string>
     <string name="onb_consent_1_title">This is not therapy.</string>
-    <string name="onb_consent_1_body">It’s a practice tool for counselors. It’s not for clients, and it can’t help in a crisis. If you’re going through a hard time yourself, tap “Need help?” below.</string>
+    <string name="onb_consent_1_body">It’s a practice tool for counselors. It’s not for clients, and it can’t help in a crisis. If you’re going through a hard time yourself, tap “Need help?” below.</string>
     <string name="onb_consent_2_title">The clients are fictional.</string>
     <string name="onb_consent_2_body">An AI plays them. Sessions may touch on depression, anxiety and dark thoughts.</string>
     <string name="onb_consent_3_title">An AI model processes the conversation.</string>
@@ -102,7 +102,6 @@
     <string name="practice_leave_cancel">Stay</string>
     <string name="practice_client_ended">The client has ended the session</string>
     <string name="practice_incomplete">(incomplete)</string>
-    <string name="practice_interrupted">Your last practice was interrupted. Pick a case to start again.</string>
     <string name="practice_help_cd">Need help</string>
     <string name="practice_timer_cd">Show or hide the timer</string>
 
@@ -143,6 +142,10 @@
     <string name="settings_privacy">Privacy</string>
     <string name="settings_about_app">About 聆镜 PSYGYM</string>
     <string name="about_body">聆镜 PSYGYM is a practice tool for new counselors, made by the 聆镜 (Lingjing) team and Novawerk.</string>
+    <string name="error_cases_load">Couldn’t load the cases. Try again in a moment.</string>
+    <string name="history_deleted">Session deleted</string>
+    <string name="supervision_still_writing">Your supervisor is still writing…</string>
+    <string name="practice_lost">We couldn’t keep your last session.</string>
     <string name="settings_debug">Developer</string>
     <string name="settings_fake_api">Use demo data</string>
     <string name="settings_fake_api_desc">Fake cases and replies, no server needed. Debug builds only.</string>
@@ -158,9 +161,11 @@
     <string name="privacy_q_vendor">Does the AI model service store it?</string>
     <string name="privacy_a_vendor">It follows its own policy.</string>
     <string name="privacy_q_device">Is it stored on my phone?</string>
-    <string name="privacy_a_device">Yes. Each session and its report are saved in the app’s own space on this phone. Nothing is uploaded or backed up to the cloud. Records are stored unencrypted in the app’s private storage. Turn saving off or delete everything under Me; delete a single session from your practice history. Uninstalling the app deletes everything.</string>
+    <string name="privacy_a_device">Yes. Each session and its report are saved, unencrypted, in the app’s own space on this phone. Nothing is uploaded or backed up to the cloud. Turn saving off or delete everything under Me; delete a single session from your practice history. Uninstalling the app deletes everything.</string>
     <string name="privacy_q_collect">What do you collect?</string>
-    <string name="privacy_a_collect">Your invite code (to reach our server) and your language, kept on this phone only. No account. We don’t collect your name, phone number or location.</string>
+    <string name="privacy_a_collect">Your invite code: sent to our server with each request, to check it and limit load; our server doesn’t store it. Your interface language: also sent with each request, so the client and the report use it. No account. We don’t collect your name, phone number or location.</string>
+    <string name="privacy_q_stats">What do you count?</string>
+    <string name="privacy_a_stats">On our server we count anonymous numbers per day, split by case and interface language: sessions started, sessions the client ended, reports written, turns per session, how long a session lasts, errors, and 👍/👎 ratings and reports received. Only numbers: no conversation, nothing that could identify you.</string>
     <string name="privacy_q_real">Can I enter real client information?</string>
     <string name="privacy_a_real">No. Please use it for practice only.</string>
 
@@ -174,7 +179,7 @@
     <string name="error_invalid_request">This session is already long. End it and see what the supervisor says.</string>
     <string name="error_timeout">No response for too long. Try again.</string>
     <string name="error_unknown">Something went wrong. Try again.</string>
-    <string name="error_open_settings">Open Settings</string>
+    <string name="error_open_settings">Go to Me</string>
     <string name="error_other_case">Try another case</string>
     <string name="error_retry_in">Try again (%1$d)</string>
     <string name="tab_practice">Practise</string>

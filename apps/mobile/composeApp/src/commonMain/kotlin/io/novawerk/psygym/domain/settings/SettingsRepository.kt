@@ -62,6 +62,21 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         dataStore.edit { it[SAVE_HISTORY] = value }
     }
 
+    /**
+     * A session was open when the app last stopped. Set when a session starts, cleared when
+     * it ends; still set on the next launch means the process was killed mid-session.
+     */
+    suspend fun setPracticeInProgress(value: Boolean) {
+        dataStore.edit { it[PRACTICE_IN_PROGRESS] = value }
+    }
+
+    /** Reads and clears [setPracticeInProgress]'s flag. */
+    suspend fun consumePracticeInProgress(): Boolean {
+        val was = dataStore.data.first()[PRACTICE_IN_PROGRESS] ?: false
+        if (was) setPracticeInProgress(false)
+        return was
+    }
+
     /** The "don't enter real client information" line shows until the first report. */
     val realInfoHintSeen: Flow<Boolean> = dataStore.data.map { it[REAL_INFO_HINT_SEEN] ?: false }
 
@@ -105,6 +120,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         val ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
         val REAL_INFO_HINT_SEEN = booleanPreferencesKey("real_info_hint_seen")
         val SAVE_HISTORY = booleanPreferencesKey("save_history")
+        val PRACTICE_IN_PROGRESS = booleanPreferencesKey("practice_in_progress")
         val USE_FAKE_API = booleanPreferencesKey("use_fake_api")
     }
 }

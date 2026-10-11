@@ -108,6 +108,8 @@ private val PsygymShapes = Shapes(
 
 @Composable
 fun PsygymTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
+    // The system bars set at launch don't follow a theme switch while the app is open (audit H).
+    SystemBarsAppearance(dark)
     MaterialTheme(colorScheme = if (dark) DarkColors else LightColors, shapes = PsygymShapes, content = content)
 }
 
@@ -115,3 +117,7 @@ fun PsygymTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () -
 val cardBorder: BorderStroke
     @Composable @ReadOnlyComposable
     get() = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+
+/** Status and navigation bar icons follow the app's theme, also when it changes while open. */
+@Composable
+expect fun SystemBarsAppearance(dark: Boolean)

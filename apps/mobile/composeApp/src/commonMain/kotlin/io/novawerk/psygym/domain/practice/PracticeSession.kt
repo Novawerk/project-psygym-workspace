@@ -36,7 +36,10 @@ class PracticeSession {
         private set
     private var startMark: TimeMark? = null
 
-    val elapsed: Duration get() = startMark?.elapsedNow() ?: Duration.ZERO
+    /** Set when the client ended the session: the clock stops there (audit C). */
+    private var frozenElapsed: Duration? = null
+
+    val elapsed: Duration get() = frozenElapsed ?: startMark?.elapsedNow() ?: Duration.ZERO
 
     /** A turn = one counselor message. */
     val turns: Int get() = transcript.count { it.role == Role.Counselor }
@@ -66,6 +69,7 @@ class PracticeSession {
     }
 
     fun markClientEnded() {
+        if (!clientEnded) frozenElapsed = elapsed
         clientEnded = true
     }
 
@@ -80,6 +84,7 @@ class PracticeSession {
     private fun reset() {
         transcript = emptyList()
         clientEnded = false
+        frozenElapsed = null
         startedAt = null
         startMark = null
         id = ""

@@ -51,6 +51,7 @@ import io.novawerk.psygym.resources.supervision_leave_title
 import io.novawerk.psygym.resources.supervision_leave_writing
 import io.novawerk.psygym.resources.supervision_meta
 import io.novawerk.psygym.resources.supervision_other_case
+import io.novawerk.psygym.resources.supervision_still_writing
 import io.novawerk.psygym.resources.supervision_title
 import io.novawerk.psygym.ui.components.BorderedCard
 import io.novawerk.psygym.ui.components.BottomActions
@@ -181,9 +182,18 @@ fun SupervisionScreen(
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
+                // Until the report ends, say it's still being written (audit D): real reports
+                // take tens of seconds and can pause mid-way.
                 if (viewModel.streaming) {
                     Spacer(Modifier.height(12.dp))
-                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                        Text(
+                            stringResource(Res.string.supervision_still_writing),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
             viewModel.error?.let { error ->

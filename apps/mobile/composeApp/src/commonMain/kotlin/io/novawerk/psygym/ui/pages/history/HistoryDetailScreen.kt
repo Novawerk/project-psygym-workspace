@@ -35,6 +35,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mikepenz.markdown.m3.Markdown
@@ -106,15 +107,23 @@ fun HistoryDetailScreen(
                         selected = tab == i,
                         onClick = { tab = i },
                         shape = SegmentedButtonDefaults.itemShape(i, labels.size),
+                        // Selected = white (the page colour) and bold on a muted track, light
+                        // border (design M2, audit M).
                         colors = SegmentedButtonDefaults.colors(
-                            activeContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            activeContainerColor = MaterialTheme.colorScheme.background,
                             activeContentColor = MaterialTheme.colorScheme.onSurface,
-                            inactiveContainerColor = MaterialTheme.colorScheme.background,
+                            inactiveContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                             activeBorderColor = MaterialTheme.colorScheme.outline,
                             inactiveBorderColor = MaterialTheme.colorScheme.outline,
                         ),
                         icon = {},
-                    ) { Text(stringResource(label)) }
+                    ) {
+                        Text(
+                            stringResource(label),
+                            fontWeight = if (tab == i) FontWeight.SemiBold else FontWeight.Normal,
+                        )
+                    }
                 }
             }
             if (tab == 0) {

@@ -23,7 +23,7 @@
     <string name="onb_step3_body">引用你的原话，告诉你哪里好、哪里可以改。</string>
     <string name="onb_consent_title">开始之前，先说清楚</string>
     <string name="onb_consent_1_title">这不是心理治疗。</string>
-    <string name="onb_consent_1_body">这是给咨询师的练习工具，不给来访者用，不能在危机中提供帮助。如果你自己正在经历困难，请点下方「需要帮助？」。</string>
+    <string name="onb_consent_1_body">这是给咨询师的练习工具，不给来访者用，不能在危机中提供帮助。如果你自己正在经历困难，请点下方「需⁠要⁠帮⁠助⁠？」。</string>
     <string name="onb_consent_2_title">来访者是虚构的。</string>
     <string name="onb_consent_2_body">由 AI 扮演。对话可能涉及抑郁、焦虑和消极念头。</string>
     <string name="onb_consent_3_title">对话会交给 AI 模型处理。</string>
@@ -96,7 +96,6 @@
     <string name="practice_leave_cancel">留下</string>
     <string name="practice_client_ended">来访者结束了这次会谈</string>
     <string name="practice_incomplete">（未完成）</string>
-    <string name="practice_interrupted">上一次练习已中断。选一个病例重新开始吧。</string>
     <string name="practice_help_cd">需要帮助</string>
     <string name="practice_timer_cd">显示或隐藏计时</string>
 
@@ -134,6 +133,10 @@
     <string name="settings_privacy">隐私说明</string>
     <string name="settings_about_app">关于聆镜 PSYGYM</string>
     <string name="about_body">聆镜 PSYGYM 是给新手咨询师的练习工具，由聆镜团队和 Novawerk 一起做。</string>
+    <string name="error_cases_load">病例加载不出来，请稍后再试。</string>
+    <string name="history_deleted">已删除</string>
+    <string name="supervision_still_writing">督导还在写…</string>
+    <string name="practice_lost">上次的会谈没能保留。</string>
     <string name="settings_debug">开发者</string>
     <string name="settings_fake_api">使用演示数据</string>
     <string name="settings_fake_api_desc">假病例、假回复，不需要服务器。仅调试版可见。</string>
@@ -148,9 +151,11 @@
     <string name="privacy_q_vendor">AI 模型服务存吗？</string>
     <string name="privacy_a_vendor">按它们自己的政策处理。</string>
     <string name="privacy_q_device">手机上存吗？</string>
-    <string name="privacy_a_device">存。每场练习的对话和报告存在这台手机上 App 自己的空间里，不上传、不进云备份。记录未加密，保存在 App 自己的存储空间里。可以在「我的」里关掉保存或全部删除，也可以在练习记录里删除单场。卸载 App 就全部删除。</string>
+    <string name="privacy_a_device">存。每场练习的对话和报告存在这台手机上 App 自己的空间里，未加密，不上传，不进云备份。可以在「我的」里关掉保存或全部删除，也可以在练习记录里删除单场。卸载 App 就全部删除。</string>
     <string name="privacy_q_collect">你们收集什么？</string>
-    <string name="privacy_a_collect">邀请码（用来连服务器）和你选的语言，只存在这台手机上。没有账号，不收集姓名、手机号、位置。</string>
+    <string name="privacy_a_collect">邀请码：每次请求会发给我们的服务器，用来校验和限流，服务器不保存邀请码。你选的界面语言：每次请求也会带上，用来决定来访者和报告用哪种语言。没有账号，不收集姓名、手机号、位置。</string>
+    <string name="privacy_q_stats">我们统计什么？</string>
+    <string name="privacy_a_stats">我们在服务器上按天统计匿名的数字，按病例和界面语言分开：开始了几场会谈、来访者主动结束了几场、写了几份报告、每场几轮、一场多长、出了几次错、收到几次 👍/👎 和举报。只有数字，不含对话，不含任何能认出你的信息。</string>
     <string name="privacy_q_real">我能输入真实来访者的信息吗？</string>
     <string name="privacy_a_real">不能。请只把它当练习。</string>
 
@@ -163,7 +168,7 @@
     <string name="error_invalid_request">这场会谈已经很长了。结束它，看看督导怎么说。</string>
     <string name="error_timeout">等了太久没有回应，请重试。</string>
     <string name="error_unknown">出了点问题，请重试。</string>
-    <string name="error_open_settings">去设置</string>
+    <string name="error_open_settings">去「我的」</string>
     <string name="error_other_case">换个病例</string>
     <string name="error_retry_in">重试（%1$d）</string>
     <string name="tab_practice">练习</string>
