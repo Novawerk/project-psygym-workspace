@@ -1,6 +1,6 @@
 // Sign-in tables (docs/decisions/0008-sign-in.md). Nothing about a person beyond the email,
 // the sign-up time and the invite batch. Codes, tokens and IPs are stored only as MACs/hashes.
-import { date, integer, pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
+import { date, index, integer, pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: text("id").primaryKey(), // random UUID
@@ -40,7 +40,7 @@ export const rateCounters = pgTable(
     windowStart: timestamp("window_start", { withTimezone: true, mode: "date" }).notNull(),
     count: integer("count").notNull(),
   },
-  (t) => [primaryKey({ columns: [t.keyMac, t.windowStart] })],
+  (t) => [primaryKey({ columns: [t.keyMac, t.windowStart] }), index("rate_counters_window_start_idx").on(t.windowStart)],
 );
 
 /** Pseudonymous active accounts per day / ISO week; rolled up into daily_counts, then deleted. */

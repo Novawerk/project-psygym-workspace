@@ -186,8 +186,9 @@ curl -s localhost:8790/auth/verify -H 'Content-Type: application/json' -d '{"ema
    `{"msg":"sign-in","enabled":true}`; `/health` says `"auth":"optional"`.
 4. About 14 days later, watching the `auth` counts (`session` vs `invite`): set
    `AUTH_REQUIRED_FROM`, announce it, and remove the old 6-character codes before that time.
-5. Store review: set `REVIEW_LOGIN_EMAIL` and a new `REVIEW_LOGIN_CODE` per submission; clear
-   both afterwards.
+5. Store review: set `REVIEW_LOGIN_EMAIL` and a new `REVIEW_LOGIN_CODE` per submission; **clear
+   both the moment the review is over** (the fixed code has no try limit, only the per-IP one).
+   The reviewer's requests are never counted.
 
 ## Anonymous counts
 

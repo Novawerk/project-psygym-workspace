@@ -41,6 +41,11 @@ Apple either.
   forward at most once a day per session. Logout deletes the row; `DELETE /me` deletes all of
   the account's rows, so its other devices get `session_expired` (the app doesn't tell "deleted"
   from "expired").
+- **Races:** a try is taken before the comparison, in one statement (`UPDATE … SET tries_left =
+  tries_left - 1 WHERE tries_left > 0 AND expires_at > now RETURNING`), so concurrent guesses
+  can't share one; the code is used up with `DELETE … RETURNING`, so only one right answer gets a
+  session; the per-email send limits are one conditional upsert. `rate_counters` has an index on
+  `window_start`, swept when a key opens a new hour.
 - **Codes:** 6 digits, 10 minutes, 5 tries, one per email. `code_mac` = HMAC-SHA256 with a
   server key (`AUTH_SECRET`), so a leaked table doesn't give codes away by trying all 10⁶.
   `verify` without an invite code for a new email doesn't use a try or the code (the app shows
@@ -107,8 +112,8 @@ well (`turn_end`).
   need to link days, which the rotating key prevents on purpose.
 - `daily_counts` never holds a pseudonym, an account id, an email or an invite code.
 - **Small numbers:** `<5` hiding and the rest of ADR 0007 apply.
-- **Deleting an account:** we compute today's and this week's pseudonyms and delete those rows.
-  Earlier rows are already gone; totals stay.
+- **Deleting an account:** for every day and ISO week still in the detail tables (not rolled up
+  yet), we compute the account's pseudonym and delete that row. Totals already rolled up stay.
 - **Not counted:** the reviewer account. `METRICS_ID_SECRET` unset: no active counts at all.
 
 ## Deleting an account without the app
@@ -121,7 +126,8 @@ address, then delete within 30 days with an admin call:
 
 - `POST /admin/accounts/delete { email }`, `Authorization: Bearer <ADMIN_TOKEN>` (a token of its
   own, not the stats token). It does exactly what `DELETE /me` does. It answers `204` whether or
-  not the email had an account. The log keeps the email's hash, not the email.
+  not the email had an account. The log keeps neither the email nor a hash of it (an unsalted
+  hash of an email can be looked up), only whether an account was found.
 
 ## Going live (operations)
 
@@ -132,7 +138,8 @@ address, then delete within 30 days with an admin call:
 3. `AUTH_MODE=on` with the signed-in app. `optional` lasts until `AUTH_REQUIRED_FROM`.
 4. Before `AUTH_REQUIRED_FROM`: remove the old 6-character codes from `INVITE_CODES`.
 5. Store review: set `REVIEW_LOGIN_EMAIL` and a new `REVIEW_LOGIN_CODE` before each submission;
-   **clear both when the review is over**, so the reviewer address is an ordinary one again.
+   **clear both the moment the review is over**: the fixed code has no try limit (only the per-IP
+   limit), so it must not outlive the review. The reviewer's requests are never counted.
 
 ## Open questions for review
 

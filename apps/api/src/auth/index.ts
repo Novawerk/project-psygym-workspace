@@ -140,7 +140,8 @@ export function createAuth(deps: AuthDeps): Auth {
       .values({ keyMac, windowStart: start, count: 1 })
       .onConflictDoUpdate({ target: [rateCounters.keyMac, rateCounters.windowStart], set: { count: sql`${rateCounters.count} + 1` } })
       .returning({ count: rateCounters.count });
-    await db.delete(rateCounters).where(lt(rateCounters.windowStart, start));
+    // Sweep finished hours only when a key opens a new hour (indexed on window_start).
+    if (row!.count === 1) await db.delete(rateCounters).where(lt(rateCounters.windowStart, start));
     return { count: row!.count, resetsInSec: Math.max(1, Math.ceil((start.getTime() + HOUR_MS - t) / 1000)) };
   }
 
@@ -192,9 +193,17 @@ export function createAuth(deps: AuthDeps): Auth {
 
   async function deleteAccount(user: AuthUser) {
     if (config.idSecret) {
-      const p = pseudonyms(user.id, now());
-      await db.delete(activeDay).where(and(eq(activeDay.day, p.day), eq(activeDay.pid, p.dayPid)));
-      await db.delete(activeWeek).where(and(eq(activeWeek.week, p.week), eq(activeWeek.pid, p.weekPid)));
+      // Every day and week not rolled up yet: work out the account's pseudonym for each.
+      const days = await db.selectDistinct({ day: activeDay.day }).from(activeDay);
+      for (const { day } of days) {
+        const pid = hmac(hmac(config.idSecret, `day:${day}`), user.id);
+        await db.delete(activeDay).where(and(eq(activeDay.day, day), eq(activeDay.pid, pid)));
+      }
+      const weeks = await db.selectDistinct({ week: activeWeek.week }).from(activeWeek);
+      for (const { week } of weeks) {
+        const pid = hmac(hmac(config.idSecret, `week:${week}`), user.id);
+        await db.delete(activeWeek).where(and(eq(activeWeek.week, week), eq(activeWeek.pid, pid)));
+      }
     }
     await db.delete(loginCodes).where(eq(loginCodes.emailHash, sha256(user.email)));
     await db.delete(users).where(eq(users.id, user.id)); // sessions go with it (on delete cascade)
@@ -290,25 +299,36 @@ export function createAuth(deps: AuthDeps): Auth {
 
     const t = now();
     const emailHash = sha256(email);
-    const [row] = await db.select().from(loginCodes).where(eq(loginCodes.emailHash, emailHash));
-    if (row && t - row.lastSentAt.getTime() < LIMITS.resendGapMs) {
-      return limited(c, Math.ceil((LIMITS.resendGapMs - (t - row.lastSentAt.getTime())) / 1000));
-    }
-    const sameWindow = row && t - row.windowStart.getTime() < HOUR_MS;
-    const windowStart = sameWindow ? row.windowStart : new Date(t);
-    const sends = sameWindow ? row.sendsInWindow + 1 : 1;
-    if (sends > LIMITS.startsPerEmailHour) return limited(c, Math.ceil((windowStart.getTime() + HOUR_MS - t) / 1000));
-
     const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
-    const values = {
+    const at = new Date(t);
+    const fresh = {
       codeMac: hmac(config.secret, `${emailHash}:${code}`),
       expiresAt: new Date(t + CODE_TTL_MS),
       triesLeft: CODE_TRIES,
-      lastSentAt: new Date(t),
-      windowStart,
-      sendsInWindow: sends,
+      lastSentAt: at,
     };
-    await db.insert(loginCodes).values({ emailHash, ...values }).onConflictDoUpdate({ target: loginCodes.emailHash, set: values });
+    // One statement, so concurrent starts can't slip past the limits: the row is written only if
+    // the last send is 60 s old and the hour has room (or a new hour starts).
+    const hourOver = sql`${loginCodes.windowStart} <= ${new Date(t - HOUR_MS)}`;
+    const [written] = await db
+      .insert(loginCodes)
+      .values({ emailHash, ...fresh, windowStart: at, sendsInWindow: 1 })
+      .onConflictDoUpdate({
+        target: loginCodes.emailHash,
+        set: {
+          ...fresh,
+          windowStart: sql`case when ${hourOver} then ${at} else ${loginCodes.windowStart} end`,
+          sendsInWindow: sql`case when ${hourOver} then 1 else ${loginCodes.sendsInWindow} + 1 end`,
+        },
+        setWhere: sql`${loginCodes.lastSentAt} <= ${new Date(t - LIMITS.resendGapMs)} and (${hourOver} or ${loginCodes.sendsInWindow} < ${LIMITS.startsPerEmailHour})`,
+      })
+      .returning({ emailHash: loginCodes.emailHash });
+    if (!written) {
+      const [row] = await db.select().from(loginCodes).where(eq(loginCodes.emailHash, emailHash));
+      const gapLeft = row ? LIMITS.resendGapMs - (t - row.lastSentAt.getTime()) : LIMITS.resendGapMs;
+      const hourLeft = row ? row.windowStart.getTime() + HOUR_MS - t : HOUR_MS;
+      return limited(c, Math.max(1, Math.ceil((gapLeft > 0 ? gapLeft : hourLeft) / 1000)));
+    }
 
     // After the answer: the response time says nothing about the email.
     if (deps.sendCode) later("code email", () => deps.sendCode!(email, code, locale).then(() => logger.info({ msg: "code email sent" })));
@@ -331,27 +351,33 @@ export function createAuth(deps: AuthDeps): Auth {
 
     const t = now();
     const emailHash = sha256(email);
-    const [row] = await db.select().from(loginCodes).where(eq(loginCodes.emailHash, emailHash));
-    if (!row || row.expiresAt.getTime() <= t || row.triesLeft <= 0) return fail(c, 400, "invalid_code");
-    const useTry = () => db.update(loginCodes).set({ triesLeft: row.triesLeft - 1 }).where(eq(loginCodes.emailHash, emailHash));
-    if (!sameHex(hmac(config.secret, `${emailHash}:${code}`), row.codeMac)) {
-      await useTry();
-      return fail(c, 400, "invalid_code");
-    }
+    // Take a try first, in one statement, so concurrent guesses can't share one: no try left (or
+    // no live code) → invalid_code before any comparison.
+    const [taken] = await db
+      .update(loginCodes)
+      .set({ triesLeft: sql`${loginCodes.triesLeft} - 1` })
+      .where(and(eq(loginCodes.emailHash, emailHash), gt(loginCodes.triesLeft, 0), gt(loginCodes.expiresAt, new Date(t))))
+      .returning({ codeMac: loginCodes.codeMac });
+    if (!taken) return fail(c, 400, "invalid_code");
+    if (!sameHex(hmac(config.secret, `${emailHash}:${code}`), taken.codeMac)) return fail(c, 400, "invalid_code");
 
     let user = await userByEmail(email);
     if (!user) {
-      // A new account needs a valid invite code; asking for one doesn't use the code or a try.
-      if (!inviteCode) return fail(c, 403, "invite_required");
+      if (!inviteCode) {
+        // Asking for the invite code doesn't use a try: give it back.
+        await db.update(loginCodes).set({ triesLeft: sql`${loginCodes.triesLeft} + 1` }).where(eq(loginCodes.emailHash, emailHash));
+        return fail(c, 403, "invite_required");
+      }
       const batch = config.signupInvites.get(inviteCode);
       if (!batch) {
-        await useTry();
-        await wrongInvite();
+        await wrongInvite(); // the try stays used
         return fail(c, 403, "invite_invalid");
       }
-      user = await createUser(email, batch);
     }
-    await db.delete(loginCodes).where(eq(loginCodes.emailHash, emailHash));
+    // Use the code up, once: of two concurrent right answers only one gets a session.
+    const [used] = await db.delete(loginCodes).where(eq(loginCodes.emailHash, emailHash)).returning({ emailHash: loginCodes.emailHash });
+    if (!used) return fail(c, 400, "invalid_code");
+    user ??= await createUser(email, config.signupInvites.get(inviteCode!)!);
     return c.json(await newSession(user), 200);
   });
 
@@ -391,7 +417,7 @@ export function createAuth(deps: AuthDeps): Auth {
     const user = await userByEmail(parsed.data.email);
     if (user) await deleteAccount(user);
     else await db.delete(loginCodes).where(eq(loginCodes.emailHash, sha256(parsed.data.email)));
-    logger.info({ msg: "admin account delete", emailHash: sha256(parsed.data.email).slice(0, 12), found: Boolean(user) });
+    logger.info({ msg: "admin account delete", found: Boolean(user) }); // no email, not even a hash
     return c.body(null, 204);
   });
 

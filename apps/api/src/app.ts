@@ -204,6 +204,8 @@ export function createApp(deps: AppDeps) {
   const auth = deps.auth ?? null;
   /** The signed-in account of a request, set by the gate below. */
   const userOf = new WeakMap<Request, AuthUser>();
+  /** The store reviewer's requests are never counted. */
+  const isReviewer = (u: AuthUser | undefined) => u?.inviteBatch === "review";
 
   // With sign-in off, exactly {"ok":true} as before.
   app.get("/health", (c) => c.json(auth ? { ok: true, auth: auth.mode(nowMs()) } : { ok: true }));
@@ -228,9 +230,9 @@ export function createApp(deps: AppDeps) {
       return c.json({ error: { code: "metrics_disabled", message: "Counting is off on this server." } }, 503);
     }
     const range = statsRange(c.req.query("from"), c.req.query("to"), deps.now?.() ?? Date.now());
-    // Finished days and weeks of active accounts first, so today's view is up to date.
-    if (auth) await auth.rollUp().catch((err) => logger.error({ msg: "active roll-up failed", ...describe(err) }));
     if (!range) return c.json({ error: { code: "invalid_request", message: "from/to must be YYYY-MM-DD, from ≤ to, at most 366 days." } }, 400);
+    // Finished days and weeks of active accounts first, so the view is up to date.
+    if (auth) await auth.rollUp().catch((err) => logger.error({ msg: "active roll-up failed", ...describe(err) }));
     try {
       return c.json(statsView(range.from, range.to, await deps.metricsStore.rows(range.from, range.to)));
     } catch (err) {
@@ -265,6 +267,7 @@ export function createApp(deps: AppDeps) {
 
   /** With sign-in on: how each /chat turn came in, to see old apps fade out before "required". */
   function countAuth(c: Context, how: "session" | "invite") {
+    if (isReviewer(userOf.get(c.req.raw))) return;
     if (c.req.method === "POST" && c.req.path === "/chat") counter.count({ metric: "auth", dim: how });
   }
 
@@ -329,6 +332,7 @@ export function createApp(deps: AppDeps) {
         const counselorLines = messages.filter((m) => m.role === "counselor").length;
         const user = userOf.get(c.req.raw);
         const onDone = (o: { ok: boolean; sessionEnd: boolean }) => {
+          if (isReviewer(user)) return; // the store reviewer is never counted
           // A /chat or /supervision (either mode) that ended well makes the account active today.
           if (o.ok && user && auth) auth.markActive(user);
           if (role === "client") {

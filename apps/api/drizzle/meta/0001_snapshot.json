@@ -1,5 +1,5 @@
 {
-  "id": "2c292b72-2f63-40c5-8112-8a6a6fdc0fdc",
+  "id": "46e469e9-17ed-4d7c-ba69-b44e59bfd009",
   "prevId": "9564eaa8-2fba-41a6-a4a7-0db8ee60e775",
   "version": "7",
   "dialect": "postgresql",
@@ -226,7 +226,23 @@
           "notNull": true
         }
       },
-      "indexes": {},
+      "indexes": {
+        "rate_counters_window_start_idx": {
+          "name": "rate_counters_window_start_idx",
+          "columns": [
+            {
+              "expression": "window_start",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {
         "rate_counters_key_mac_window_start_pk": {
