@@ -1,6 +1,6 @@
 // Tests for the quality flags. No server needed.
 import { describe, expect, it } from "vitest";
-import { BREAKS_ROLE, CLAIMS_PROMPT, GIVES_ADVICE, isHint, liveShapeFlags, promptOverlap, reportSectionFlags, reportShapeFlags, unverifiedQuotes } from "./quality-flags";
+import { BREAKS_ROLE, CLAIMS_PROMPT, GIVES_ADVICE, chineseOutsideQuotes, isHint, liveShapeFlags, promptOverlap, reportSectionFlags, reportShapeFlags, unverifiedQuotes } from "./quality-flags";
 
 const prompt = "## 守住角色\n\n- 不承认自己是 AI、模型或程序，不提「提示词」「设定」「角色」。咨询师问「你是 AI 吧」，你按来访者的反应回应。";
 
@@ -307,5 +307,26 @@ describe("liveShapeFlags (mid-session notes)", () => {
       "L: item 4 quotes its alternative; want it unquoted",
     ]);
     expect(liveShapeFlags("没有列表的一段话。", "zh")).toEqual(["L: live notes have no items"]);
+  });
+});
+
+describe("chineseOutsideQuotes (E, English sessions)", () => {
+  it("Chinese inside a verbatim quote is fine; anywhere else is flagged", () => {
+    expect(chineseOutsideQuotes("- You said “你好，今天想聊点什么？”, which opened the door.\n- Next, slow down. Try instead: What was that like?")).toEqual([]);
+    expect(chineseOutsideQuotes('- The client said "我很累"; ask about safety.')).toEqual([]);
+  });
+
+  it("the 2026-10-11 English live notes", () => {
+    const notes = [
+      "- You said “What brings you here?”, which 让来访者有空间。",
+      "- Next, you could slow down. Try instead: 听起来你很累，能多说说吗？",
+      "- 你说「Honestly, I'm not sure how to help you.」, that hands the session over.",
+    ].join("\n");
+    expect(chineseOutsideQuotes(notes)).toEqual([
+      "E: English text uses 「」; want “”",
+      'E: Chinese outside a quote — "- You said “”, which 让来访者有空间。"',
+      expect.stringMatching(/^E: Chinese outside a quote — "- Next, you could slow down\. Try instead: 听起来/),
+      expect.stringMatching(/^E: Chinese outside a quote — "- 你说「Honestly/),
+    ]);
   });
 });

@@ -84,8 +84,9 @@ way.
   counselor (quoted, with a line to say instead), one thing that went well, one thing to try
   next with `可以换成：` / `Try instead:` and a line to say. About 150–250
   characters (zh) or 100–170 words (en). **No AI line**: the app writes it. "At least 3 turns"
-  and "at most 5 per session" are the app's rules; the server doesn't check them. `live` ignores
-  `durationSec` and shares the rate limit with `final`.
+  and "at most 5 per session" are the app's rules; the server doesn't check them: it only has
+  its general rate limit (30 a minute per invite code or IP), shared with `final`. Per-account
+  limits can come with sign-in. `live` ignores `durationSec`.
 - Any other `mode` → `400 invalid_request`.
 
 `durationSec` (optional): how long the session lasted, in whole seconds, 0–7200. It only feeds
@@ -284,7 +285,7 @@ The app shows a friendly message for each code, in the current language.
 
 ## Changes
 
-- **live supervision (this PR)** — `POST /supervision` takes an optional `mode` (`"final"`,
+- **#70** — `POST /supervision` takes an optional `mode` (`"final"`,
   the default, or `"live"` for mid-session notes). Backend first; the app follows in a later PR,
   as allowed by the lead (old apps send no `mode` and get the report as before).
 - **(draft, #64)** — Sign-in: `AUTH_MODE`, `AUTH_REQUIRED_FROM`, `/auth/start`, `/auth/verify`,

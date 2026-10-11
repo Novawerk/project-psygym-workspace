@@ -237,7 +237,7 @@ describe("what the supervisor sees", () => {
     expect(prompts.supervisor).toContain("`- One sentence on the problem. You said: “…”. Try instead: your suggested line`");
     expect(prompts.supervisor).not.toMatch(/可以换成：「|Try instead: “/);
     // Short enough for one phone screen.
-    for (const s of ["**做得好的地方**：1–2 条", "**需要改进的地方**：1–3 条", "**下次练什么**：1–2 条", "中文约 400–600 字"]) expect(prompts.supervisor).toContain(s);
+    for (const s of ["**做得好的地方**：1–2 条", "**需要改进的地方**：1–3 条", "**下次练什么**：1–2 条", "中文 400–600 字（含标点），**不超过 600 字**"]) expect(prompts.supervisor).toContain(s);
     expect(prompts.supervisor).toContain("不加编号，不用粗体小标题");
     // All three sections, always; at least one good point; at most three improvements, risk and
     // harmful remarks first and never dropped.

@@ -11,7 +11,10 @@ const LANGUAGE: Record<Locale, string> = {
 
 const REPORT_LANGUAGE: Record<Locale, string> = {
   zh: "用简体中文写报告。引用原话用「」，保留原文。不要写 [7] 这样的消息编号。",
-  en: "Write the report in English. Quote the counselor's words as they were said, in “”. Never write message numbers such as [7].",
+  en:
+    "Write the whole report in English: headings, explanations and the line after “Try instead:”. " +
+    "Only a word-for-word quote keeps its original words. Quote the counselor's or the client's words exactly as they were said, in “”. " +
+    "Never use 「」 or 可以换成, and never write message numbers such as [7].",
 };
 
 const SPEAKER: Record<Locale, { counselor: string; client: string }> = {
@@ -110,7 +113,10 @@ export function liveSupervisorRequest(prompts: Prompts, c: Case, locale: Locale,
 
 const LIVE_LANGUAGE: Record<Locale, string> = {
   zh: "用简体中文写。引用原话用「」，保留原文。不要写 [7] 这样的消息编号。",
-  en: "Write in English. Quote the counselor's words as they were said, in “”. Never write message numbers such as [7].",
+  en:
+    "Write every word in English: the notes, the explanations and the line after “Try instead:”. " +
+    "Only a word-for-word quote keeps its original words. Quote the counselor's or the client's words exactly as they were said, in “”. " +
+    "Never use 「」 or 可以换成, and never write message numbers such as [7].",
 };
 
 /** Message text can't open or close the <transcript> block: the tags are escaped. */

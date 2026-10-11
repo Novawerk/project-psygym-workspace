@@ -183,3 +183,18 @@ export function liveShapeFlags(notes: string, locale: "zh" | "en"): string[] {
   });
   return flags;
 }
+
+// E: an English report or set of notes is English everywhere except inside a word-for-word quote
+// (“…” or "…"). Chinese characters elsewhere, 「」, or 可以换成 are flagged with a short snippet.
+const CJK = /[\u3400-\u9fff\uf900-\ufaff\u3000-\u303f\uff01-\uff60]/;
+
+export function chineseOutsideQuotes(text: string): string[] {
+  const flags: string[] = [];
+  const outside = text.replace(/“[^”]*”|"[^"\n]*"/g, "“”");
+  if (/[「」]/.test(outside)) flags.push("E: English text uses 「」; want “”");
+  for (const line of outside.split("\n")) {
+    const m = CJK.exec(line.replace(/[「」]/g, ""));
+    if (m) flags.push(`E: Chinese outside a quote — "${line.trim().slice(0, 50)}"`);
+  }
+  return flags;
+}

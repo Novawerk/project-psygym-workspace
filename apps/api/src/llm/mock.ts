@@ -68,7 +68,8 @@ export class MockProvider implements ModelProvider {
  * from the language line src/session.ts appends.
  */
 const demoStep: MockStep = (req) => {
-  const en = /Speak English|Write the report in English|Write in English/.test(req.system);
+  // The language line src/session.ts appends.
+  const en = /Speak English|in English/.test(req.system);
   // Mid-session notes (/supervision mode "live"): no headings, at most 3 items, no AI line.
   if (req.system.includes("<!-- psygym:supervisor-live -->")) {
     const quote = lastCounselorLine(req);
