@@ -397,7 +397,7 @@ O1 欢迎 → O2 先说清楚（勾选同意）→ O3 准备开始（只选语�
 | privacy_q_account | 账号存了什么？ | What does my account store? |
 | privacy_a_account | 只有邮箱、注册时间、注册时用的邀请码批次和登录会话。练习对话和报告不在服务器上，只在你手机上。 | Only your email, sign-up date, the invite batch you used and your sessions. Practice conversations and reports aren't on our server, only on your phone. |
 | privacy_q_delete | 怎么删除账号？ | How do I delete my account? |
-| privacy_a_delete | 在「我的」→「删除账号」。删除后，服务器上的账号信息马上删掉，这台手机上这个账号的练习记录也一起删掉。不方便用 App 时，也可以按 novawerk.io/psygym/delete-account 上的说明申请。 | Go to Me → Delete account. We delete your account data from our server right away, and this account's practice history on this phone too. If you can't use the app, follow the steps at novawerk.io/psygym/delete-account. |
+| privacy_a_delete | 在「我的」→「删除账号」。删除后，服务器上的账号信息马上删掉，这台手机上这个账号的练习记录也一起删掉。不方便用 App 时，也可以按 psygym.novawerk.io/delete-account 上的说明申请。 | Go to Me → Delete account. We delete your account data from our server right away, and this account's practice history on this phone too. If you can't use the app, follow the steps at psygym.novawerk.io/delete-account. |
 
 ### `docs/release/privacy-policy.md`（中英）
 
@@ -409,19 +409,12 @@ O1 欢迎 → O2 先说清楚（勾选同意）→ O3 准备开始（只选语�
 - 「使用统计」那一行里「不存……任何能认出你的信息」改成：「按天的次数不带任何 ID；活跃人数用假名，见上一行。」
 - 「我们不做的事」里删掉「没有账号」，改成「账号只用邮箱，不收集姓名、手机号」。
 - 「第三方」加 **Resend**：发送验证码邮件。**Resend 是美国公司**；我们用它在欧盟区发送，但作为美国公司，数据可能被传到美国或受美国法律管辖，属于数据出境，依据它的标准合同条款。它的发送日志（收件邮箱、发送时间）按 Resend 的政策保留，保留期**待核对**。
-- 「你的权利」加：在 App 里删除账号；不方便用 App 时，按网页 `novawerk.io/psygym/delete-account` 上的说明申请。
+- 「你的权利」加：在 App 里删除账号；不方便用 App 时，按网页 `psygym.novawerk.io/delete-account` 上的说明申请。
 
 ### 网页上的删除入口（Google Play 要求）
 
-- **地址：** `novawerk.io/psygym/delete-account`。由总控另派人在 `apps/web` 里做。
-- **语言：** 英文（novawerk.io 只有英文），App 名写「PSYGYM」。
-- **内容：**
-  - 页面全英文，不出现中文，团队名写「the Lingjing team」。
-  - This page explains how to delete a PSYGYM account (PSYGYM is a counseling practice app made by Novawerk and the Lingjing team).
-  - 最快的办法：在 App 里 Me → Delete account。
-  - 不能用 App 时：用注册邮箱发邮件到 info@novawerk.io，主题写「Delete my PSYGYM account」。我们人工处理，**30 天内删除**，删完回信确认。
-  - 删除什么：邮箱、注册时间、邀请码批次、登录会话。不删什么：已经汇总的统计数字（不带账号）；Slack 里的反馈和举报（不带账号，认不出是谁的）。
-  - 手机上的练习记录只在手机上，我们碰不到：卸载 App 就会删除。
+- **地址：** `psygym.novawerk.io/delete-account`，放在 PSYGYM 自己的网站上（`apps/web`），中英双语，跟着网站的语言切换。完整的中英文案见 [landing.md](./landing.md)「/delete-account」一节。
+- **要点：** 最快的办法是在 App 里删；不能用 App 时，用注册邮箱写信到 info@novawerk.io，我们人工处理，30 天内删完并回信；写清删什么、不删什么；手机上的练习记录我们碰不到，卸载 App 就会删除。
 
 ### `docs/release/privacy-labels.md`（交给发布核对）
 
