@@ -2,7 +2,7 @@
 
 每页按同一个结构写：**期、目的、内容（从上到下）、操作、状态、验收**。
 
-全部在 10/18 demo 前实现。批次只排顺序：🟢 第 1 批 demo 必经；🔵 第 2 批 demo 前其余；🟠 第 3 批已定的新功能（D2、D3、D6、D7，见 [open-decisions.md](./open-decisions.md)）；🟣 等督导标准（D5）；⚪ 完整版。没有标记的内容跟所在页面的批次走。Onboarding 三页（O1–O3、O4）在 [onboarding.md](./onboarding.md)。全部文案的中英对照在 [copy.md](./copy.md)。
+全部在 10/17 demo 前实现。批次只排顺序：🟢 第 1 批 demo 必经；🔵 第 2 批 demo 前其余；🟠 第 3 批已定的新功能（D2、D3、D6、D7，见 [open-decisions.md](./open-decisions.md)）；🟣 等督导标准（D5）；⚪ 完整版。没有标记的内容跟所在页面的批次走。Onboarding 三页（O1–O3、O4）在 [onboarding.md](./onboarding.md)。全部文案的中英对照在 [copy.md](./copy.md)。
 
 设计稿（可点击原型，17 屏）：<https://claude.ai/artifact/UkqiioLoNiSB618ks8dPvg>（内部链接，需要分享后才能打开）。在画布上点任意一屏的播放按钮，可以从那一屏点着走。原型和本文不一致时，以本文为准，并提 issue 改原型。
 
