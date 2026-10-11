@@ -12,33 +12,58 @@
 | 危机情况下用户没地方求助 | Apple 1.4.1 的精神；Play 对心理类内容的审查 | 会谈页常驻「需要帮助？」，不需要网络 | 热线号码**还没核实**（待聆镜确认）。正式版前最好有核实过的号码，至少要有几个主要地区的 |
 | AI 输出冒犯性内容 | Apple 1.1、1.2；**Play AI-Generated Content 政策要求 App 里能举报或标记冒犯性的 AI 内容，而且不用离开 App** | 提示词有安全边界（[safety.md](../safety.md) §3、§4）；报告页的 👎 和一句话（D7）；**举报单条 AI 内容**（D8：来访者回复或报告里的一段，`POST /report`，服务端见 #47） | App 端做好后，提交前在真机上试一遍举报流程 |
 | 未成年人使用 | 两边的分级 | 分级定 18+，目标受众选 18+ | |
-| 功能太少，或者审核员进不去 | Apple 2.1、4.2 | 给审核员一个专用邀请码；后端在审核期间必须在线 | 审核期间不改 `INVITE_CODES`，不停服务 |
+| 功能太少，或者审核员进不去 | Apple 2.1、4.2；Play App access | **登录版**：一个固定的审核员邮箱加固定验证码（[login.md](../product/login.md) 第 4 节），不发邮件、不受尝试次数限制、不用邀请码。**登录前的 build**：用审核员专用邀请码 | 每次提交审核前换一个新码，填进后台；审核期间不清空 `REVIEW_LOGIN_EMAIL`、`REVIEW_LOGIN_CODE`，不停服务 |
+| 有账号却删不掉 | Apple 5.1.1(v)；Play 账号删除要求 | App 内「我的 → 删除账号」；网页 `https://psygym.novawerk.io/delete-account` 说明不用 App 时怎么申请 | 网页在 Google 送审前上线；提交前在真机上试一遍删除 |
 | 隐私标签和实际不符 | Apple 5.1.1、5.1.2；Play User Data 政策 | [privacy-labels.md](./privacy-labels.md) 按代码写 | 每次发版前核一遍 |
 
 ## 给审核员的说明（Review Notes / App access 说明）
 
-TestFlight 的 Beta App Review、App Store 审核、Play 的 App access 都可以用这段。邀请码由用户在后台填，不写进这里。
+TestFlight 的 Beta App Review、App Store 审核、Play 的 App access 都可以用这段。审核员邮箱、验证码和邀请码都只填在后台，不写进仓库。
+
+### 登录信息填在哪（登录版）
+
+| 后台 | 位置 | 填什么 |
+|------|------|--------|
+| App Store Connect（App Store 审核） | App Review Information → Sign-in required：勾选 | User name 填审核员邮箱，Password 填固定验证码 |
+| App Store Connect（TestFlight） | Test Information → Beta App Review Information → Sign-in required：勾选 | 同上 |
+| Play Console | App content → Sign in details → Add details | Username 填审核员邮箱，Password 填固定验证码；「Any other information」照下面的 How to test 写；「允许 Google 测试设备使用」保持关闭 |
+
+值从后端环境变量 `REVIEW_LOGIN_EMAIL`、`REVIEW_LOGIN_CODE` 来，由用户或总控当面给，发布只负责填进后台。
+
+### 说明正文（登录版）
 
 > **What this app is.** 聆镜 PSYGYM is a training tool for counseling students and new counselors. It is not a therapy or mental-health app for patients, and it gives no diagnosis or treatment. An AI plays a fictional client with depression or anxiety; the trainee practises a counseling session; afterwards an AI supervisor gives feedback on the trainee's technique.
 >
 > **How to test.**
 > 1. On first launch, read the "Before we start" page and tick the box. (It explains that this is not therapy, the clients are fictional, and the conversation is sent to a third-party AI model.)
-> 2. On the next page, enter the invite code: `<filled in App Store Connect / Play Console, not in the repo>`. You can also enter it later under Me → Settings.
+> 2. Sign in with the reviewer email in the sign-in details. Tap "Send code"; no email is sent to this address. Enter the code from the sign-in details. No invite code is needed for this account.
 > 3. Pick a case, read the brief, tap "Start session", and type a few counselor lines (for example, "What brings you here today?").
 > 4. Tap "End", then read the supervision report.
+> 5. To test account deletion: Me → Delete account. You can sign in again with the same email and code; a new account is created.
 >
 > **Safety.** Cases are low to moderate risk. The AI client may mention dark thoughts as written in the case, but never describes methods. A "Need help?" page with crisis guidance is always one tap away and works offline. If the trainee is abusive, the AI client reacts like a real person and ends the session on the second time.
 >
-> **Data.** No accounts. Our server doesn't store conversations. Practice history stays on the device and can be deleted in the app. See the privacy policy.
+> **Data.** Sign-in uses an email and a one-time code. Our server stores only the email, sign-up date, invite batch and sessions. It doesn't store conversations. Practice history stays on the device and can be deleted in the app. Accounts can be deleted in the app or via https://psygym.novawerk.io/delete-account. See the privacy policy.
 >
 > **Contact.** info@novawerk.io
+
+### 登录前的 build（现在 TestFlight 和 Play 内部测试里的 0.1.0）
+
+把第 2 步换成：
+
+> 2. On the next page, enter the invite code: `<filled in App Store Connect / Play Console, not in the repo>`. You can also enter it later under Me → Settings.
+
+Data 一段里去掉登录和账号删除那两句。Apple 用 `review-…`、Play 用 `play-…` 两个分开的码，见后台。
 
 ## 提交前检查
 
 - [ ] 文案、截图、关键词里没有「治疗、疗效、诊断、患者」，也没有 therapy app、treatment
 - [ ] O2 同意页、首页短版声明、病例简介页的内容提示、会谈页的「需要帮助？」都在
-- [ ] 审核员邀请码有效，而且不会被限流
+- [ ] 登录版：审核员邮箱和**这次新换的**验证码在后端生效，用 curl 或真机试过；后台填的是同一组值
+- [ ] 登录前的 build：审核员邀请码有效，而且不会被限流
+- [ ] App 内删除账号能用；`https://psygym.novawerk.io/delete-account` 能打开（Google 送审前必须上线）
+- [ ] 隐私标签里 Other User Content 选「不关联」的前提仍然成立：发给模型服务的请求不带账号 ID，服务端也不把会话和对话内容记在一起
 - [ ] 后端 `https://psygym-api.novawerk.io` 在线，生产环境配了模型服务的 key
-- [ ] 隐私政策链接能打开
+- [ ] 隐私政策链接能打开。登录版送审时，把后台的链接从 GitHub 上的 md 换成官网：ASC（App 隐私政策、TestFlight Test Information）和 Play（App content → Privacy policy）填 `https://psygym.novawerk.io/en/privacy`（中文页 `/zh/privacy`）；Play 数据安全表的删除链接和 Delete account URL 填 `https://psygym.novawerk.io/delete-account`
 - [ ] 隐私标签和 `PrivacyInfo.xcprivacy` 一致
 - [ ] Play 的 AI 内容举报入口（D8）在当前 build 里能用
