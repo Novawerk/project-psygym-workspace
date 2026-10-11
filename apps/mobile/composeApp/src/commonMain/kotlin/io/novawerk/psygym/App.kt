@@ -94,8 +94,9 @@ fun App(component: AppComponent) {
     LaunchedEffect(demoData, inviteCode) { caseStore.load(force = true) }
     LaunchedEffect(Unit) {
         history.load()
-        // A session was open when the process died: the in-memory practice is gone.
-        if (session.case == null && settings.consumePracticeInProgress()) practiceLost = true
+        // A session was open when the process died: the in-memory practice is gone. Never in
+        // screenshot mode, so the notice can't end up in a store screenshot.
+        if (shot == null && session.case == null && settings.consumePracticeInProgress()) practiceLost = true
     }
 
     val lang = language ?: return
@@ -286,7 +287,11 @@ fun App(component: AppComponent) {
                             onEnd = { nav.navigate(SupervisionRoute) { popUpTo(BriefingRoute) { inclusive = true } } },
                             onHelp = openHelp,
                             onOpenSettings = openSettings,
-                            onOtherCase = { nav.navigate(CasesRoute) { popUpTo(HomeRoute) } },
+                            onOtherCase = {
+                                // Leaving the session for another case: no practice left open.
+                                scope.launch { settings.setPracticeInProgress(false) }
+                                nav.navigate(CasesRoute) { popUpTo(HomeRoute) }
+                            },
                         )
                     }
                     composable<SupervisionRoute> {

@@ -41,4 +41,16 @@ class FakeReportFormatTest {
         assertTrue(Regex("Try instead: [\"“]").find(r) == null)
         assertTrue(r.trimEnd().endsWith("This feedback is AI-generated, for practice only."))
     }
+
+    @Test
+    fun neverQuotesTestCommands() = runTest {
+        val withEnd = TurnRequest(
+            "demo-depression",
+            ApiLocale.En,
+            listOf(Message(Role.Counselor, long), Message(Role.Client, "Um…"), Message(Role.Counselor, "#end")),
+        )
+        val r = FakePsygymApi(charDelayMillis = 0).supervision(withEnd).toList().joinToString("")
+        assertTrue("#end" !in r)
+        assertTrue(r.contains("Before you said \"$long\""), "the last real message is quoted instead")
+    }
 }

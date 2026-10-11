@@ -40,7 +40,8 @@ class FakePsygymApi(
         // Same shape as the real report (backend #57, product #58): quotes are whole
         // counselor messages, never cut; suggestions follow "可以换成：" / "Try instead:"
         // without quote marks; 2 / 3 / 2 items, each starting with "- ".
-        val counselor = request.messages.filter { it.role == Role.Counselor }.map { it.text }
+        // Test commands like "#end" are not something the counselor said: never quote them.
+        val counselor = request.messages.filter { it.role == Role.Counselor && !it.text.startsWith("#") }.map { it.text }
         val first = counselor.firstOrNull() ?: "…"
         val last = counselor.lastOrNull() ?: first
         val report = (if (request.locale == ApiLocale.Zh) REPORT_ZH else REPORT_EN)
