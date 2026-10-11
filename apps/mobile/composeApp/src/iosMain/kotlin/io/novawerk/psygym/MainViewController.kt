@@ -4,6 +4,7 @@ import androidx.compose.ui.window.ComposeUIViewController
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import io.novawerk.psygym.di.AppComponent
 import io.novawerk.psygym.di.HistoryDir
+import io.novawerk.psygym.domain.screenshot.ScreenshotModeHolder
 import io.novawerk.psygym.di.create
 import kotlinx.cinterop.ExperimentalForeignApi
 import okio.Path.Companion.toPath
@@ -20,6 +21,8 @@ private val component: AppComponent by lazy {
     AppComponent.create(
         PreferenceDataStoreFactory.createWithPath(produceFile = { appSupportPath(DATA_STORE_FILE_NAME).toPath() }),
         HistoryDir(appSupportPath("history")),
+        // Store-screenshot mode is Android-debug only.
+        ScreenshotModeHolder(null),
     )
 }
 

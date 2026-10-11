@@ -10,6 +10,7 @@ import io.novawerk.psygym.data.api.SwitchingPsygymApi
 import io.novawerk.psygym.domain.history.HistoryRepository
 import io.novawerk.psygym.domain.practice.CaseStore
 import io.novawerk.psygym.domain.practice.PracticeSession
+import io.novawerk.psygym.domain.screenshot.ScreenshotModeHolder
 import io.novawerk.psygym.domain.settings.SettingsRepository
 import me.tatarka.inject.annotations.Component
 import okio.Path.Companion.toPath
@@ -26,6 +27,7 @@ annotation class AppScope
 abstract class AppComponent(
     @get:Provides protected val dataStore: DataStore<Preferences>,
     @get:Provides protected val historyDir: HistoryDir,
+    @get:Provides val screenshot: ScreenshotModeHolder,
 ) {
     abstract val settingsRepository: SettingsRepository
     abstract val practiceSession: PracticeSession
@@ -47,7 +49,9 @@ abstract class AppComponent(
 
     @AppScope
     @Provides
-    protected fun api(settings: SettingsRepository): PsygymApi {
+    protected fun api(settings: SettingsRepository, screenshot: ScreenshotModeHolder): PsygymApi {
+        // Debug-only store-screenshot mode replaces the backend entirely.
+        screenshot.mode?.let { return it.api }
         val real = KtorPsygymApi(baseUrl = AppConfig.apiBaseUrl, inviteCode = settings::currentInviteCode)
         // Release never sees demo data: no fake API is even built.
         if (!AppConfig.isDebug) return real
@@ -61,4 +65,8 @@ abstract class AppComponent(
 data class HistoryDir(val path: String)
 
 @KmpComponentCreate
-expect fun AppComponent.Companion.create(dataStore: DataStore<Preferences>, historyDir: HistoryDir): AppComponent
+expect fun AppComponent.Companion.create(
+    dataStore: DataStore<Preferences>,
+    historyDir: HistoryDir,
+    screenshot: ScreenshotModeHolder,
+): AppComponent
