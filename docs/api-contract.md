@@ -11,13 +11,16 @@ in a PR that touches both sides, or not at all.
   `https://psygym-api.novawerk.io`).
 - JSON in, JSON or SSE out. UTF-8.
 - Stateless. The app sends the whole conversation each turn. The server stores no
-  transcript and never logs message text. It may keep anonymous counts per day, case and
-  language (sessions started, reports, ratings, errors…): no text, no invite code, no IP, no
-  id of any kind ([`decisions/0007-anonymous-counts.md`](./decisions/0007-anonymous-counts.md)). `/chat` and `/supervision` pass the conversation to
+  transcript and never logs message text. It may keep counts per day, case and language
+  (sessions started, reports, ratings, errors…): no text, no invite code, no IP
+  ([`decisions/0007-anonymous-counts.md`](./decisions/0007-anonymous-counts.md)). With sign-in
+  on, it also keeps pseudonymous active-account records that rotate every day and every week,
+  never an email or an account id ([`decisions/0008-sign-in.md`](./decisions/0008-sign-in.md)). `/chat` and `/supervision` pass the conversation to
   the model vendor to get a reply, and nowhere else. The only conversation text that goes
   anywhere beyond that is one passage the user reports with `POST /report`.
 - Header `X-Invite-Code: <code>` on every request. The server checks it only when
-  `INVITE_CODES` is set; otherwise any value (or none) passes.
+  `INVITE_CODES` is set; otherwise any value (or none) passes. With sign-in on, see
+  [Sign-in](#sign-in-proposed-not-live-yet): a session token replaces the invite code.
 
 ## Models (shared shapes)
 
@@ -46,7 +49,9 @@ type CaseSummary = {
 
 ### `GET /health` → `200 {"ok":true}`
 
-Never checks the invite code.
+Never checks the invite code. With sign-in on, it also says which mode the server runs:
+`{"ok":true,"auth":"optional"}` or `{"ok":true,"auth":"required"}` (see Sign-in). With sign-in
+off it stays exactly `{"ok":true}`.
 
 ### `GET /cases` → `200 {"cases": CaseSummary[]}`
 
@@ -114,6 +119,113 @@ Same invite code check; same rate limit, its own bucket. Same delivery as `/feed
 either way, best effort, dropped when Slack isn't set up. Errors: `400 invalid_request`,
 `401 invite_required`, `404 case_not_found`, `429 rate_limited`.
 
+## Sign-in (proposed, not live yet)
+
+> **Draft for review.** Nothing below is live. The server keeps working exactly as described
+> above until `AUTH_MODE` is set. Product spec: [`product/login.md`](./product/login.md).
+> Decisions and storage: [`decisions/0008-sign-in.md`](./decisions/0008-sign-in.md).
+
+Email and a one-time code; no passwords. The code arrives by email from
+`no-reply@novawerk.io`. The invite code is asked once, when an account is created.
+
+### Modes and the move from invite codes
+
+Two settings: `AUTH_MODE` (`off` or `on`) and, with `on`, `AUTH_REQUIRED_FROM` (a date and time,
+UTC). The app reads the current mode from `GET /health`.
+
+| Mode | When | `/health` | `/auth/*`, `/me` | Every other endpoint (except `/health`) |
+|---|---|---|---|---|
+| `off` | today, default | `{"ok":true}` | `404 not_found` | invite code, as today |
+| `optional` | `on`, before `AUTH_REQUIRED_FROM` (or it's unset) | `"auth":"optional"` | live | **either** a valid `Authorization: Bearer <token>` **or** a valid `X-Invite-Code` (or anything, when `INVITE_CODES` isn't set) |
+| `required` | `on`, from `AUTH_REQUIRED_FROM` | `"auth":"required"` | live | `Authorization: Bearer <token>` only |
+
+- A request that carries `Authorization` is judged by the token alone: a bad, expired,
+  signed-out or deleted-account token is `401 session_expired`. An invite code next to it
+  doesn't help. The app then signs in again.
+- The move: the signed-in app ships with the server in `optional`; we set `AUTH_REQUIRED_FROM`
+  about 14 days later, looking at how many requests still come with only an invite code (a
+  count, `auth` with dim `session` or `invite`, no ids). We announce the date. From then on, a
+  request without a token is `426 update_required`. Old apps don't know that code and show
+  their generic error; new apps never send such a request.
+- A new app: if `/health` says `optional` or `required`, it signs in and sends the token on
+  every request, and no `X-Invite-Code`.
+
+### `POST /auth/start` → `202` (no body)
+
+Body: `{ email: string, locale: Locale }`.
+
+- `email` is trimmed and lower-cased by the server; at most 254 characters; must look like an
+  address. `locale` is the language of the email.
+- The server answers `202` and then emails a 6-digit code, valid for 10 minutes (sent after
+  the answer, so the response time doesn't tell whether the email has an account). A new
+  `start` replaces the previous code at once.
+- Always `202` for a well-formed request, whether or not the email has an account.
+- Limits: one `start` per email per 60 s and 5 per hour; 20 per IP per hour. Over any →
+  `429 rate_limited` with `Retry-After` (seconds; the app shows the countdown).
+- Errors: `400 invalid_request`, `429 rate_limited`. If the email can't be sent, the app hears
+  nothing more (the answer is already out): the user taps "send again".
+
+### `POST /auth/verify` → `200`
+
+Body: `{ email: string, code: string, inviteCode?: string }`. Answer:
+
+```ts
+type Me = { email: string; createdAt: string /* ISO 8601 */; inviteBatch: string | null };
+type Session = { token: string; expiresAt: string /* ISO 8601 */; me: Me };
+```
+
+- The invite code comes after the email code (L3), with the **same** email code: no second
+  email. For an email without an account:
+  1. `verify` without `inviteCode` → `403 invite_required`. The code is **not** used up and
+     this isn't a try. The app shows L3.
+  2. `verify` again with the same code and `inviteCode`. Valid → the account is created, the
+     code used up, a session returned. Not valid → `403 invite_invalid`, and it counts as one of
+     the code's 5 tries (so invite codes can't be guessed endlessly).
+  An app updated from the old version sends the invite code it kept on the first `verify`, so
+  the user never sees L3. An email that already has an account ignores `inviteCode`.
+- The account exists only once a valid invite code was given: no half-made accounts, nothing
+  stored about an email that never got that far.
+- The token is opaque: keep it in the platform's secure storage (Android Keystore, iOS
+  Keychain); send it as `Authorization: Bearer <token>`.
+- **The session lasts 90 days from its last use** and renews itself on requests, so someone who
+  practises now and then doesn't sign in again. 90 days without a request →
+  `401 session_expired`. `expiresAt` is the end as of now.
+- Errors:
+  - `400 invalid_code`: wrong, expired, already used, replaced by a newer code, or no tries
+    left (5 per code). One code for all on purpose; the app says the code is wrong or no longer
+    valid and offers to type it again or send a new one.
+  - `403 invite_required`, `403 invite_invalid` (above).
+  - `400 invalid_request`, `429 rate_limited` (30 per IP per hour, with `Retry-After`).
+
+### `GET /me` → `200 Me`
+
+Needs the token. Errors: `401 sign_in_required` (no token), `401 session_expired`.
+
+### `POST /auth/logout` → `204`
+
+Ends the session of the token sent. Also `204` if the token is unknown or already expired, so
+the app can always call it and forget the token.
+
+### `DELETE /me` → `204`
+
+Deletes the account: the email, sign-up date, invite batch, every session and any pending
+code, right away; and its pseudonymous active rows of today and this week. Counts already
+totalled stay (they hold no account). Feedback and reports already sent to our Slack channel
+never carried the email either. Needs the token; same `401` errors as `GET /me`. Afterwards
+the account's other devices get `401 session_expired`.
+
+Without the app (Google Play asks for this): the page `novawerk.io/psygym/delete-account`
+explains it; the request goes by email to `info@novawerk.io`, from the account's address. We
+delete within 30 days (ADR 0008).
+
+### App review
+
+One reviewer address, set on the server (`REVIEW_LOGIN_EMAIL`, `REVIEW_LOGIN_CODE`), signs in
+with a fixed code; no email is sent and no invite code is asked. Only that address. Its fixed
+code has no try limit and no per-email send limit (so nobody can lock the reviewer out by
+typing wrong codes); the per-IP limit stays. Its activity isn't counted. Nothing changes for
+the app.
+
 ## Stream format (both streaming endpoints)
 
 Data-only SSE frames, one JSON object per frame, discriminated by `type`:
@@ -143,6 +255,12 @@ JSON `{ "error": { "code": string, "message": string } }` with:
 |------|------|---------|
 | 400 | `invalid_request` | body fails validation, or is too large (never 413) |
 | 401 | `invite_required` | invite code missing or wrong |
+| 401 | `sign_in_required` | (sign-in on) no session token where one is needed (`/me`, `/auth/logout`) |
+| 401 | `session_expired` | (sign-in on) the token is wrong, expired, signed out, or its account was deleted |
+| 426 | `update_required` | (`required` mode) no token: an old app after the move |
+| 400 | `invalid_code` | (`/auth/verify`) wrong, expired, used, replaced or no tries left |
+| 403 | `invite_required` | (`/auth/verify`) new email, no invite code; the code stays valid, no try used |
+| 403 | `invite_invalid` | (`/auth/verify`) new email, invite code not valid; uses one try |
 | 404 | `case_not_found` | unknown `caseId` |
 | 429 | `rate_limited` | too many requests; `Retry-After` header set |
 | 503 | `model_unavailable` | no model configured or vendor down |
@@ -153,6 +271,10 @@ The app shows a friendly message for each code, in the current language.
 
 ## Changes
 
+- **(draft, #64)** — Sign-in: `AUTH_MODE`, `AUTH_REQUIRED_FROM`, `/auth/start`, `/auth/verify`,
+  `/auth/logout`, `GET /me`, `DELETE /me`, Bearer tokens, the move from invite codes, new error
+  codes, `auth` in `/health`; Basics now mention pseudonymous active records. Proposed only;
+  not live until the implementation PR, which touches both sides.
 - **#62** — `POST /supervision` takes an optional `durationSec`. Backend first; the app sends it
   in a later PR. An exception to "both sides in one PR", allowed by the lead: the field is
   optional and old apps work unchanged.

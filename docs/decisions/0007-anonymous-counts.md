@@ -2,6 +2,9 @@
 
 Date: 2026-10-11. Status: accepted (board D-A6 = B, D-A7 = A, D-A4 = B; D-A1 still open).
 
+**Partly superseded by [0008](./0008-sign-in.md)** (once sign-in is on): "no id of any kind" no
+longer holds; 0008 adds pseudonymous active-account records that rotate daily and weekly.
+
 - **What.** One table, `daily_counts`: day (UTC) × event × case × language × one extra
   dimension, and a count. For reports, also the sum of session lengths and how many sessions
   sent one. Nothing else: no events one by one, no text, no invite code, no IP, no id of any
