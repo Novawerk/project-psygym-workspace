@@ -37,9 +37,15 @@ class FakePsygymApi(
     }
 
     override fun supervision(request: TurnRequest): Flow<String> {
-        // Same shape as the real report (acceptance C1, C2, C7), so switching doesn't jump.
-        val quote = request.messages.firstOrNull { it.role == Role.Counselor }?.text?.take(40) ?: "…"
-        val report = (if (request.locale == ApiLocale.Zh) REPORT_ZH else REPORT_EN).replace("{quote}", quote)
+        // Same shape as the real report (backend #57, product #58): quotes are whole
+        // counselor messages, never cut; suggestions follow "可以换成：" / "Try instead:"
+        // without quote marks; 2 / 3 / 2 items, each starting with "- ".
+        val counselor = request.messages.filter { it.role == Role.Counselor }.map { it.text }
+        val first = counselor.firstOrNull() ?: "…"
+        val last = counselor.lastOrNull() ?: first
+        val report = (if (request.locale == ApiLocale.Zh) REPORT_ZH else REPORT_EN)
+            .replace("{first}", first)
+            .replace("{last}", last)
         return typeOut(report, chunk = 4)
     }
 
@@ -107,16 +113,19 @@ class FakePsygymApi(
         val REPORT_ZH = """
             ## 做得好的地方
 
-            - 你说「{quote}」：开场开放，给了来访者空间。（演示数据）
+            - 你说「{first}」，开场开放，给了来访者空间。（演示数据）
+            - 来访者说完后你接着追问，保持了对话的节奏。（演示数据）
 
             ## 需要改进的地方
 
-            - 你还没有和来访者一起设定这次会谈的目标。可以换成：「今天我们先聊聊最困扰你的一件事，好吗？」（演示数据）
+            - 你说「{last}」之前，还没有和来访者一起设定这次会谈的目标。可以换成：今天我们先聊聊最困扰你的一件事，好吗？（演示数据）
+            - 还没有问到来访者最近的睡眠和日常状态。可以换成：最近这段时间，你睡得怎么样？（演示数据）
+            - 反映感受可以更具体。可以换成：听起来你对自己挺失望的，是这样吗？（演示数据）
 
             ## 下次练什么
 
-            1. 用苏格拉底式提问探索一个具体情境。
-            2. 会谈开始时先共同设定议程。
+            - 会谈开始时，先和来访者共同设定议程。
+            - 用苏格拉底式提问，探索一个具体情境。
 
             这份反馈由 AI 生成，仅供练习参考。
         """.trimIndent()
@@ -124,16 +133,19 @@ class FakePsygymApi(
         val REPORT_EN = """
             ## What went well
 
-            - You said "{quote}": an open start that gave the client room. (Demo data)
+            - You said "{first}", an open start that gave the client room. (Demo data)
+            - You followed up after the client spoke, which kept the session moving. (Demo data)
 
             ## What to improve
 
-            - You haven't set a goal for the session together. Try: "Shall we start with the thing that troubles you most today?" (Demo data)
+            - Before you said "{last}", you hadn't set a goal for the session together. Try instead: Shall we start with the thing that troubles you most today? (Demo data)
+            - You haven't asked about sleep and daily life yet. Try instead: How have you been sleeping lately? (Demo data)
+            - Your reflections could name the feeling more precisely. Try instead: It sounds like you're quite disappointed in yourself. Is that right? (Demo data)
 
             ## What to practise next
 
-            1. Use Socratic questions to explore one concrete situation.
-            2. Set an agenda together at the start.
+            - Set an agenda together at the start of the session.
+            - Use Socratic questions to explore one concrete situation.
 
             This feedback is AI-generated, for practice only.
         """.trimIndent()

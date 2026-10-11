@@ -31,6 +31,8 @@ import io.novawerk.psygym.resources.privacy_a_where
 import io.novawerk.psygym.resources.privacy_q_collect
 import io.novawerk.psygym.resources.privacy_q_device
 import io.novawerk.psygym.resources.privacy_q_real
+import io.novawerk.psygym.resources.privacy_a_stats
+import io.novawerk.psygym.resources.privacy_q_stats
 import io.novawerk.psygym.resources.privacy_q_store
 import io.novawerk.psygym.resources.privacy_q_vendor
 import io.novawerk.psygym.resources.privacy_q_where
@@ -69,6 +71,7 @@ fun PrivacyScreen(onBack: () -> Unit) {
             Qa(stringResource(Res.string.privacy_q_vendor), stringResource(Res.string.privacy_a_vendor))
             Qa(stringResource(Res.string.privacy_q_device), stringResource(Res.string.privacy_a_device))
             Qa(stringResource(Res.string.privacy_q_collect), stringResource(Res.string.privacy_a_collect))
+            Qa(stringResource(Res.string.privacy_q_stats), stringResource(Res.string.privacy_a_stats))
             Qa(stringResource(Res.string.privacy_q_real), stringResource(Res.string.privacy_a_real))
         }
     }

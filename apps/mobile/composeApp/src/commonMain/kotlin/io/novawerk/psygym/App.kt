@@ -23,6 +23,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.toRoute
 import io.novawerk.psygym.di.AppComponent
 import io.novawerk.psygym.domain.model.CaseSummary
@@ -84,12 +85,18 @@ fun App(component: AppComponent) {
 
     // Outside key(lang): switching language rebuilds the UI but keeps the back stack.
     val nav = rememberNavController()
-    var practiceInterrupted by remember { mutableStateOf(false) }
+    // "We couldn't keep your last session", shown once on Home (audit O).
+    var practiceLost by remember { mutableStateOf(false) }
+    var historyDeleted by remember { mutableStateOf(false) }
 
     // Cases come from whichever backend is active, with the current invite code: reload when
     // either changes (the code is often entered after the first, failed, fetch).
     LaunchedEffect(demoData, inviteCode) { caseStore.load(force = true) }
-    LaunchedEffect(Unit) { history.load() }
+    LaunchedEffect(Unit) {
+        history.load()
+        // A session was open when the process died: the in-memory practice is gone.
+        if (session.case == null && settings.consumePracticeInProgress()) practiceLost = true
+    }
 
     val lang = language ?: return
     // The start page is picked once, from the first value DataStore gives; later changes
@@ -114,8 +121,9 @@ fun App(component: AppComponent) {
                 }
                 // The app was restarted mid-practice; the in-memory session is gone (D8).
                 val sessionLost = {
-                    practiceInterrupted = true
-                    nav.navigate(CasesRoute) { popUpTo(HomeRoute) }
+                    practiceLost = true
+                    scope.launch { settings.setPracticeInProgress(false) }
+                    nav.goHome()
                 }
                 val caseIndex = { case: CaseSummary? -> caseStore.cases?.indexOfFirst { it.id == case?.id }?.coerceAtLeast(0) ?: 0 }
 
@@ -197,13 +205,20 @@ fun App(component: AppComponent) {
                             onOpenSettings = openSettings,
                             onHelp = openHelp,
                             onTab = onTab,
+                            practiceLost = practiceLost,
+                            onPracticeLostShown = { practiceLost = false },
                         )
                     }
                     composable<HistoryRoute> {
                         HistoryScreen(
                             sessions = savedSessions,
                             onOpen = { nav.navigate(HistoryDetailRoute(it.id)) },
-                            onDelete = { scope.launch { history.delete(it.id) } },
+                            onDelete = {
+                                scope.launch { history.delete(it.id) }
+                                historyDeleted = true
+                            },
+                            deleted = historyDeleted,
+                            onDeletedShown = { historyDeleted = false },
                             onStartPractice = { nav.navigate(CasesRoute) },
                             onTab = onTab,
                         )
@@ -211,12 +226,16 @@ fun App(component: AppComponent) {
                     composable<HistoryDetailRoute> { entry ->
                         val id = entry.toRoute<HistoryDetailRoute>().id
                         val saved = savedSessions?.firstOrNull { it.id == id }
+                        // Pop only while this page is on top: after a delete the record turns null and
+                        // the screen asks to go back again, which used to pop History too (audit B).
+                        val back = { if (nav.currentBackStackEntry?.destination?.hasRoute<HistoryDetailRoute>() == true) nav.popBackStack() }
                         HistoryDetailScreen(
                             session = saved,
-                            onBack = { nav.popBackStack() },
+                            onBack = { back() },
                             onDelete = {
                                 scope.launch { history.delete(id) }
-                                nav.popBackStack()
+                                historyDeleted = true
+                                back()
                             },
                             onPracticeAgain = { saved?.let { openCase(it.case) } },
                         )
@@ -227,8 +246,6 @@ fun App(component: AppComponent) {
                             cases = caseStore.cases,
                             error = caseStore.error,
                             demoData = demoBadge,
-                            interrupted = practiceInterrupted,
-                            onInterruptedShown = { practiceInterrupted = false },
                             onBack = { if (!nav.popBackStack()) goHome() },
                             onPick = openCase,
                             onRetry = { caseStore.load(force = true) },
@@ -243,6 +260,7 @@ fun App(component: AppComponent) {
                                 // Screenshot mode opens on a written session instead of an empty one.
                                 session.case?.let { case -> shot?.seed?.invoke(case.id, apiLocale) }
                                     ?.let { session.seed(it.messages, it.elapsed) }
+                                if (shot == null) scope.launch { settings.setPracticeInProgress(true) }
                                 nav.navigate(PracticeRoute)
                             },
                             onBack = { nav.popBackStack() },
@@ -261,6 +279,7 @@ fun App(component: AppComponent) {
                             onLeave = {
                                 // Nothing kept: coming back starts a fresh session (timer, messages).
                                 session.finish()
+                                scope.launch { settings.setPracticeInProgress(false) }
                                 nav.popBackStack()
                             },
                             onSessionLost = sessionLost,
@@ -275,7 +294,12 @@ fun App(component: AppComponent) {
                         SupervisionScreen(
                             viewModel = vm,
                             demoData = demoBadge,
-                            onShown = { if (shot == null) scope.launch { settings.markRealInfoHintSeen() } },
+                            onShown = {
+                                scope.launch {
+                                    settings.setPracticeInProgress(false)
+                                    if (shot == null) settings.markRealInfoHintSeen()
+                                }
+                            },
                             onHome = {
                                 vm.finish()
                                 goHome()

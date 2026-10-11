@@ -27,6 +27,7 @@ import io.novawerk.psygym.data.api.ApiError
 import io.novawerk.psygym.data.api.ApiErrorCode
 import io.novawerk.psygym.resources.Res
 import io.novawerk.psygym.resources.error_case_not_found
+import io.novawerk.psygym.resources.error_cases_load
 import io.novawerk.psygym.resources.error_invalid_request
 import io.novawerk.psygym.resources.error_invite_required
 import io.novawerk.psygym.resources.error_model_unavailable
@@ -43,8 +44,20 @@ import io.novawerk.psygym.resources.retry
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 
+/**
+ * For the case list ([casesList]), anything that isn't the user's to fix (connection,
+ * invite code, too many requests) reads "couldn't load the cases": a 404 on the list is
+ * not "this case is unavailable" (audit E).
+ */
 @Composable
-fun ApiError.message(): String = when (code) {
+fun ApiError.message(casesList: Boolean = false): String = when {
+    casesList && code !in listOf(ApiErrorCode.Network, ApiErrorCode.InviteRequired, ApiErrorCode.RateLimited, ApiErrorCode.Timeout) ->
+        stringResource(Res.string.error_cases_load)
+    else -> message()
+}
+
+@Composable
+private fun ApiError.message(): String = when (code) {
     ApiErrorCode.InvalidRequest -> stringResource(Res.string.error_invalid_request)
     ApiErrorCode.InviteRequired -> stringResource(Res.string.error_invite_required)
     ApiErrorCode.CaseNotFound -> stringResource(Res.string.error_case_not_found)
@@ -70,6 +83,8 @@ fun ErrorCard(
     modifier: Modifier = Modifier,
     onOtherCase: (() -> Unit)? = null,
     onEndSession: (() -> Unit)? = null,
+    /** On the case list: list-level wording, and always a retry. */
+    casesList: Boolean = false,
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -82,10 +97,12 @@ fun ErrorCard(
         Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 14.dp, bottom = 4.dp)) {
             Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Icon(Icons.Outlined.ErrorOutline, contentDescription = null, modifier = Modifier.size(20.dp))
-                Text(error.message(), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(end = 8.dp))
+                Text(error.message(casesList), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(end = 8.dp))
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 when {
+                    casesList && error.code != ApiErrorCode.InviteRequired && error.code != ApiErrorCode.RateLimited && onRetry != null ->
+                        TextButton(onClick = onRetry) { Text(stringResource(Res.string.retry)) }
                     // Fix the code in Settings, come back, try again (acceptance D2).
                     error.code == ApiErrorCode.InviteRequired -> {
                         TextButton(onClick = onOpenSettings) { Text(stringResource(Res.string.error_open_settings)) }

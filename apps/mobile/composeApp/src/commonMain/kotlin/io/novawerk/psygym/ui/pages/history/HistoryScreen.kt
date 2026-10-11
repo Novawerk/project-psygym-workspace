@@ -1,5 +1,10 @@
 package io.novawerk.psygym.ui.pages.history
 
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.remember
+import io.novawerk.psygym.resources.history_deleted
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -80,10 +85,21 @@ fun HistoryScreen(
     onDelete: (SavedSession) -> Unit,
     onStartPractice: () -> Unit,
     onTab: (TopTab) -> Unit,
+    deleted: Boolean = false,
+    onDeletedShown: () -> Unit = {},
 ) {
     val locale = rememberApiLocale()
+    val snackbar = remember { SnackbarHostState() }
+    val deletedText = stringResource(Res.string.history_deleted)
+    LaunchedEffect(deleted) {
+        if (deleted) {
+            snackbar.showSnackbar(deletedText, duration = SnackbarDuration.Short)
+            onDeletedShown()
+        }
+    }
     var pendingDelete by rememberSaveable { mutableStateOf<String?>(null) }
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(Res.string.history_title)) },

@@ -101,9 +101,9 @@ import org.jetbrains.compose.resources.stringResource
 // docs/product/onboarding.md: three pages, page dots, 中/EN top right, one main button
 // at the bottom. O1 and O3 can be skipped; O2 can't. No system permissions.
 
-/** Top row shared by O1–O3: page dots, Skip (when allowed), language toggle. */
+/** Top row shared by O1–O3: page dots, Skip (when allowed), language toggle (when given). */
 @Composable
-private fun OnboardingTopBar(page: Int, onSkip: (() -> Unit)?, onLanguage: (AppLanguage) -> Unit) {
+private fun OnboardingTopBar(page: Int, onSkip: (() -> Unit)?, onLanguage: ((AppLanguage) -> Unit)?) {
     Row(
         Modifier.fillMaxWidth().statusBarsPadding().padding(start = 20.dp, end = 8.dp, top = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -124,7 +124,7 @@ private fun OnboardingTopBar(page: Int, onSkip: (() -> Unit)?, onLanguage: (AppL
                 Text(stringResource(Res.string.onb_skip), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        LanguageToggle(onChange = onLanguage)
+        if (onLanguage != null) LanguageToggle(onChange = onLanguage)
     }
 }
 
@@ -132,7 +132,7 @@ private fun OnboardingTopBar(page: Int, onSkip: (() -> Unit)?, onLanguage: (AppL
 private fun OnboardingPage(
     page: Int,
     onSkip: (() -> Unit)?,
-    onLanguage: (AppLanguage) -> Unit,
+    onLanguage: ((AppLanguage) -> Unit)?,
     bottom: @Composable ColumnScope.() -> Unit,
     content: @Composable ColumnScope.() -> Unit,
 ) {
@@ -154,11 +154,17 @@ private fun OnboardingPage(
 /** O1 · Welcome. */
 @Composable
 fun WelcomeScreen(onContinue: () -> Unit, onSkip: () -> Unit, onLanguage: (AppLanguage) -> Unit) {
+    // Skip sits under Continue as a text button, not up top (design O1).
     OnboardingPage(
         page = 0,
-        onSkip = onSkip,
+        onSkip = null,
         onLanguage = onLanguage,
-        bottom = { PrimaryButton(stringResource(Res.string.onb_continue), onContinue) },
+        bottom = {
+            PrimaryButton(stringResource(Res.string.onb_continue), onContinue)
+            TextButton(onClick = onSkip) {
+                Text(stringResource(Res.string.onb_skip), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        },
     ) {
         Text(
             stringResource(Res.string.app_name),
@@ -303,9 +309,11 @@ fun ReadyScreen(
     onSkip: () -> Unit,
 ) {
     var code by rememberSaveable { mutableStateOf(inviteCode) }
+    // "Skip for now" is at the bottom, so no second Skip up top (audit F). The 中/EN toggle
+    // stays, as on every intro page (design).
     OnboardingPage(
         page = 2,
-        onSkip = onSkip,
+        onSkip = null,
         onLanguage = onLanguage,
         bottom = {
             PrimaryButton(stringResource(Res.string.onb_ready_start), { onStart(code) })

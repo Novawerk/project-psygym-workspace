@@ -160,9 +160,14 @@ fun PracticeScreen(
                             overflow = TextOverflow.Ellipsis,
                         )
                         val timerCd = stringResource(Res.string.practice_timer_cd)
+                        // No "Turn 0" before the first message: just the clock (audit K).
+                        val turns = viewModel.turns
                         Text(
-                            if (showTimer) stringResource(Res.string.practice_meta, viewModel.turns, clock)
-                            else stringResource(Res.string.practice_meta_turns, viewModel.turns),
+                            when {
+                                turns == 0 -> if (showTimer) clock else ""
+                                showTimer -> stringResource(Res.string.practice_meta, turns, clock)
+                                else -> stringResource(Res.string.practice_meta_turns, turns)
+                            },
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.semantics { contentDescription = timerCd },

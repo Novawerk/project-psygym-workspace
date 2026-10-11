@@ -39,6 +39,9 @@ Debug-only overrides: `-Ppsygym.apiBaseUrl=http://192.168.1.20:8787` (a phone on
 Wi-Fi) and `-Ppsygym.fakeApi=false`.
 
 Local backend, from the repo root: `LLM_PROVIDER=mock pnpm --filter api dev`.
+Port 8787 is a common default; if another dev server already holds it (Novawerk's API
+does), `/cases` answers 404 and the app says it can't load the cases. Run ours on another
+port (`PORT=8789 …`) and build with `-Ppsygym.apiBaseUrl=http://10.0.2.2:8789`.
 
 ### iOS
 

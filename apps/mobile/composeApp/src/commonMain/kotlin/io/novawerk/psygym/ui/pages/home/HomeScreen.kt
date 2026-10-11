@@ -1,7 +1,15 @@
 package io.novawerk.psygym.ui.pages.home
 
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import io.novawerk.psygym.resources.practice_lost
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -66,9 +74,21 @@ fun HomeScreen(
     onOpenSettings: () -> Unit,
     onHelp: () -> Unit,
     onTab: (TopTab) -> Unit,
+    practiceLost: Boolean = false,
+    onPracticeLostShown: () -> Unit = {},
 ) {
     val locale = rememberApiLocale()
+    val snackbar = remember { SnackbarHostState() }
+    val lostText = stringResource(Res.string.practice_lost)
+    LaunchedEffect(practiceLost) {
+        if (practiceLost) {
+            // Clear only after showing: clearing first would cancel this effect.
+            snackbar.showSnackbar(lostText, withDismissAction = true, duration = SnackbarDuration.Long)
+            onPracticeLostShown()
+        }
+    }
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(
                 title = {
@@ -104,14 +124,15 @@ fun HomeScreen(
             }
             Spacer(Modifier.height(8.dp))
             when {
-                casesError != null -> ErrorCard(casesError, onRetry = onRetryCases, onOpenSettings = onOpenSettings)
+                casesError != null -> ErrorCard(casesError, onRetry = onRetryCases, onOpenSettings = onOpenSettings, casesList = true)
                 cases == null -> Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     CaseCardSkeleton(Modifier.weight(1f))
                     CaseCardSkeleton(Modifier.weight(1f))
                 }
-                else -> Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Same height, content from the top, whatever each case carries (audit L).
+                else -> Row(Modifier.height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     cases.take(2).forEachIndexed { i, case ->
-                        CaseCard(case, i, locale, onClick = { onPickCase(case) }, modifier = Modifier.weight(1f), compact = true)
+                        CaseCard(case, i, locale, onClick = { onPickCase(case) }, modifier = Modifier.weight(1f).fillMaxHeight(), compact = true)
                     }
                     if (cases.size == 1) Spacer(Modifier.weight(1f))
                 }
