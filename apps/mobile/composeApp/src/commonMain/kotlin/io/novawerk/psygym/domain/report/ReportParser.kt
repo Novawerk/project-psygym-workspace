@@ -59,7 +59,8 @@ object ReportParser {
 
     // 你说「…」 / 来访者说：「…」 / You said “…” / The client said: “…” (straight quotes too).
     private val quoteZh = Regex("""(来访者说|你说)[：:]?\s*「([^」]+)」[，,。.；;]?\s*""")
-    private val quoteEn = Regex("""(?i)(the client said|you said)[：:,]?\s*[“"]([^”"]+)[”"][,.;]?\s*""")
+    // Curly quotes may hold straight ones (“he said "ok"”), so each kind closes with its own mark.
+    private val quoteEn = Regex("""(?i)(the client said|you said)[：:,]?\s*(?:“([^”]+)”|"([^"]+)")[,.;]?\s*""")
     private val tryZh = Regex("""可以换成[：:]\s*""")
     private val tryEn = Regex("""Try instead[：:]\s*""")
     private val listItem = Regex("""^\s*(?:[-*•]|\d+[.)、])\s+""")
@@ -69,7 +70,14 @@ object ReportParser {
      * order): then the app shows it as plain Markdown, as before. Works on a report that is
      * still streaming: a cut-off last item just doesn't parse yet.
      */
-    fun parse(report: String): ParsedReport? {
+    fun parse(report: String): ParsedReport? = try {
+        read(report)
+    } catch (e: Exception) {
+        // Whatever the model wrote, the page must not crash: fall back to plain Markdown.
+        null
+    }
+
+    private fun read(report: String): ParsedReport? {
         val lines = report.lines()
         val starts = lines.mapIndexedNotNull { i, line ->
             val title = line.trim().takeIf { it.startsWith("## ") }?.removePrefix("## ")?.trim() ?: return@mapIndexedNotNull null
@@ -86,46 +94,70 @@ object ReportParser {
         val parts = starts.mapIndexed { n, (start, section, title) ->
             val end = starts.getOrNull(n + 1)?.first ?: lines.size
             val body = lines.subList(start + 1, end)
-            val items = mutableListOf<ReportItem>()
+            // Raw items in order: a list item, with any lines right under it; or a plain line.
+            val raws = mutableListOf<Pair<String, Boolean>>() // text, is a list item
             val rest = mutableListOf<String>()
+            var afterBlank = true
             body.forEach { line ->
                 when {
-                    line.isBlank() -> if (rest.isNotEmpty()) rest += line
-                    listItem.containsMatchIn(line) && rest.isEmpty() -> items += readItem(section, listItem.replaceFirst(line, "").trim())
-                    // A plain line inside a section: keep it, as a plain item (or the footer
-                    // after the last section).
-                    n < starts.lastIndex -> items += ReportItem.Plain(line.trim())
-                    else -> rest += line
+                    rest.isNotEmpty() -> rest += line
+                    line.isBlank() -> afterBlank = true
+                    listItem.containsMatchIn(line) -> {
+                        raws += listItem.replaceFirst(line, "").trim() to true
+                        afterBlank = false
+                    }
+                    // A line right under a list item continues it.
+                    !afterBlank && raws.lastOrNull()?.second == true -> {
+                        val (text, _) = raws.removeLast()
+                        raws += "$text\n${line.trim()}" to true
+                    }
+                    // A paragraph of its own: the AI line after the last section, otherwise
+                    // kept as a plain item.
+                    n == starts.lastIndex -> rest += line
+                    else -> {
+                        raws += line.trim() to false
+                        afterBlank = false
+                    }
                 }
             }
             if (n == starts.lastIndex) footer = rest.joinToString("\n").trim()
+            val items = raws.map { (text, isItem) -> if (isItem) readItem(section, text) else ReportItem.Plain(text) }
             ReportPart(section, title, items.markRisk(section))
         }
         return ParsedReport(intro, parts, footer)
     }
 
     private fun readItem(section: ReportSection, raw: String): ReportItem {
-        if (section == ReportSection.Next) return ReportItem.Parsed(raw, note = raw, quotes = emptyList(), tryInstead = null)
+        if (section == ReportSection.Next) return ReportItem.Parsed(raw, note = raw.plain(), quotes = emptyList(), tryInstead = null)
         var text = raw
         // "可以换成：" takes everything after it (it's always last).
         val tryMatch = tryZh.find(text) ?: tryEn.find(text)
         val tryInstead = tryMatch?.let { text.substring(it.range.last + 1).trim().ifEmpty { null } }
         if (tryMatch != null) text = text.substring(0, tryMatch.range.first)
         val quotes = mutableListOf<Quote>()
-        val matches = (quoteZh.findAll(text) + quoteEn.findAll(text)).sortedBy { it.range.first }.toList()
+        // Chinese and English quotes can nest (来访者说：「you said "ok" 就行」): keep the
+        // outer one, drop any match that overlaps one already taken.
+        val matches = mutableListOf<MatchResult>()
+        (quoteZh.findAll(text) + quoteEn.findAll(text))
+            .sortedWith(compareBy({ it.range.first }, { -it.range.last }))
+            .forEach { m -> if (matches.none { it.range.first <= m.range.last && m.range.first <= it.range.last }) matches += m }
         matches.forEach { m ->
             val speaker = if (m.groupValues[1].startsWith("你") || m.groupValues[1].equals("you said", ignoreCase = true)) Speaker.Counselor else Speaker.Client
-            quotes += Quote(speaker, m.groupValues[2].trim())
+            val said = m.groupValues.drop(2).first { it.isNotEmpty() }
+            quotes += Quote(speaker, said.trim().plain())
         }
         if (quotes.isEmpty() && tryInstead == null) return ReportItem.Plain(raw)
         // A "try instead" with nothing after it is a cut-off item (still streaming): plain.
         if (tryMatch != null && tryInstead == null) return ReportItem.Plain(raw)
         var note = text
         matches.sortedByDescending { it.range.first }.forEach { note = note.removeRange(it.range) }
-        note = note.trim().trimStart('，', ',', '：', ':', '；', ';', ' ').trim()
+        note = note.trim().trimStart('，', ',', '：', ':', '；', ';', ' ').trim().plain()
         if (note.isNotEmpty() && note.first().isLowerCase()) note = note.replaceFirstChar { it.uppercase() }
-        return ReportItem.Parsed(raw, note, quotes, tryInstead)
+        return ReportItem.Parsed(raw, note, quotes, tryInstead?.plain())
     }
+
+    // Parsed parts are plain text: Markdown emphasis marks would show as literal stars.
+    private fun String.plain(): String = replace("**", "").replace("__", "")
 
     // No skill tags yet: the risk item is the first "to improve" item, quoting only the client
     // (screens.md R1 item 6). Other items may quote the client too, so that alone isn't enough.

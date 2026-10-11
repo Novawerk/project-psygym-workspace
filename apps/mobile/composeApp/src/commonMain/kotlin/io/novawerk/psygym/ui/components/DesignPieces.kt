@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.padding
@@ -22,7 +23,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
@@ -51,11 +55,19 @@ fun <T> PillToggle(
     track: Color = MaterialTheme.colorScheme.surfaceVariant,
     fill: Boolean = false,
 ) {
+    // The row is 48dp tall so every option has a full tap area; the grey track is drawn
+    // 5dp in from top and bottom, so it looks the size of the design (38dp).
     Row(
         modifier
-            .background(track, CircleShape)
-            .padding(3.dp)
+            .heightIn(min = 48.dp)
+            .drawBehind {
+                val inset = 5.dp.toPx()
+                val h = size.height - 2 * inset
+                drawRoundRect(track, topLeft = Offset(0f, inset), size = Size(size.width, h), cornerRadius = CornerRadius(h / 2))
+            }
+            .padding(horizontal = 3.dp)
             .selectableGroup(),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         options.forEach { (value, label) ->
             PillOption(label, value == selected, { onSelect(value) }, fill)
@@ -65,19 +77,28 @@ fun <T> PillToggle(
 
 @Composable
 private fun RowScope.PillOption(label: String, chosen: Boolean, onClick: () -> Unit, fill: Boolean) {
+    // The pill looks small, but the tap area is the full 48dp height (accessibility).
     Box(
         (if (fill) Modifier.weight(1f) else Modifier)
-            .background(if (chosen) MaterialTheme.colorScheme.background else Color.Transparent, CircleShape)
-            .selectable(selected = chosen, onClick = onClick, role = Role.Tab)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+            .heightIn(min = 48.dp)
+            .selectable(selected = chosen, onClick = onClick, role = Role.Tab),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            label,
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = if (chosen) FontWeight.SemiBold else FontWeight.Normal,
-            color = if (chosen) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Box(
+            Modifier
+                .then(if (fill) Modifier.fillMaxWidth() else Modifier)
+                .background(if (chosen) MaterialTheme.colorScheme.background else Color.Transparent, CircleShape)
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = if (chosen) FontWeight.SemiBold else FontWeight.Normal,
+                // tertiary is zinc-600 / zinc-300: 4.5:1 or more on the track in both themes.
+                color = if (chosen) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.tertiary,
+            )
+        }
     }
 }
 

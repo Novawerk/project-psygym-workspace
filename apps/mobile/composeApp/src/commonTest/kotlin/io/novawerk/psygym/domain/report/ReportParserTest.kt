@@ -125,4 +125,54 @@ class ReportParserTest {
         // The cut-off item has no suggestion yet: plain for now, never dropped.
         assertIs<ReportItem.Plain>(r.items(ReportSection.Improve).single())
     }
+
+    private fun improveWith(item: String) = "## 需要改进的地方\n\n- $item\n"
+
+    private fun reportWithImprove(item: String) =
+        "## 做得好的地方\n\n- 你说「好」，好在简短。\n\n${improveWith(item)}\n## 下次练什么\n\n- 设定议程。\n\n这份反馈由 AI 生成，仅供练习参考。"
+
+    @Test
+    fun englishQuotesInsideChineseOnesDontCrash() {
+        val item = ReportParser.parse(reportWithImprove("没有问安全。来访者说：「you said \"ok\" 就行」。可以换成：你还好吗？"))!!
+            .items(ReportSection.Improve).single() as ReportItem.Parsed
+        assertEquals(listOf(Quote(Speaker.Client, "you said \"ok\" 就行")), item.quotes)
+        assertEquals("没有问安全。", item.note)
+    }
+
+    @Test
+    fun chineseQuotesInsideEnglishOnesDontCrash() {
+        val item = ReportParser.parse(en.replace("You said: “You should try to sleep earlier”", "The client said: “你说「没用」 again”"))!!
+            .items(ReportSection.Improve).single() as ReportItem.Parsed
+        assertEquals(listOf(Quote(Speaker.Client, "你说「没用」 again")), item.quotes)
+    }
+
+    @Test
+    fun nestedQuotesCutOffMidStreamDontCrash() {
+        val full = reportWithImprove("没有问安全。来访者说：「you said \"ok\" 就行」。可以换成：你还好吗？")
+        // Every prefix of the text, as it arrives.
+        for (end in 1..full.length) ReportParser.parse(full.substring(0, end))
+    }
+
+    @Test
+    fun curlyQuotesMayHoldStraightOnes() {
+        val item = ReportParser.parse(en.replace("“You should try to sleep earlier”", "“Just say \"no\" to them”"))!!
+            .items(ReportSection.Improve).single() as ReportItem.Parsed
+        assertEquals("Just say \"no\" to them", item.quotes.single().text)
+    }
+
+    @Test
+    fun aLineRightUnderAnItemContinuesIt() {
+        val r = ReportParser.parse(zh.replace("- 用苏格拉底式提问，检验一个自动思维。", "- 用苏格拉底式提问，\n  检验一个自动思维。"))!!
+        assertEquals("用苏格拉底式提问，\n检验一个自动思维。", (r.items(ReportSection.Next).last() as ReportItem.Parsed).note)
+        assertEquals("这份反馈由 AI 生成，仅供练习参考。", r.footer)
+    }
+
+    @Test
+    fun boldMarksAreDroppedFromParsedText() {
+        val item = ReportParser.parse(reportWithImprove("**过早给建议**。你说：「**早点睡**」。可以换成：**怎么了？**"))!!
+            .items(ReportSection.Improve).single() as ReportItem.Parsed
+        assertEquals("过早给建议。", item.note)
+        assertEquals("早点睡", item.quotes.single().text)
+        assertEquals("怎么了？", item.tryInstead)
+    }
 }
