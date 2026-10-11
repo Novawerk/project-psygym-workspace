@@ -211,7 +211,7 @@ describe("what the supervisor sees", () => {
     expect(prompts.supervisor).toContain("不提病例设定");
     expect(prompts.supervisor).toContain("一律用「来访者」");
     expect(prompts.supervisor).toContain("都必须是 `<transcript>` 里逐字出现过的话");
-    expect(prompts.supervisor).toContain("不算引用");
+    expect(prompts.supervisor).toContain("它不是引用");
     expect(prompts.supervisor).toContain("「」/ “” 只用于逐字引用对话原话");
     expect(prompts.supervisor).toContain("英文报告里不用「」");
     // The quote rule sits up front, second only to the risk check, with a wrong/right table.
@@ -221,8 +221,7 @@ describe("what the supervisor sees", () => {
     expect(prompts.supervisor).toContain("一个字都不改，不省略，不拼接");
     expect(prompts.supervisor).toContain("| 错 | 对 |");
     expect(prompts.supervisor).toContain("| 你没有「留在来访者身上」 | 你没有留在来访者身上 |");
-    expect(prompts.supervisor).toContain("**包括风险筛查那一条**");
-    expect(prompts.supervisor).toContain("必须**跟在「可以换成：」");
+    expect(prompts.supervisor).toContain("只写在「可以换成：」/ \"Try instead:\" 后面，**不加引号**");
     // The risk-screening check is the first rule, before the transcript note and the structure,
     // and the structure repeats it.
     const check = prompts.supervisor.indexOf("## 第一条规则：写报告前先做风险筛查检查");
@@ -231,8 +230,15 @@ describe("what the supervisor sees", () => {
     expect(prompts.supervisor).toContain("如果上面的风险筛查检查成立，第 1 条就是它");
     for (const cue of ["觉得自己没用", "睡眠明显改变", "提不起劲"]) expect(prompts.supervisor).toContain(cue);
     // Every improvement carries one alternative wording, with the lead-in written once.
-    expect(prompts.supervisor).toContain("替代说法每条都要有");
-    expect(prompts.supervisor).toContain("Try instead: “…”");
+    expect(prompts.supervisor).toContain("三样都要有，**包括风险筛查那一条**，一条都不能少");
+    // Alternatives are never quoted: 「」/“” hold the transcript only.
+    expect(prompts.supervisor).toContain("没有例外。");
+    expect(prompts.supervisor).toContain("`- 一句话说问题。你说：「原话」。可以换成：你建议的说法`");
+    expect(prompts.supervisor).toContain("`- One sentence on the problem. You said: “…”. Try instead: your suggested line`");
+    expect(prompts.supervisor).not.toMatch(/可以换成：「|Try instead: “/);
+    // Short enough for one phone screen.
+    for (const s of ["**做得好的地方**：最多 2 条", "**需要改进的地方**：最多 3 条", "**下次练什么**：最多 2 条", "中文约 400–600 字"]) expect(prompts.supervisor).toContain(s);
+    expect(prompts.supervisor).toContain("不加编号，不用粗体小标题");
     expect(prompts.supervisor).not.toContain("（「可以换成：……」");
   });
 });
@@ -407,8 +413,8 @@ describe("mock supervisor", () => {
 
 describe("mock supervisor quotes the counselor", () => {
   it.each([
-    ["zh", "你说：「后来呢？你当时怎么想的？」"],
-    ["en", "You said “后来呢？你当时怎么想的？”"],
+    ["zh", "你说：「后来呢？」"],
+    ["en", "You said: “后来呢？”"],
   ])("quotes the last counselor message verbatim (%s)", async (locale, expected) => {
     const { app } = makeApp();
     const messages = [
@@ -421,6 +427,22 @@ describe("mock supervisor quotes the counselor", () => {
     const text = frames.filter((f) => f.type === "text_delta").map((f) => f.text).join("");
     const improve = text.split(/^## /m)[2]!;
     expect(improve).toContain(expected);
+    // problem → quote → alternative; the alternative is not quoted.
+    expect(improve).toMatch(locale === "zh" ? /。你说：「.+」可以换成：[^「“]/ : /\. You said: “.+” Try instead: [^「“]/);
+    expect(improve).not.toMatch(/」。|”\./);
+  });
+
+  it.each([
+    ["only the first line of a multi-line message", "第一行就到这里。\n第二行不该出现", "「第一行就到这里。」"],
+    ["only the first sentence", "你好。今天想聊点什么？", "「你好。」"],
+    ["at most 80 characters of a long sentence, never an ellipsis", "长".repeat(120), `「${"长".repeat(80)}」`],
+  ])("quotes %s", async (_, line, expected) => {
+    const { app } = makeApp();
+    const { frames } = await readSse(await post(app, "/supervision", body({ messages: [{ role: "counselor", text: line }] })));
+    const text = frames.filter((f) => f.type === "text_delta").map((f) => f.text).join("");
+    expect(text).toContain(expected);
+    expect(text).not.toContain("第二行");
+    expect(text).not.toMatch(/「[^」]*…[^」]*」/);
   });
 });
 

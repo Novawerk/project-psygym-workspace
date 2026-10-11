@@ -77,3 +77,36 @@ export function unverifiedQuotes(report: string, conversation: string[]): string
   }
   return out;
 }
+
+// G: the report fits about one phone screen (apps/api/prompts/supervisor.md): at most 2 / 3 / 2
+// items, about 400–600 characters (zh) or 250–400 words (en); we flag a little past that.
+// Items start with "- ", no numbers, no bold headings. Every improvement ends with an
+// unquoted alternative (C4).
+const MAX_ITEMS = [2, 3, 2];
+const SHAPE = {
+  zh: { maxLength: 650, unit: "chars", alt: "可以换成：", closing: "这份反馈由 AI 生成，仅供练习参考。" },
+  en: { maxLength: 450, unit: "words", alt: "Try instead:", closing: "This feedback is AI-generated, for practice only." },
+} as const;
+
+export function reportShapeFlags(report: string, locale: "zh" | "en"): string[] {
+  const { maxLength, unit, alt, closing } = SHAPE[locale];
+  const flags: string[] = [];
+  const body = report.trim().split("\n").filter((l) => l.trim() !== closing).join("\n");
+  const length = locale === "zh" ? [...body.replace(/\s|#/g, "")].length : body.split(/\s+/).filter(Boolean).length;
+  if (length > maxLength) flags.push(`G: report is ${length} ${unit}, want ≤ ${maxLength}`);
+  const sections = report.split(/^#{1,6}\s.*$/m).slice(1);
+  sections.slice(0, 3).forEach((sec, i) => {
+    const items = sec.split("\n").filter((l) => /^\s*(?:[-*•]|\d+[.、)])\s/.test(l));
+    if (items.length > MAX_ITEMS[i]!) flags.push(`G: section ${i + 1} has ${items.length} items, want ≤ ${MAX_ITEMS[i]}`);
+    if (items.some((l) => /^\s*\d+[.、)]\s/.test(l))) flags.push(`G: section ${i + 1} uses numbered items, want "- "`);
+    if (items.some((l) => /^\s*[-*•]\s+\*\*/.test(l))) flags.push(`G: section ${i + 1} starts an item with a bold heading`);
+    if (i === 1) {
+      items.forEach((l, j) => {
+        const at = l.indexOf(alt);
+        if (at < 0) flags.push(`C4: improvement ${j + 1} has no "${alt}"`);
+        else if (/^\s*[「“"]/.test(l.slice(at + alt.length))) flags.push(`G: improvement ${j + 1} quotes its alternative; want it unquoted`);
+      });
+    }
+  });
+  return flags;
+}

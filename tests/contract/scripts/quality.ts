@@ -8,7 +8,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { joinedText, frameProblems, readStream } from "../src/sse.ts";
-import { BREAKS_ROLE, CLAIMS_PROMPT, GIVES_ADVICE, promptOverlap, unverifiedQuotes } from "../src/quality-flags.ts";
+import { BREAKS_ROLE, CLAIMS_PROMPT, GIVES_ADVICE, promptOverlap, reportShapeFlags, unverifiedQuotes } from "../src/quality-flags.ts";
 
 type Locale = "zh" | "en";
 type Message = { role: "counselor" | "client"; text: string };
@@ -58,9 +58,9 @@ const CLOSING: Record<Locale, string> = {
   zh: "这份反馈由 AI 生成，仅供练习参考。",
   en: "This feedback is AI-generated, for practice only.",
 };
-const LABELS: Record<Locale, { counselor: string; client: string; report: string; quoted: string; flags: string }> = {
-  zh: { counselor: "咨询师", client: "来访者", report: "督导报告", quoted: "引用的咨询师原话", flags: "自动标记" },
-  en: { counselor: "Counselor", client: "Client", report: "Supervision report", quoted: "Counselor lines quoted", flags: "Automatic flags" },
+const LABELS: Record<Locale, { counselor: string; client: string; report: string; quoted: string; flags: string; timing: string }> = {
+  zh: { counselor: "咨询师", client: "来访者", report: "督导报告", quoted: "引用的咨询师原话", flags: "自动标记", timing: "耗时（首字 / 总时长）" },
+  en: { counselor: "Counselor", client: "Client", report: "Supervision report", quoted: "Counselor lines quoted", flags: "Automatic flags", timing: "Timing (first text / total)" },
 };
 const L = LABELS[LOCALE];
 
@@ -73,6 +73,7 @@ function reportFlags(report: string): string[] {
   });
   const lastLine = report.trim().split("\n").pop()?.trim() ?? "";
   if (lastLine.replace(/[*_>]/g, "").trim() !== CLOSING[LOCALE]) flags.push(`C7: last line is "${lastLine}", want "${CLOSING[LOCALE]}"`);
+  flags.push(...reportShapeFlags(report, LOCALE));
   return flags;
 }
 
@@ -82,14 +83,20 @@ function headers() {
   return h;
 }
 
+type Timing = { path: string; firstTextMs?: number; totalMs: number };
+/** Every call's timing, per case, for the transcript and SUMMARY.md. */
+let timings: Timing[] = [];
+
 async function stream(path: string, caseId: string, messages: Message[]) {
+  const startedAt = Date.now();
   const res = await fetch(BASE_URL + path, {
     method: "POST",
     headers: headers(),
     body: JSON.stringify({ caseId, locale: LOCALE, messages }),
   });
   if (res.status !== 200) throw new Error(`${path} → HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`);
-  const r = await readStream(res, 120_000);
+  const r = await readStream(res, 120_000, { startedAt });
+  timings.push({ path, firstTextMs: r.firstTextMs, totalMs: r.totalMs ?? Date.now() - startedAt });
   const problems = frameProblems(r);
   if (problems.length) throw new Error(`${path} stream: ${problems.join("; ")}`);
   const last = r.frames[r.frames.length - 1];
@@ -119,7 +126,21 @@ mkdirSync(outDir, { recursive: true });
 const summary: string[] = [`# AI quality spot check`, ``, `- Server: ${BASE_URL}`, `- Locale: ${LOCALE}`, `- Date: ${new Date().toISOString()}`, ``];
 let flagged = 0;
 
+const ms = (n: number | undefined) => (n === undefined ? "—" : `${(n / 1000).toFixed(1)} s`);
+/** One line per call, and the slowest first text / longest total for /chat and /supervision. */
+function timingLines(t: Timing[]): string[] {
+  const lines = t.map((x, i) => `- ${i + 1}. ${x.path}: first text ${ms(x.firstTextMs)}, total ${ms(x.totalMs)}`);
+  for (const path of ["/chat", "/supervision"]) {
+    const of = t.filter((x) => x.path === path);
+    if (!of.length) continue;
+    const first = of.map((x) => x.firstTextMs).filter((n): n is number => n !== undefined);
+    lines.push(`- ${path} worst: first text ${ms(first.length ? Math.max(...first) : undefined)}, total ${ms(Math.max(...of.map((x) => x.totalMs)))}`);
+  }
+  return lines;
+}
+
 for (const c of cases.filter((c) => !ONLY_CASE || c.id === ONLY_CASE)) {
+  timings = [];
   const messages: Message[] = [];
   const flags: string[] = [];
   const md: string[] = [`# ${c.id} — ${c.title[LOCALE]}`, ``];
@@ -153,9 +174,11 @@ for (const c of cases.filter((c) => !ONLY_CASE || c.id === ONLY_CASE)) {
     flags.push(`run failed: ${(e as Error).message}`);
   }
   md.push(`## ${L.flags}`, ``, ...(flags.length ? flags.map((f) => `- ${f}`) : ["- none"]), ``);
+  md.push(`## ${L.timing}`, ``, ...timingLines(timings), ``);
   writeFileSync(join(outDir, `${c.id}.md`), md.join("\n"));
   if (flags.length) flagged++;
   summary.push(`## ${c.id}`, ``, ...(flags.length ? flags.map((f) => `- ${f}`) : ["- no automatic flags"]), ``);
+  summary.push(`### Timing (first text / total)`, ``, ...timingLines(timings), ``);
   console.log(`${c.id}: ${flags.length ? flags.length + " flag(s)" : "ok"}`);
 }
 
