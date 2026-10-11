@@ -64,6 +64,6 @@ Data 一段里去掉登录和账号删除那两句。Apple 用 `review-…`、Pl
 - [ ] App 内删除账号能用；`https://psygym.novawerk.io/delete-account` 能打开（Google 送审前必须上线）
 - [ ] 隐私标签里 Other User Content 选「不关联」的前提仍然成立：发给模型服务的请求不带账号 ID，服务端也不把会话和对话内容记在一起
 - [ ] 后端 `https://psygym-api.novawerk.io` 在线，生产环境配了模型服务的 key
-- [ ] 隐私政策链接能打开
+- [ ] 隐私政策链接能打开。登录版送审时，把后台的链接从 GitHub 上的 md 换成官网：ASC（App 隐私政策、TestFlight Test Information）和 Play（App content → Privacy policy）填 `https://psygym.novawerk.io/en/privacy`（中文页 `/zh/privacy`）；Play 数据安全表的删除链接和 Delete account URL 填 `https://psygym.novawerk.io/delete-account`
 - [ ] 隐私标签和 `PrivacyInfo.xcprivacy` 一致
 - [ ] Play 的 AI 内容举报入口（D8）在当前 build 里能用
