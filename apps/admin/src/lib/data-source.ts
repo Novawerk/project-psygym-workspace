@@ -1,113 +1,98 @@
-// One interface, two implementations: the PSYGYM API and an in-memory sample store. Screens never
-// call fetch directly; they go through the hooks in ./queries.ts.
-//
-// The API side is a stub until the admin contract lands: paths below are guesses to replace.
+// One interface, two implementations: the admin API (docs/admin-api.md) and an in-memory sample
+// store. Screens never call fetch directly; they go through the hooks in ./queries.ts.
 
-import { API_URL, USE_SAMPLE_DATA } from "./env"
-import { SAMPLE_CASES, SAMPLE_RELEASES, SAMPLE_RUBRICS, sampleMe, sampleStats } from "./sample-data"
+import { call, toError } from "./api"
+import { API_BASE, USE_SAMPLE_DATA } from "./env"
+import { sampleSource } from "./sample-store"
+import { readFrames } from "./sse"
 import type {
-  CaseDetail,
-  CaseSummary,
+  ChatFrame,
+  ChatMessage,
+  ContentDetail,
+  ContentDoc,
+  ContentItem,
+  Dashboard,
+  DashboardQuery,
+  Kind,
   Me,
-  Release,
-  RubricDetail,
-  RubricSummary,
-  Role,
-  Stats,
-  StatsFilter,
+  PublishLogEntry,
+  VersionInfo,
 } from "./types"
+
+export type DraftInput = {
+  draftRevision: number | null
+  /** After a draft_outdated publish: move the draft onto the current published version. */
+  rebase?: true
+  frontmatter: Record<string, unknown>
+  body: string
+}
+/** `note` (「改了什么」) is not in the contract yet; asked the backend to add it. */
+export type PublishInput = { draftRevision: number; basePublishedVersion: number | null; note?: string }
+export type RollbackInput = { toVersion: number; basePublishedVersion: number }
+export type PreviewChatInput = { locale: "zh" | "en"; messages: ChatMessage[]; source?: string }
 
 export interface AdminDataSource {
   readonly isSample: boolean
   me(): Promise<Me>
-  signInWithGoogle(credential: string): Promise<void>
-  signOut(): Promise<void>
+  signInWithGoogle(idToken: string): Promise<Me>
+  logout(): Promise<void>
 
-  stats(filter: StatsFilter): Promise<Stats>
+  dashboard(q: DashboardQuery): Promise<Dashboard>
 
-  cases(): Promise<CaseSummary[]>
-  case(id: string): Promise<CaseDetail>
+  contentList(kind: Kind): Promise<ContentItem[]>
+  content(kind: Kind, id: string): Promise<ContentDetail>
+  createCase(id: string, frontmatter: Record<string, unknown>, body: string): Promise<ContentDetail>
+  saveDraft(kind: Kind, id: string, input: DraftInput): Promise<ContentDetail>
+  discardDraft(kind: Kind, id: string, draftRevision: number): Promise<void>
+  publish(kind: Kind, id: string, input: PublishInput): Promise<VersionInfo>
+  rollback(kind: Kind, id: string, input: RollbackInput): Promise<VersionInfo>
+  versions(kind: Kind, id: string): Promise<VersionInfo[]>
+  version(kind: Kind, id: string, version: number): Promise<ContentDoc & VersionInfo>
+  publishLog(cursor?: string | null): Promise<{ entries: PublishLogEntry[]; nextCursor: string | null }>
 
-  rubrics(): Promise<RubricSummary[]>
-  rubric(id: string): Promise<RubricDetail>
-
-  releases(): Promise<Release[]>
+  /** The /chat stream, with the draft (or `source`) as the role brief. Not counted, not stored. */
+  previewChat(id: string, input: PreviewChatInput, signal?: AbortSignal): AsyncGenerator<ChatFrame>
 }
 
-export class ApiError extends Error {
-  constructor(
-    readonly status: number,
-    message: string,
-  ) {
-    super(message)
-  }
-}
-
-export const isUnauthorized = (error: unknown) => error instanceof ApiError && error.status === 401
-
-async function call<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
-    ...init,
-    credentials: "include",
-    headers: { "content-type": "application/json", ...init?.headers },
-  })
-  if (!res.ok) {
-    const body = (await res.json().catch(() => null)) as { error?: string } | null
-    throw new ApiError(res.status, body?.error ?? `${res.status} ${res.statusText}`)
-  }
-  return (res.status === 204 ? undefined : await res.json()) as T
-}
+const path = (kind: Kind, id: string) => `/admin/content/${kind}/${encodeURIComponent(id)}`
 
 const apiSource: AdminDataSource = {
   isSample: false,
   me: () => call("/admin/me"),
-  signInWithGoogle: (credential) => call("/admin/auth/google", { method: "POST", body: JSON.stringify({ credential }) }),
-  signOut: () => call("/admin/auth/sign-out", { method: "POST" }),
-  stats: (f) => call(`/admin/stats?${new URLSearchParams(Object.entries(f).filter(([, v]) => v) as [string, string][])}`),
-  cases: () => call("/admin/cases"),
-  case: (id) => call(`/admin/cases/${encodeURIComponent(id)}`),
-  rubrics: () => call("/admin/rubrics"),
-  rubric: (id) => call(`/admin/rubrics/${encodeURIComponent(id)}`),
-  releases: () => call("/admin/releases"),
-}
+  signInWithGoogle: (idToken) => call("/admin/auth/google", { method: "POST", json: { idToken } }),
+  logout: () => call("/admin/auth/logout", { method: "POST", json: {} }),
 
-const ROLE_KEY = "psygym-admin-sample-role"
-
-/** Sample mode lets you switch roles from the user menu to see what each one sees. */
-export function sampleRole(): Role {
-  try {
-    const r = localStorage.getItem(ROLE_KEY)
-    if (r === "admin" || r === "editor" || r === "viewer") return r
-  } catch {}
-  return "admin"
-}
-
-export function setSampleRole(role: Role) {
-  try {
-    localStorage.setItem(ROLE_KEY, role)
-  } catch {}
-}
-
-const notFound = (what: string) => new ApiError(404, `${what} not found`)
-const delay = <T>(value: T) => new Promise<T>((resolve) => setTimeout(() => resolve(structuredClone(value)), 150))
-
-const sampleSource: AdminDataSource = {
-  isSample: true,
-  me: () => delay(sampleMe(sampleRole())),
-  signInWithGoogle: () => delay(undefined),
-  signOut: () => delay(undefined),
-  stats: (f) => delay(sampleStats(f)),
-  cases: () => delay(SAMPLE_CASES.map(({ fields: _f, versions: _v, ...summary }) => summary)),
-  case: (id) => {
-    const found = SAMPLE_CASES.find((c) => c.id === id)
-    return found ? delay(found) : Promise.reject(notFound("Case"))
+  dashboard: (q) => {
+    const params = new URLSearchParams({ from: q.from, to: q.to, granularity: q.granularity })
+    if (q.caseId) params.set("caseId", q.caseId)
+    if (q.locale) params.set("locale", q.locale)
+    return call(`/admin/dashboard?${params}`)
   },
-  rubrics: () => delay(SAMPLE_RUBRICS.map(({ body: _b, versions: _v, ...summary }) => summary)),
-  rubric: (id) => {
-    const found = SAMPLE_RUBRICS.find((r) => r.id === id)
-    return found ? delay(found) : Promise.reject(notFound("Rubric"))
+
+  contentList: async (kind) => (await call<{ items: ContentItem[] }>(`/admin/content?kind=${kind}`)).items,
+  content: (kind, id) => call(path(kind, id)),
+  createCase: (id, frontmatter, body) =>
+    call("/admin/content", { method: "POST", json: { kind: "case", id, frontmatter, body } }),
+  saveDraft: (kind, id, input) => call(`${path(kind, id)}/draft`, { method: "PUT", json: input }),
+  discardDraft: (kind, id, draftRevision) =>
+    call(`${path(kind, id)}/draft`, { method: "DELETE", json: { draftRevision } }),
+  publish: (kind, id, input) => call(`${path(kind, id)}/publish`, { method: "POST", json: input }),
+  rollback: (kind, id, input) => call(`${path(kind, id)}/rollback`, { method: "POST", json: input }),
+  versions: async (kind, id) => (await call<{ versions: VersionInfo[] }>(`${path(kind, id)}/versions`)).versions,
+  version: (kind, id, v) => call(`${path(kind, id)}/versions/${v}`),
+  publishLog: (cursor) => call(`/admin/publish-log?limit=50${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`),
+
+  async *previewChat(id, input, signal) {
+    const res = await fetch(`${API_BASE}${path("case", id)}/preview-chat`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(input),
+      signal,
+    })
+    if (!res.ok || !res.body) throw await toError(res)
+    yield* readFrames(res.body)
   },
-  releases: () => delay(SAMPLE_RELEASES),
 }
 
 export const dataSource: AdminDataSource = USE_SAMPLE_DATA ? sampleSource : apiSource

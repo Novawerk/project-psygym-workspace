@@ -4,81 +4,79 @@ import { Link, createFileRoute, useNavigate } from "@tanstack/react-router"
 import { FlaskConicalIcon, Loader2Icon } from "lucide-react"
 
 import { GoogleSignInButton } from "@/components/google-sign-in-button"
+import { Logo } from "@/components/logo"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { ApiError } from "@/lib/api"
 import { dataSource } from "@/lib/data-source"
 import { GOOGLE_CLIENT_ID } from "@/lib/env"
+import { COPY } from "@/lib/labels"
 import { queryKeys } from "@/lib/queries"
 
 export const Route = createFileRoute("/login")({
+  validateSearch: (search: Record<string, unknown>): { expired?: boolean } =>
+    search.expired ? { expired: true } : {},
   component: LoginPage,
 })
 
+function signInMessage(error: unknown) {
+  if (error instanceof ApiError && error.code === "not_admin") return "这个 Google 账号没有后台权限。需要的话，请联系负责人。"
+  if (error instanceof ApiError && error.status === 429) return "登录尝试太多了，请过 10 分钟再试。"
+  return "登录没有成功，请再试一次。"
+}
+
 /** Google only (D-A3). The API checks the ID token against the admins table and sets the cookie. */
 function LoginPage() {
+  const { expired } = Route.useSearch()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [busy, setBusy] = React.useState(false)
-  const [error, setError] = React.useState<string | null>(null)
+  const [error, setError] = React.useState<string | null>(expired ? COPY.expired : null)
 
-  const handleCredential = async (credential: string) => {
+  const handleCredential = async (idToken: string) => {
     setBusy(true)
     setError(null)
     try {
-      await dataSource.signInWithGoogle(credential)
-      await queryClient.invalidateQueries({ queryKey: queryKeys.me })
+      const me = await dataSource.signInWithGoogle(idToken)
+      queryClient.setQueryData(queryKeys.me, me)
       await navigate({ to: "/" })
-    } catch {
-      setError("登录没成功。只有加进后台名单的邮箱能登录，有问题找管理员。")
+    } catch (err) {
+      setError(signInMessage(err))
       setBusy(false)
     }
   }
 
   return (
-    <main className="flex min-h-svh items-center justify-center bg-muted/40 p-6">
-      <Card className="w-full max-w-sm">
-        <CardHeader className="items-center text-center">
-          <img src="/favicon.svg" alt="" className="mx-auto mb-2 size-12 rounded-xl" />
-          <CardTitle className="text-xl">聆镜 PSYGYM 后台</CardTitle>
-          <CardDescription>给 Novawerk 和聆镜团队用。用 Google 账号登录。</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col items-center gap-3">
-          {GOOGLE_CLIENT_ID ? (
-            <GoogleSignInButton
-              clientId={GOOGLE_CLIENT_ID}
-              onCredential={(c) => void handleCredential(c)}
-              onError={setError}
-            />
-          ) : (
-            <>
-              <Button variant="outline" size="lg" disabled className="w-full max-w-72">
-                用 Google 登录
-              </Button>
-              <p className="text-center text-xs text-muted-foreground">
-                需要设置 <code className="font-mono">VITE_GOOGLE_CLIENT_ID</code>。
-              </p>
-            </>
-          )}
-          {busy && (
-            <p className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2Icon className="size-4 animate-spin" /> 正在登录…
-            </p>
-          )}
-          {error && (
-            <p role="alert" className="text-center text-sm text-destructive">
-              {error}
-            </p>
-          )}
-        </CardContent>
-        {dataSource.isSample && (
-          <CardFooter className="flex-col gap-2 border-t text-center">
-            <p className="text-xs text-muted-foreground">示例数据模式，不用登录。</p>
-            <Button variant="ghost" size="sm" nativeButton={false} render={<Link to="/" />}>
-              <FlaskConicalIcon /> 看示例数据
-            </Button>
-          </CardFooter>
+    <main className="flex min-h-svh items-center justify-center bg-muted p-6">
+      <div className="flex w-full max-w-[380px] flex-col gap-5 rounded-xl border bg-background p-8">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <Logo className="size-10" />
+          <h1 className="text-xl font-bold">聆镜 PSYGYM 后台</h1>
+          <p className="text-sm text-muted-foreground">只给 Novawerk 和聆镜团队使用。</p>
+        </div>
+        {error && (
+          <div role="alert" className="rounded-lg border border-destructive bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
+            {error}
+          </div>
         )}
-      </Card>
+        {GOOGLE_CLIENT_ID && !dataSource.isSample ? (
+          <GoogleSignInButton clientId={GOOGLE_CLIENT_ID} onCredential={(c) => void handleCredential(c)} onError={setError} />
+        ) : (
+          <Button variant="outline" size="lg" disabled={!dataSource.isSample} onClick={() => void handleCredential("sample")}>
+            用 Google 登录
+          </Button>
+        )}
+        {busy && (
+          <p className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+            <Loader2Icon className="size-4 animate-spin" /> 正在登录…
+          </p>
+        )}
+        <p className="text-center text-xs text-muted-foreground">admin.psygym.novawerk.io</p>
+        {dataSource.isSample && (
+          <Button variant="ghost" size="sm" nativeButton={false} render={<Link to="/" />}>
+            <FlaskConicalIcon /> 示例数据模式，不用登录
+          </Button>
+        )}
+      </div>
     </main>
   )
 }

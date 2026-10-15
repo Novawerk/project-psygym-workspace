@@ -38,6 +38,18 @@
   --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
   --sidebar-border: oklch(0.92 0.004 286.32);
   --sidebar-ring: oklch(0.705 0.015 286.067);
+  /* Chart series (design row ⑩): blue, ink, orange, teal, grey. */
+  --series-1: #2563eb;
+  --series-2: #18181b;
+  --series-3: #ea580c;
+  --series-4: #0d9488;
+  --series-5: #a1a1aa;
+  --warning-bg: #fef3c7;
+  --warning-fg: #92400e;
+  --success-bg: #f0fdf4;
+  --success-fg: #15803d;
+  --diff-add: #dcfce7;
+  --diff-del: #fee2e2;
 }
 
 .dark {
@@ -72,12 +84,24 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.552 0.016 285.938);
+  --series-1: #60a5fa;
+  --series-2: #fafafa;
+  --series-3: #fb923c;
+  --series-4: #2dd4bf;
+  --series-5: #71717a;
+  --warning-bg: #422006;
+  --warning-fg: #fcd34d;
+  --success-bg: #052e16;
+  --success-fg: #4ade80;
+  --diff-add: #14532d;
+  --diff-del: #7f1d1d;
 }
 
 @theme inline {
   --font-sans: ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Hiragino Sans GB", "Noto Sans SC",
     "Microsoft YaHei", sans-serif;
   --font-heading: var(--font-sans);
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -110,6 +134,17 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-series-1: var(--series-1);
+  --color-series-2: var(--series-2);
+  --color-series-3: var(--series-3);
+  --color-series-4: var(--series-4);
+  --color-series-5: var(--series-5);
+  --color-warning-bg: var(--warning-bg);
+  --color-warning-fg: var(--warning-fg);
+  --color-success-bg: var(--success-bg);
+  --color-success-fg: var(--success-fg);
+  --color-diff-add: var(--diff-add);
+  --color-diff-del: var(--diff-del);
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);

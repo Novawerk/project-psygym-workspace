@@ -1,111 +1,104 @@
-// Placeholder shapes until the admin API contract lands (backend owns it). Keep screens on
-// these names so swapping in the contract's types is a local change.
+// Shapes from docs/admin-api.md (the admin contract). Keep them in step with it.
 
 export type Role = "admin" | "editor" | "viewer"
+export type Org = "novawerk" | "lingjing"
+export type Kind = "case" | "rubric"
+export type Localized = { zh: string; en: string | null }
 
-export type Me = {
-  email: string
-  name: string
-  role: Role
-  /** Novawerk or 聆镜. */
-  org: "novawerk" | "psygym"
-}
+export type Me = { email: string; role: Role; org: Org }
 
-export type Bilingual = { zh: string; en: string }
+/** A count, or "<5" when the backend hides it. Never add "<5" cells up; never draw them as 0. */
+export type Count = number | "<5"
 
-export type CaseSummary = {
-  id: string
-  title: Bilingual
-  school: string
-  /** Latest published version; null when never published. */
-  publishedVersion: number | null
-  hasDraft: boolean
-  missingEnglish: boolean
-  updatedAt: string
-}
+export type Granularity = "day" | "week"
 
-export type CaseFields = {
-  id: string
-  school: string
-  title: Bilingual
-  summary: Bilingual
-  clientAlias: Bilingual
-  tags: Bilingual[]
-  difficulty: "intro" | "medium" | "hard"
-  estimatedMinutes: number
-  clientIntro: Bilingual
-  practiceFocus: Bilingual[]
-  contentNotes: Bilingual
-  /** The role brief the AI client reads (markdown). */
-  body: string
-}
-
-export type VersionAction = "publish" | "rollback"
-
-export type ContentVersion = {
-  version: number
-  action: VersionAction
-  /** For a rollback: the version it restored. */
-  restoredFrom?: number
-  by: string
-  at: string
-}
-
-export type CaseDetail = CaseSummary & {
-  fields: CaseFields
-  versions: ContentVersion[]
-}
-
-export type RubricSummary = {
-  id: string
-  title: Bilingual
-  school: string
-  publishedVersion: number | null
-  hasDraft: boolean
-  updatedAt: string
-}
-
-export type RubricDetail = RubricSummary & {
-  body: string
-  versions: ContentVersion[]
-}
-
-export type Release = {
-  id: string
-  kind: "case" | "rubric"
-  contentId: string
-  version: number
-  action: VersionAction
-  by: string
-  at: string
-  /** Whether the export to content/ on GitHub went through. */
-  synced: boolean
-}
-
-/** A count, or "<5" when the backend masks it. Never draw "<5" as 0. */
-export type MaskedCount = number | "<5"
-
-export type StatsFilter = {
+export type DashboardQuery = {
   from: string
   to: string
-  interval: "day" | "week"
+  granularity: Granularity
   caseId?: string
   locale?: "zh" | "en"
 }
 
-export type StatsSummary = {
-  started: MaskedCount
-  completed: MaskedCount
-  /** completed ÷ started, 0–1; null when either is masked. */
-  completionRate: number | null
-  liveSupervision: MaskedCount
-  /** 👍 ÷ (👍 + 👎), 0–1; null when masked. */
-  thumbsUpRate: number | null
-  /** null with a filter on: the pseudonym counts don't split by case or locale. */
-  dailyActive: MaskedCount | null
-  weeklyActive: MaskedCount | null
+export type Series = {
+  metric: string
+  dim: string
+  points: { period: string; count: Count }[]
+  total: Count
 }
 
-export type StatsPoint = { day: string; started: MaskedCount; completed: MaskedCount }
+export type Duration = { sessions: Count; avgSec: number | null }
 
-export type Stats = { summary: StatsSummary; series: StatsPoint[] }
+export type Dashboard = {
+  from: string
+  to: string
+  granularity: Granularity
+  filters: { caseId: string | null; locale: "zh" | "en" | null }
+  minShown: 5
+  periods: string[]
+  series: Series[]
+  duration: { points: { period: string; value: Duration }[]; total: Duration }
+  active: { day: Series; week: Series } | null
+  cases: { id: string; title: Localized }[]
+}
+
+export type Problem = { path: string; message: string }
+
+export type ContentDoc = {
+  source: string
+  frontmatter: Record<string, unknown> | null
+  body: string
+}
+
+export type Publisher = { email: string; role: Role }
+
+export type VersionAction = "import" | "publish" | "rollback"
+
+export type VersionInfo = {
+  version: number
+  action: VersionAction
+  fromVersion: number | null
+  publishedAt: string
+  publishedBy: Publisher | null
+  /** 「改了什么」. Not in the contract yet; asked the backend to add it. */
+  note?: string | null
+}
+
+export type Draft = ContentDoc & {
+  revision: number
+  baseVersion: number | null
+  updatedAt: string
+  updatedBy: Publisher | null
+  errors: Problem[]
+  warnings: Problem[]
+}
+
+export type ContentItem = {
+  kind: Kind
+  id: string
+  title: Localized
+  publishedVersion: number | null
+  publishedAt: string | null
+  hasDraft: boolean
+  draftUpdatedAt: string | null
+  enMissing: boolean
+}
+
+export type ContentDetail = {
+  kind: Kind
+  id: string
+  published: (ContentDoc & VersionInfo) | null
+  draft: Draft | null
+}
+
+export type PublishLogEntry = VersionInfo & { kind: Kind; id: string }
+
+export type ChatMessage = { role: "counselor" | "client"; text: string }
+
+/** One frame of the /chat stream (docs/api-contract.md). */
+export type ChatFrame =
+  | { type: "turn_start" }
+  | { type: "text_delta"; text: string }
+  | { type: "session_end" }
+  | { type: "turn_end" }
+  | { type: "error"; code: string; message: string }

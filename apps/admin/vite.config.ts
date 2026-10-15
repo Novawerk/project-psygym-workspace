@@ -15,7 +15,14 @@ export default defineConfig({
   resolve: {
     alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
   },
-  // 8787 is the local API; the admin panel stays off it.
-  server: { port: 5180, strictPort: true },
+  server: {
+    // 8787 is the local API; the admin panel runs beside it and proxies /api to it, the way the
+    // Vercel rewrite does in production (vercel.json), so the session cookie is same-origin.
+    port: 5180,
+    strictPort: true,
+    proxy: {
+      "/api": { target: "http://localhost:8787", rewrite: (path) => path.replace(/^\/api/, "") },
+    },
+  },
   preview: { port: 4180 },
 })

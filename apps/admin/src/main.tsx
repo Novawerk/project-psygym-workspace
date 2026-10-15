@@ -2,17 +2,28 @@ import "./styles.css"
 
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { RouterProvider, createRouter } from "@tanstack/react-router"
 import { ThemeProvider } from "next-themes"
 
 import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { isUnauthorized } from "@/lib/api"
 
 import { routeTree } from "./routeTree.gen"
 
+/** A 401 after sign-in (expired, or the admin was disabled) goes back to the sign-in page. */
+const onError = (error: unknown) => {
+  if (isUnauthorized(error) && router.state.location.pathname !== "/login") {
+    queryClient.clear()
+    void router.navigate({ to: "/login", search: { expired: true } })
+  }
+}
+
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { staleTime: 30_000, refetchOnWindowFocus: false } },
+  queryCache: new QueryCache({ onError }),
+  mutationCache: new MutationCache({ onError }),
+  defaultOptions: { queries: { staleTime: 30_000, refetchOnWindowFocus: false, retry: (n, e) => !isUnauthorized(e) && n < 2 } },
 })
 
 const router = createRouter({

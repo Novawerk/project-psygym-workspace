@@ -1,22 +1,23 @@
 import { Outlet, createFileRoute, redirect, useRouter, type ErrorComponentProps } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
-import { CloudOffIcon, TriangleAlertIcon } from "lucide-react"
+import { TriangleAlertIcon } from "lucide-react"
 
 import { AppSidebar } from "@/components/app-sidebar"
+import { Crumbs, CrumbsProvider } from "@/components/crumbs"
 import { SampleDataBadge } from "@/components/sample-data-badge"
-import { UserMenu } from "@/components/user-menu"
+import { ThemeToggle } from "@/components/theme-toggle"
 import { Button } from "@/components/ui/button"
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
+import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Separator } from "@/components/ui/separator"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
-import { isUnauthorized } from "@/lib/data-source"
-import { API_URL } from "@/lib/env"
+import { isUnauthorized } from "@/lib/api"
+import { COPY } from "@/lib/labels"
 import { meQueryOptions } from "@/lib/queries"
 
 /**
- * Pathless layout for every signed-in page. `beforeLoad` asks who is signed in; a 401 sends the
- * visitor to /login. The API re-checks the admins table on every request, so a removed admin is
- * out at once.
+ * Pathless layout for every signed-in page. `beforeLoad` asks GET /admin/me; a 401 sends the
+ * visitor to /login. The API re-checks the admins table on every request, and main.tsx sends any
+ * later 401 back to /login too, so a disabled admin is out at once.
  */
 export const Route = createFileRoute("/_app")({
   beforeLoad: async ({ context }) => {
@@ -38,46 +39,37 @@ function AppLayout() {
 
   return (
     <SidebarProvider>
-      <AppSidebar />
-      <SidebarInset className="h-svh min-w-0 overflow-hidden">
-        <header className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
-          <SidebarTrigger />
-          <Separator orientation="vertical" className="mx-1 h-4 data-vertical:self-center" />
-          <div className="ml-auto flex shrink-0 items-center gap-2">
-            <SampleDataBadge />
-            <UserMenu me={me} />
+      <CrumbsProvider>
+        <AppSidebar me={me} />
+        <SidebarInset className="h-svh min-w-0 overflow-hidden">
+          <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
+            <SidebarTrigger />
+            <Separator orientation="vertical" className="mx-1 h-4 data-vertical:self-center" />
+            <Crumbs />
+            <div className="ml-auto flex shrink-0 items-center gap-2">
+              <SampleDataBadge />
+              <ThemeToggle />
+            </div>
+          </header>
+          <div className="flex min-h-0 flex-1 flex-col">
+            <Outlet />
           </div>
-        </header>
-        <div className="flex min-h-0 flex-1 flex-col">
-          <Outlet />
-        </div>
-      </SidebarInset>
+        </SidebarInset>
+      </CrumbsProvider>
     </SidebarProvider>
   )
 }
 
-/** fetch() rejects with a TypeError when the server can't be reached (down, CORS, offline). */
-const isNetworkError = (error: unknown) => error instanceof TypeError && /fetch|network|load/i.test(error.message)
-
-function LayoutError({ error, reset }: ErrorComponentProps) {
+function LayoutError({ reset }: ErrorComponentProps) {
   const router = useRouter()
-  const offline = isNetworkError(error)
   return (
     <div className="flex min-h-svh items-center justify-center p-6">
       <Empty>
         <EmptyHeader>
-          <EmptyMedia variant="icon">{offline ? <CloudOffIcon /> : <TriangleAlertIcon />}</EmptyMedia>
-          <EmptyTitle>{offline ? "连不上接口" : "出错了"}</EmptyTitle>
-          <EmptyDescription>
-            {offline ? (
-              <>
-                后台调的是 <code className="font-mono text-xs">{API_URL}</code>。本地开发可以设{" "}
-                <code className="font-mono text-xs">VITE_USE_SAMPLE_DATA=true</code> 看示例数据。
-              </>
-            ) : (
-              <code className="font-mono text-xs">{error instanceof Error ? error.message : String(error)}</code>
-            )}
-          </EmptyDescription>
+          <EmptyMedia variant="icon">
+            <TriangleAlertIcon />
+          </EmptyMedia>
+          <EmptyTitle>{COPY.error}</EmptyTitle>
         </EmptyHeader>
         <EmptyContent>
           <Button

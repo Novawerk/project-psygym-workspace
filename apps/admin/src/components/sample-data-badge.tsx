@@ -1,13 +1,6 @@
-import { FlaskConicalIcon } from "lucide-react"
-
-import { Badge } from "@/components/ui/badge"
 import { dataSource } from "@/lib/data-source"
 
 export function SampleDataBadge() {
   if (!dataSource.isSample) return null
-  return (
-    <Badge variant="outline" className="gap-1">
-      <FlaskConicalIcon /> 示例数据
-    </Badge>
-  )
+  return <span className="rounded border border-dashed px-2 py-0.5 text-xs text-muted-foreground">示例数据</span>
 }
