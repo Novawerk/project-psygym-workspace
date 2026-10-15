@@ -10,7 +10,7 @@ reasons: [`decisions/0009-admin-phase1.md`](./decisions/0009-admin-phase1.md).
 - The page runs on `admin.psygym.novawerk.io`; a Vercel rewrite sends `/api/*` there to
   `psygym-api.novawerk.io/*`. So `/api/admin/me` on the page is `GET /admin/me` here. Local:
   the Vite dev server proxies `/api` the same way.
-- JSON in and out, UTF-8. Session: the httpOnly cookie `psygym_admin`, set by
+- JSON in and out, UTF-8. Session: the httpOnly cookie `__Host-psygym_admin`, set by
   `POST /admin/auth/google`. The page never sees the token.
 - Every request that changes something (POST, PUT, PATCH, DELETE) needs
   `Origin: <ADMIN_ORIGIN>` and `Content-Type: application/json`, else `403 forbidden`.
@@ -27,7 +27,7 @@ reasons: [`decisions/0009-admin-phase1.md`](./decisions/0009-admin-phase1.md).
 | 403 | `not_admin` | sign-in: the Google account isn't an enabled admin |
 | 403 | `forbidden` | the role can't do this; or the Origin / Content-Type check failed |
 | 404 | `not_found` | unknown route, item, version; or `ADMIN_MODE` off |
-| 409 | `conflict` | the draft or the published version changed since the page loaded it |
+| 409 | `conflict` | the draft or the published version changed since the page loaded it; `reason: "draft_outdated"` when the draft started from an older version than the current one |
 | 422 | `invalid_content` | publish (or create) refused by the content checks; see `errors` |
 | 429 | `rate_limited` | with `Retry-After` |
 | 503 | `unavailable` | the database can't be reached |
@@ -67,8 +67,9 @@ type VersionInfo = {
 ### `POST /admin/auth/google` → `200 Me`
 
 Body `{ "idToken": "<Google ID token from Google Identity Services>" }`. Checks in ADR 0009.
-Sets the cookie (7 days). `403 not_admin` if the email isn't an enabled admin; `401
-unauthorized` if the token is bad or expired. 10 a minute per IP.
+Sets the cookie (7 days). `403 not_admin` if the email isn't an enabled admin, or the Google
+account (`sub`) isn't the one that first signed in with it; `401 unauthorized` if the token is
+bad or expired. `429` after 30 failed sign-ins in 10 minutes, all together (ADR 0009).
 
 ### `GET /admin/me` → `200 Me`
 
@@ -168,12 +169,15 @@ or draft). Rubrics can't be created in phase 1 (`400`). Answers like `GET` (with
 
 ### `PUT /admin/content/:kind/:id/draft` → `200` (editor)
 
-Body `{ draftRevision: number | null, frontmatter, body }` or `{ draftRevision, source }`.
+Body `{ draftRevision: number | null, rebase?: true, frontmatter, body }` or
+`{ draftRevision, rebase?, source }`.
 
 - `draftRevision: null` starts a draft from the published version; a draft that already exists
   makes it `409`. A number must equal the draft's current revision, else `409` (someone saved in
   between: the page reloads and shows both).
 - `frontmatter` as JSON is merged into the stored YAML (comments and key order kept).
+- `rebase: true` moves the draft's `baseVersion` to the current published version: the editor
+  has seen the newer version (see publish).
 - Saved even when invalid. Answers like `GET`; the draft's `errors` say what blocks publishing.
 - Size limit 200 KB of source.
 
@@ -187,6 +191,9 @@ Body `{ draftRevision: number, basePublishedVersion: number | null }`.
 
 - `409` if the draft's revision changed, or the published version isn't
   `basePublishedVersion` any more (someone published or rolled back in between).
+- `409` with `reason: "draft_outdated"` if the draft's `baseVersion` isn't the current version:
+  it started before someone else's publish and would overwrite it. Save it again with
+  `rebase: true` after looking at the new version.
 - `422 invalid_content` with `errors` if the checks fail. Warnings don't block.
 - Success: a new version (`current + 1`, `action: "publish"`), the draft is gone, one Slack
   line. The app uses it within about a minute.
@@ -195,8 +202,9 @@ Body `{ draftRevision: number, basePublishedVersion: number | null }`.
 
 Body `{ toVersion: number, basePublishedVersion: number }`. Publishes a copy of `toVersion` as
 `current + 1` (`action: "rollback"`, `fromVersion: toVersion`). `409` if the current version
-isn't `basePublishedVersion`; `400` if `toVersion` is the current one or doesn't exist. The
-draft is not touched. One Slack line.
+isn't `basePublishedVersion`; `400` if `toVersion` is the current one or doesn't exist; `422
+invalid_content` if that version no longer passes the checks. Publishes directly, no review.
+The draft is not touched (it becomes outdated: see publish). One Slack line.
 
 ### `GET /admin/content/:kind/:id/versions` → `200 { versions: VersionInfo[] }`
 
@@ -221,8 +229,8 @@ Try a case before publishing it. Body:
 ```
 
 `messages` as in `POST /chat`. `source` is the case to play (unsaved edits); without it, the
-saved draft, else the published version. `422 invalid_content` if that source doesn't parse as
-a case. The stream is exactly `/chat`'s (frames, `session_end`, the `END_SESSION_JUDGE` switch).
+saved draft, else the published version. `source` at most 200 KB (`400`). `422
+invalid_content` if that source doesn't parse as a case. The stream is exactly `/chat`'s (frames, `session_end`, the `END_SESSION_JUDGE` switch).
 Not counted, not stored, no Slack. 60 turns an hour per admin. Rubrics have no preview in
 phase 1.
 
@@ -239,7 +247,7 @@ phase 1.
 
 | Variable | |
 |---|---|
-| `ADMIN_MODE` | `on` turns the admin routes on. Default off. |
+| `ADMIN_MODE` | `on` turns the admin routes on. Default off. On but a variable below missing: stays off (`404`), one config error in the log. |
 | `ADMIN_GOOGLE_CLIENT_ID` | the OAuth client id (not a secret) |
 | `ADMIN_ORIGIN` | `https://admin.psygym.novawerk.io` (local: `http://localhost:5173`) |
 | `CONTENT_SOURCE` | `db`: the app reads the published versions. Default `files`. |

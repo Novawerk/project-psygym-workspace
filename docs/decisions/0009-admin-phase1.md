@@ -11,6 +11,8 @@ phase-1 scope in `product/admin-phase1.md` (product's PR). The HTTP contract is
   `editor`: an editor saves drafts, previews, publishes and rolls back (D-A9: self-review is
   allowed). No separate "submitted for review" state: a draft, then published.
 - No people page and no invite-code page yet. Admins are added and disabled by a command.
+- A rollback publishes directly: no review step, like a publish (D-A9). It is logged and
+  announced like one.
 - No GitHub sync yet (D-A8 is phase 2). After each publish we export by hand
   (`content:export`) and open a PR, so the public repo and the bundled fallback keep up. The CI
   lock on `content/` comes with the sync in phase 2.
@@ -30,6 +32,9 @@ Two switches, both off by default. Off means: the same answers, the same modules
   `jose` (Google token checks). App routes don't get slower with admin on.
 - `CONTENT_SOURCE=db` loads the database code at start, as counting and sign-in already do in
   production (`METRICS_ENABLED`, `AUTH_MODE`). It adds no wait on a warm instance (below).
+- `ADMIN_MODE=on` with `DATABASE_URL`, `ADMIN_GOOGLE_CLIENT_ID` or `ADMIN_ORIGIN` missing fails
+  closed: the admin stays off (its routes are `404`), one config error in the log, and the rest of
+  the service runs as usual. It never takes the server down.
 - The two switches are independent. We turn `ADMIN_MODE` on first, import, check the content in
   the admin, then turn `CONTENT_SOURCE=db` on.
 
@@ -45,10 +50,14 @@ rewritten here:
    `accounts.google.com` or `https://accounts.google.com`, audience = `ADMIN_GOOGLE_CLIENT_ID`,
    not expired, `email_verified: true`.
 3. The email (lower-case) must be an enabled row in `admins`. Otherwise `403 not_admin`, the
-   same answer for "not in the table" and "disabled".
-4. We create a session: 32 random bytes, base64url, in an httpOnly cookie `psygym_admin`
-   (SameSite=Lax, Secure except on localhost, Path `/`, 7 days). The database keeps only the
-   sha256 of the token.
+   same answer for "not in the table" and "disabled". On the first sign-in we store the token's
+   `sub` (Google's account id) in `admins.google_sub`; from then on the `sub` must match too, so a
+   Google account that later takes over the same address can't get in. We don't check `hd`:
+   聆镜's colleagues use personal Google accounts, not a Workspace domain.
+4. We create a session: 32 random bytes, base64url, in an httpOnly cookie `__Host-psygym_admin`
+   (Secure, SameSite=Lax, Path `/`, no Domain, 7 days; browsers accept Secure cookies on
+   `http://localhost` too). The database keeps only the sha256 of the token. A session cookie the
+   browser still sent with the sign-in is deleted, and so are expired sessions.
 5. **Every request** looks the session up together with its admin row (one query): expired
    session, disabled admin or unknown token → `401`. Disabling an admin works on their next
    request; it also deletes their sessions. A role change applies on the next request.
@@ -63,8 +72,15 @@ every `/admin/*` request that changes something (not GET/HEAD) must carry
 `403 forbidden`. The Bearer routes (`/admin/stats`, `/admin/accounts/delete`) don't use the
 cookie and are not affected.
 
-**Limits.** `POST /admin/auth/google`: 10 a minute per IP (the address as we see it behind the
-rewrite). Preview chat: 60 turns an hour per admin.
+**Limits.** Behind the Vercel rewrite the address we see may be Vercel's, not the visitor's, and
+keying a limit by IP would also mean storing an IP or a hash of one (an unsalted hash of an IPv4
+address can be reversed). So the sign-in limit doesn't use the IP: one counter in the database
+(`rate_counters`, the table from 0001, key `admin-sign-in-failures`), shared by all instances,
+counts failed sign-ins (bad token, `not_admin`). Past 30 in 10 minutes, every sign-in is `429`
+until the window ends. The cost: someone sending junk tokens can keep us out for 10 minutes at a
+time; sessions already open keep working. A valid sign-in is cheap to check (Google's keys are
+cached), so this only stops floods. Preview chat: 60 turns an hour per admin, in memory per
+instance (it only guards model spend).
 
 **Login log.** `admin_logins(admin_id, at)`; rows older than 90 days are deleted on each new
 login (`admin.md` §5). `admins.last_login_at` is updated too. No IP, no user agent.
@@ -87,11 +103,14 @@ login (`admin.md` §5). `admins.last_login_at` is updated too. No IP, no user ag
 
 | Table | Columns | Notes |
 |---|---|---|
-| `admins` | `id` (uuid), `email` (lower-case, unique), `role` (`admin`/`editor`/`viewer`), `org` (`novawerk`/`lingjing`), `enabled`, `created_at`, `last_login_at` | Our own members' data. |
+| `admins` | `id` (uuid), `email` (lower-case, unique), `google_sub` (set on first sign-in), `role` (`admin`/`editor`/`viewer`), `org` (`novawerk`/`lingjing`), `enabled`, `created_at`, `last_login_at` | Our own members' data. |
 | `admin_sessions` | `token_hash` (sha256, pk), `admin_id` (fk, cascade), `created_at`, `expires_at` | Expired rows are deleted on the next login. |
 | `admin_logins` | `id`, `admin_id` (fk, cascade), `at` | 90 days. |
 | `content_versions` | `kind` (`case`/`rubric`), `item_id`, `version`, `source`, `action` (`import`/`publish`/`rollback`), `from_version` (rollback only), `published_by` (fk, set null), `published_at` | pk (`kind`, `item_id`, `version`). Only published versions; never updated, never deleted. This table *is* the publish log. |
 | `content_drafts` | `kind`, `item_id` (pk together), `source`, `revision`, `base_version`, `updated_by`, `updated_at` | At most one draft per item, shared by all editors. |
+
+The migration only adds tables; it changes nothing that exists. Order: migrate first, then
+deploy (the new code expects the tables only when `ADMIN_MODE` or `CONTENT_SOURCE=db` is on).
 
 **We store the whole file, `source`**: the Markdown exactly as in `content/` (YAML frontmatter
 and body, comments included). The frontmatter of `placeholder-cbt-depression` has YAML comments
@@ -103,18 +122,29 @@ keeps comments and key order for the keys that didn't change.
 
 **Versions.** The current version of an item is its highest version. Publishing a draft inserts
 `version = current + 1` and deletes the draft, in one transaction; the primary key turns a race
-between two publishes into `409`. A rollback inserts `version = current + 1` with the old
+between two publishes into `409`.
+
+**An outdated draft can't overwrite a newer publish.** A draft remembers the version it started
+from (`base_version`). If someone publishes or rolls back after the draft was started, the
+draft's `base_version` is no longer the current version and publishing it is `409` (reason
+`draft_outdated`), even if the page sent the right `basePublishedVersion`. The editor looks at
+the new version, merges what they need by hand, and saves the draft with `rebase: true`: that
+moves `base_version` to the current version (an explicit "I have seen it"). Then publishing
+works. A rollback inserts `version = current + 1` with the old
 `source`, `action = rollback`, `from_version`; the draft stays. Nothing is ever overwritten, so
 the version list is the publish log (who, when, what, from which version).
 
-**Checks.** A draft may be saved while invalid (the answer lists the problems). Publishing runs
-the same checks as loading `content/` today, and refuses with `422`:
+**Checks.** A draft may be saved while invalid (the answer lists the problems). Publishing and
+rolling back run the same checks, and refuse with `422`. The checks are one set of functions
+(`src/content-doc.ts`) that the loader of `content/`, the import, publish, rollback and the tests
+all call; the rubric rules move there out of `test/content.test.ts`.
 
 - case: `parseCase` (required fields, `id` = the path's id, ids `^[a-z0-9-]+$`, closed `<!-- -->`);
   optional-field warnings are listed but don't block, as at load time;
 - rubric: the path's id is a known school (`cbt`), frontmatter `id` and `school` match it,
-  comments closed, skill ids present, unique and including `risk_screening` (the rules in
-  `test/content.test.ts`).
+  comments closed, skill ids present, unique and including `risk_screening`;
+- across items: every case's school has a rubric. The loader and the import check the whole
+  set; publishing a case checks that its school has a rubric (published, or bundled).
 
 ## How the app reads the published version (`CONTENT_SOURCE=db`)
 
@@ -124,7 +154,11 @@ the same checks as loading `content/` today, and refuses with `422`:
   request uses what's in memory; if it is older than 60 s, a refresh starts in the background
   (one at a time, kept alive with `waitUntil`) and the request goes on with the copy it has. A
   publish reaches every warm instance within about a minute.
-- **Cold start:** the first request waits for the first load, at most 1.5 s.
+- **Cold start:** the first request waits for the first load, at most 1.5 s. A Neon database that
+  was asleep can take that long to wake, so a cold start with `CONTENT_SOURCE=db` may be up to
+  1.5 s slower than today, once per instance. If the load doesn't finish in time, the request
+  uses the bundle and the load goes on in the background; the next request uses its result, or
+  starts a new load if it failed.
 - **Fallback, in this order:** the last copy that loaded → the bundled `content/`. A failed or
   slow load is one log line (the error's kind only) and the request goes on. If the database has
   no published case at all (import not run), we use the bundle and log it. A rubric missing for
@@ -134,7 +168,18 @@ the same checks as loading `content/` today, and refuses with `422`:
   `admin.md` §2 accepts).
 - The `turn` log line gets the case's version (`caseVersion`). Counting by case id is unchanged.
 
-**Import on switch-over day.** `pnpm --filter api content:import` (the lead runs it right after
+**Switch-over day**, in this order:
+
+1. Merge or close every open PR that touches `content/cases/` or `content/rubrics/`.
+2. Migrate (`0002_admin`), then deploy.
+3. `admin:add` the first admin; set `ADMIN_MODE=on`.
+4. `content:import` (below); look at the cases and the rubric in the admin.
+5. Set `CONTENT_SOURCE=db`.
+6. Same day: `content/README.md` and `docs/for-psygym-team.md` say that cases and rubrics are now
+   edited in the admin, and that a PR to `content/` no longer reaches the app (until the sync in
+   phase 2 turns the folder into an exported copy).
+
+**Import.** `pnpm --filter api content:import` (the lead runs it right after
 the migration, like the migration itself) inserts every `content/cases/*.md` and
 `content/rubrics/*.md` as version 1, `action = import`, no publisher. Each file goes through the
 publish checks; a bad file stops the import before anything is written. An item that already has
@@ -170,7 +215,10 @@ Sunday, UTC) **in the backend**. Hiding happens after filtering and summing, on 
 - per metric, the counts form a table, periods × dim. In every row and every column with exactly
   one hidden cell among the non-zero ones, the smallest shown cell is hidden too; we repeat
   until nothing changes. So no hidden cell is a total minus the rest;
-- durations (sessions and average) follow the same rules on the number of sessions;
+- a metric's dims and the metric's total per period are one table: the total is a column of
+  it, so hiding a bucket can't be undone by subtracting the other buckets from the total. For
+  `session_duration` that total column is the number of sessions with a duration, shown in
+  `duration`; its average is hidden with it;
 - `active_day` / `active_week` have no case or language: with a filter they are `null`.
 
 As in ADR 0007, this protects one response. Subtracting two responses with different
