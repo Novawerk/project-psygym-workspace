@@ -256,7 +256,9 @@ data: {"type":"error","code":"model_unavailable","message":"…"}
 - `text_delta` arrives zero or more times; the app appends `text` in order.
 - `session_end` (`/chat` only) arrives at most once per stream (not per session), after the last `text_delta` and right
   before `turn_end`; nothing but `turn_end` follows it. It means the AI client ended the
-  session in character (see [`safety.md`](./safety.md) §3). The app locks the input.
+  session in character (see [`safety.md`](./safety.md) §3). The app locks the input. If the model writes the
+  end call into its reply as a tag (`<end_session>` and variants) instead of calling the tool, the server strips
+  the tag from `text_delta` and sends `session_end` all the same; the app never sees the tag.
 - Exactly one of `turn_end` or `error` ends the stream. `usage` is optional.
 - The app ignores any frame `type` it doesn't know, so we can add frames later.
 - `: ping` comments arrive every ~15 s; the app ignores them.

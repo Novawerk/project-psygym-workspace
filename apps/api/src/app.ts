@@ -22,6 +22,7 @@ import type { ModelRequest } from "./llm/types.js";
 import { FeedbackBody, postToSlack, slackMessage, type FetchLike } from "./feedback.js";
 import type { Auth, AuthUser } from "./auth/types.js";
 import { disabledCounter, durationBucket, normalizeEvent, turnBucket, type Counter, type MetricsStore } from "./metrics/counter.js";
+import { EndTagFilter } from "./end-tag.js";
 import { statsView } from "./metrics/stats.js";
 import { FixedWindowLimiter, clientIp } from "./rate-limit.js";
 import { ReportBody, reportSlackMessage } from "./report.js";
@@ -392,20 +393,24 @@ export function createApp(deps: AppDeps) {
       send({ type: "turn_start" });
       try {
         let said = "";
+        const say = (text: string) => {
+          if (!text) return;
+          said += text;
+          send({ type: "text_delta", text });
+        };
+        // Only /chat offers the tool, so only there can its call show up as text.
+        const endTags = t.request.tools.length > 0 ? new EndTagFilter() : undefined;
         const res = await t.provider.stream(
           { ...t.request, signal: abort.signal },
-          {
-            onText: (text) => {
-              if (!text) return;
-              said += text;
-              send({ type: "text_delta", text });
-            },
-          },
+          { onText: (text) => say(endTags ? endTags.push(text) : text) },
         );
+        if (endTags) say(endTags.flush());
         const saidSomething = said.trim() !== "";
         // The AI client ends the session by calling end_session (only /chat offers the tool).
-        // The tool call itself never reaches the app: it becomes one session_end frame.
-        const sessionEnd = t.request.tools.length > 0 && endsSession(res.message.toolCalls);
+        // The tool call itself never reaches the app: it becomes one session_end frame. A call
+        // written into the text as a tag counts the same (src/end-tag.ts).
+        const endTagInText = endTags?.found === true;
+        const sessionEnd = t.request.tools.length > 0 && (endsSession(res.message.toolCalls) || endTagInText);
         if (sessionEnd) {
           // Some models call the tool without saying goodbye; the app still needs a last line.
           if (!saidSomething) send({ type: "text_delta", text: FAREWELL[t.locale] });
@@ -421,6 +426,7 @@ export function createApp(deps: AppDeps) {
           msg: "turn",
           stop: res.stopReason,
           ...(sessionEnd ? { sessionEnd: true } : {}),
+          ...(endTagInText ? { endTagInText: true } : {}),
           inputTokens: res.usage.inputTokens,
           outputTokens: res.usage.outputTokens,
           ms: Date.now() - started,
