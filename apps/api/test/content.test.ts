@@ -68,17 +68,17 @@ describe("case briefs", () => {
   });
 });
 
-describe("harm: the AI client and live supervision use one standard", () => {
-  const { client, supervisorLive } = loadPrompts();
-  it.each(["贬低", "嘲讽", "不耐烦", "矫情", "更惨的人", "否定", "来咨询的理由", "性骚扰", "歧视", "拒绝细说", "指责受害者"])(
-    "both name %s",
-    (term) => {
-      expect(client).toContain(term);
-      expect(supervisorLive).toContain(term);
-    },
-  );
-  it.each(["复述", "正常化", "说教", "温和地问起创伤经历", "主动收尾"])("both list %s as not harm", (term) => {
-    expect(client).toContain(term);
-    expect(supervisorLive).toContain(term);
+describe("live supervision has no harm category", () => {
+  // Harmful remarks are judged in the full report only; live notes kept mistaking lecturing for harm.
+  const { supervisorLive, supervisor } = loadPrompts();
+  it("has no harm item, template or definition", () => {
+    for (const term of ["伤害性的话", "会伤到来访者，真实会谈里", "would hurt the client", "might simply leave", "指责受害者"]) {
+      expect(supervisorLive).not.toContain(term);
+    }
+    expect(supervisorLive).toContain("**不说咨询师的话会伤到来访者，也不说来访者会离开。**");
+  });
+  it("the full report still judges harmful remarks", () => {
+    expect(supervisor).toContain("伤害性的话");
+    expect(supervisor).toContain("指责受害者");
   });
 });
