@@ -72,6 +72,10 @@ const EnvSchema = z.object({
   /** Bearer token for POST /admin/accounts/delete. Unset: the endpoint answers 404. */
   ADMIN_TOKEN: optionalString,
 
+  // ── AI client ──
+  /** "on": an end_session call ends the session only if an independent check agrees (src/end-judge.ts). Default off. */
+  END_SESSION_JUDGE: z.enum(["off", "on"]).default("off"),
+
   // ── Report feedback ──
   /** Slack incoming webhook for POST /feedback. Unset: feedback is dropped (204). */
   FEEDBACK_SLACK_WEBHOOK_URL: optionalString.pipe(z.url({ protocol: /^https$/ }).optional()),
@@ -119,6 +123,8 @@ export interface AppConfig {
   /** Sign-in; null when AUTH_MODE is off or what it needs is missing. */
   auth: AuthConfig | null;
   adminStatsToken: string | null;
+  /** END_SESSION_JUDGE=on. */
+  endSessionJudge: boolean;
 }
 
 const PROVIDER_DEFAULTS: Record<ProviderName, { model: string; baseURL?: string; maxOutputTokens: number }> = {
@@ -246,6 +252,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     feedbackWebhookUrl: e.FEEDBACK_SLACK_WEBHOOK_URL ?? null,
     metrics: (e.METRICS_ENABLED === "true" || e.METRICS_ENABLED === "1") && e.DATABASE_URL ? { databaseUrl: e.DATABASE_URL } : null,
     adminStatsToken: e.ADMIN_STATS_TOKEN ?? null,
+    endSessionJudge: e.END_SESSION_JUDGE === "on",
     auth,
   };
 }

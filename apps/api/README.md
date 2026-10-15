@@ -55,6 +55,7 @@ Blank values count as unset. `apps/api/.env` is read on start; shell variables w
 | `RATE_LIMIT_MAX` | `30` | `/chat` + `/supervision` requests per key per window; `/feedback` and `/report` each have their own bucket of the same size. Key: the invite code, else the IP. |
 | `RATE_LIMIT_WINDOW_SEC` | `60` | Window length. Over the limit → 429 `rate_limited` with `Retry-After`. |
 | `FEEDBACK_SLACK_WEBHOOK_URL` | — | Slack incoming webhook (https) for `POST /feedback` and `POST /report`. Unset → feedback and reports are dropped (still 204) with a `feedback dropped: not configured` / `report dropped: not configured` log line. |
+| `END_SESSION_JUDGE` | off | `on`: the AI client's `end_session` ends the session only if an independent check (the supervisor model, 4 s timeout) finds 2 harmful counselor messages; otherwise the closing line is dropped and the client answers once more without the tool. The start of each `/chat` reply is held until it can't be a one-sentence closing line (about 30 characters or a second sentence). Off: the stream is exactly as before. See `src/end-judge.ts`. |
 | `METRICS_ENABLED` | off | `true` turns on the anonymous daily counts. Needs `DATABASE_URL` too, or it stays off. |
 | `DATABASE_URL` | — | Postgres for the counts (Neon Frankfurt; Vercel injects it). |
 | `DATABASE_URL_UNPOOLED` | — | Neon's direct URL; only `db:migrate` uses it (falls back to `DATABASE_URL`). |

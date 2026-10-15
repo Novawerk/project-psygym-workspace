@@ -142,6 +142,8 @@ export interface Prompts {
   supervisor: string;
   /** Mid-session notes (/supervision with mode "live"). */
   supervisorLive: string;
+  /** Checks an end_session call (src/end-judge.ts, END_SESSION_JUDGE). */
+  endJudge: string;
   /** Supervision rubric per school, without its frontmatter. */
   rubrics: Record<CaseSummary["school"], string>;
 }
@@ -190,6 +192,7 @@ export function loadPrompts(dir = promptsDir(), content = contentDir()): Prompts
     client: read(path.join(dir, "client.md")),
     supervisor: read(path.join(dir, "supervisor.md")),
     supervisorLive: read(path.join(dir, "supervisor-live.md")),
+    endJudge: read(path.join(dir, "end-judge.md")),
     rubrics: { cbt: rubricForPrompt(read(path.join(content, "rubrics/cbt.md"))) },
   };
 }

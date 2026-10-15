@@ -80,6 +80,16 @@ const demoStep: MockStep = (req) => {
       toolCalls: [],
     };
   }
+  // The end-session check (src/end-judge.ts): every counselor message with "#end" counts as harmful,
+  // so with END_SESSION_JUDGE on, "#end" in two messages ends the session and in one it doesn't.
+  if (req.system.includes("<!-- psygym:end-judge -->")) {
+    const first = req.messages[0];
+    const transcript = first?.role === "user" ? first.text : "";
+    const harmful = [...transcript.matchAll(/^\[(\d+)\] (?:咨询师|Counselor)：(.*)$/gm)]
+      .filter((m) => m[2]!.includes(MOCK_END_TRIGGER))
+      .map((m) => Number(m[1]));
+    return { text: JSON.stringify({ harmful }), toolCalls: [] };
+  }
   if (req.system.includes("<!-- psygym:supervisor -->")) {
     const quote = lastCounselorLine(req);
     // Same shape as prompts/supervisor.md asks for: problem → quote → alternative, the

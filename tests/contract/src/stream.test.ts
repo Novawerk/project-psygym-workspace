@@ -82,7 +82,9 @@ describe.skipIf(env.expectModelUnavailable)("POST /supervision, durationSec (opt
 });
 
 describe.skipIf(env.expectModelUnavailable || !env.endTrigger)("session_end (END_TRIGGER set, mock model)", () => {
-  const ending = () => conversation(3).map((m, i, a) => (i === a.length - 1 ? { ...m, text: `好的。${env.endTrigger}` } : m));
+  // The trigger in every counselor line: with END_SESSION_JUDGE on, the mock's check needs it in
+  // two different messages before it lets the session end.
+  const ending = () => conversation(3).map((m) => (m.role === "counselor" ? { ...m, text: `${m.text} ${env.endTrigger}` } : m));
 
   it("POST /chat: the client says a closing line, then exactly one session_end right before turn_end", async () => {
     const res = await call("/chat", { body: await validBody("zh", ending()) });

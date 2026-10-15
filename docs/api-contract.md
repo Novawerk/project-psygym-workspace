@@ -259,6 +259,9 @@ data: {"type":"error","code":"model_unavailable","message":"…"}
   session in character (see [`safety.md`](./safety.md) §3). The app locks the input. If the model writes the
   end call into its reply as a tag (`<end_session>` and variants) instead of calling the tool, the server strips
   the tag from `text_delta` and sends `session_end` all the same; the app never sees the tag.
+  With `END_SESSION_JUDGE=on` (server setting, default off) the server sends `session_end` only when an
+  independent check agrees; otherwise the closing line is never sent and the turn carries an ordinary reply
+  instead. Same frames either way; the first `text_delta` of a `/chat` turn may come a little later.
 - Exactly one of `turn_end` or `error` ends the stream. `usage` is optional.
 - The app ignores any frame `type` it doesn't know, so we can add frames later.
 - `: ping` comments arrive every ~15 s; the app ignores them.
