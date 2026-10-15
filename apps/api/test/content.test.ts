@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { SKILL_ALIASES, contentDir, loadCases, loadPrompts, rubricForPrompt, rubricSkillIds, stripComments } from "../src/content.js";
+import { SKILL_ALIASES, contentDir, loadCases, loadPrompts, parseCase, rubricForPrompt, rubricSkillIds, stripComments } from "../src/content.js";
 
 const rawRubric = fs.readFileSync(path.join(contentDir(), "rubrics/cbt.md"), "utf8");
 const rubric = loadPrompts().rubrics.cbt;
@@ -50,10 +50,20 @@ describe("rubricForPrompt", () => {
 
 describe("case briefs", () => {
   it("never carry HTML comments to the model", () => {
-    for (const c of loadCases().values()) expect(c.brief, c.id).not.toContain("<!--");
+    for (const c of loadCases().values()) {
+      expect(c.brief, c.id).not.toContain("<!--");
+      expect(c.brief, c.id).not.toContain("-->");
+    }
   });
 
   it("stripComments removes multi-line notes", () => {
     expect(stripComments("a\n<!-- one\ntwo -->\n\n\nb")).toBe("a\n\nb");
+  });
+
+  it("an unclosed comment fails the load, naming the file", () => {
+    expect(() => stripComments("a <!-- never closed\nb")).toThrow("unclosed HTML comment");
+    expect(() => stripComments("a --> b")).toThrow("unclosed HTML comment");
+    const raw = "---\nid: x-1\nschool: cbt\ntitle: { zh: 标题 }\nsummary: { zh: 简介 }\n---\n正文 <!-- 没闭合\n";
+    expect(() => parseCase("x-1.md", raw, () => {})).toThrow("x-1.md: unclosed HTML comment");
   });
 });

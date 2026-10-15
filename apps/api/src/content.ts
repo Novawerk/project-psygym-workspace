@@ -92,7 +92,13 @@ export function parseCase(file: string, raw: string, warn: Warn = consoleWarn): 
   const yaml: unknown = parseYaml(m[1]!);
   const meta = Required.safeParse(yaml);
   if (!meta.success) throw new Error(`${file}: bad frontmatter\n${z.prettifyError(meta.error)}`);
-  const c: Case = { ...meta.data, brief: stripComments(m[2]!) };
+  let brief: string;
+  try {
+    brief = stripComments(m[2]!);
+  } catch (e) {
+    throw new Error(`${file}: ${(e as Error).message}`);
+  }
+  const c: Case = { ...meta.data, brief };
   const fields = (yaml ?? {}) as Record<string, unknown>;
   for (const key of OPTIONAL_FIELDS) {
     let input = fields[key];
@@ -143,12 +149,14 @@ export interface Prompts {
 const read = (file: string) => fs.readFileSync(file, "utf8").trim();
 const stripFrontmatter = (raw: string) => FRONTMATTER.exec(raw)?.[2]?.trim() ?? raw;
 
-/** Notes for us and for 聆镜 (<!-- … -->) never reach a model. */
+/**
+ * Notes for us and for 聆镜 (<!-- … -->) never reach a model. An unclosed one would send the
+ * rest of the file as is, so it fails the load (and CI) instead.
+ */
 export function stripComments(text: string): string {
-  return text
-    .replace(/<!--[\s\S]*?-->/g, "")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+  const stripped = text.replace(/<!--[\s\S]*?-->/g, "");
+  if (stripped.includes("<!--") || stripped.includes("-->")) throw new Error("unclosed HTML comment");
+  return stripped.replace(/\n{3,}/g, "\n\n").trim();
 }
 
 /**
