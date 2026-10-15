@@ -65,3 +65,16 @@ export function statsView(from: string, to: string, rows: Row[]) {
 
   return { from, to, minShown: MIN_SHOWN, cells, totals };
 }
+
+const DAY_MS = 86_400_000;
+/** ?from=&to= as UTC days. Default: the last 30 days up to today. */
+export function statsRange(from: string | undefined, to: string | undefined, nowMs: number) {
+  const ok = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(`${s}T00:00:00Z`));
+  const t = to ?? new Date(nowMs).toISOString().slice(0, 10);
+  if (!ok(t)) return null;
+  const f = from ?? new Date(Date.parse(`${t}T00:00:00Z`) - 29 * DAY_MS).toISOString().slice(0, 10);
+  if (!ok(f)) return null;
+  const days = (Date.parse(`${t}T00:00:00Z`) - Date.parse(`${f}T00:00:00Z`)) / DAY_MS;
+  if (days < 0 || days > 365) return null;
+  return { from: f, to: t };
+}

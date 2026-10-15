@@ -16,7 +16,11 @@
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:migrate:prod": "MIGRATE_TARGET=production drizzle-kit migrate"
+    "db:migrate:prod": "MIGRATE_TARGET=production drizzle-kit migrate",
+    "admin:add": "tsx scripts/admin.ts add",
+    "admin:disable": "tsx scripts/admin.ts disable",
+    "content:import": "tsx scripts/content.ts import",
+    "content:export": "tsx scripts/content.ts export"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.133.0",
@@ -24,6 +28,7 @@
     "@vercel/functions": "^3.9.11",
     "drizzle-orm": "^0.45.4",
     "hono": "^4.13.13",
+    "jose": "^6.2.12",
     "openai": "^7.32.0",
     "pg": "^8.23.1",
     "yaml": "^2.9.1",

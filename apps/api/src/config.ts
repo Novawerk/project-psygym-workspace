@@ -72,6 +72,18 @@ const EnvSchema = z.object({
   /** Bearer token for POST /admin/accounts/delete. Unset: the endpoint answers 404. */
   ADMIN_TOKEN: optionalString,
 
+  // ── Admin (docs/decisions/0009-admin-phase1.md) ──
+  /** "on" turns the admin routes on (needs DATABASE_URL, ADMIN_GOOGLE_CLIENT_ID, ADMIN_ORIGIN). Default off. */
+  ADMIN_MODE: z.enum(["off", "on"]).default("off"),
+  /** The admin page's Google OAuth client id (not a secret). */
+  ADMIN_GOOGLE_CLIENT_ID: optionalString,
+  /** The admin page's origin, e.g. https://admin.psygym.novawerk.io. Writes must come from it. */
+  ADMIN_ORIGIN: optionalString.pipe(z.url().optional()),
+  /** "db": cases and rubrics come from the published versions in the database. Default "files". */
+  CONTENT_SOURCE: z.enum(["files", "db"]).default("files"),
+  /** Slack incoming webhook for #project-psygym: one line per publish or rollback. Unset: log only. */
+  CONTENT_SLACK_WEBHOOK_URL: optionalString.pipe(z.url({ protocol: /^https$/ }).optional()),
+
   // ── AI client ──
   /** "on": an end_session call ends the session only if an independent check agrees (src/end-judge.ts). Default off. */
   END_SESSION_JUDGE: z.enum(["off", "on"]).default("off"),
@@ -125,6 +137,19 @@ export interface AppConfig {
   adminStatsToken: string | null;
   /** END_SESSION_JUDGE=on. */
   endSessionJudge: boolean;
+  /** The admin routes; null when ADMIN_MODE is off or what it needs is missing. */
+  admin: AdminConfig | null;
+  /** CONTENT_SOURCE=db with a DATABASE_URL; null: the bundled content/. */
+  contentDb: { databaseUrl: string } | null;
+  /** Where publish notices go. Null: log only. */
+  contentWebhookUrl: string | null;
+}
+
+export interface AdminConfig {
+  databaseUrl: string;
+  googleClientId: string;
+  /** Exactly as browsers send it in Origin: no trailing slash. */
+  origin: string;
 }
 
 const PROVIDER_DEFAULTS: Record<ProviderName, { model: string; baseURL?: string; maxOutputTokens: number }> = {
@@ -244,6 +269,15 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
       };
     }
   }
+  let admin: AdminConfig | null = null;
+  if (e.ADMIN_MODE === "on") {
+    if (!e.DATABASE_URL || !e.ADMIN_GOOGLE_CLIENT_ID || !e.ADMIN_ORIGIN) {
+      errors.push("ADMIN_MODE is on but DATABASE_URL, ADMIN_GOOGLE_CLIENT_ID or ADMIN_ORIGIN is missing; the admin stays off");
+    } else {
+      admin = { databaseUrl: e.DATABASE_URL, googleClientId: e.ADMIN_GOOGLE_CLIENT_ID, origin: new URL(e.ADMIN_ORIGIN).origin };
+    }
+  }
+  if (e.CONTENT_SOURCE === "db" && !e.DATABASE_URL) errors.push("CONTENT_SOURCE is db but DATABASE_URL is missing; using the bundled content");
   return {
     llm: { client: roleLlm("client", e, invalid), supervisor: roleLlm("supervisor", e, invalid) },
     errors,
@@ -254,5 +288,8 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     adminStatsToken: e.ADMIN_STATS_TOKEN ?? null,
     endSessionJudge: e.END_SESSION_JUDGE === "on",
     auth,
+    admin,
+    contentDb: e.CONTENT_SOURCE === "db" && e.DATABASE_URL ? { databaseUrl: e.DATABASE_URL } : null,
+    contentWebhookUrl: e.CONTENT_SLACK_WEBHOOK_URL ?? null,
   };
 }

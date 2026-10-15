@@ -42,6 +42,30 @@ describe.skipIf(typeof registerHooks !== "function")("cold start", () => {
     expect(l.auth).toBeGreaterThan(0);
   }, 60_000);
 
+  it("admin on: the database code loads, the admin module doesn't (until an /admin request)", () => {
+    const out = execFileSync(
+      process.execPath,
+      ["--import", "tsx", "--import", "./test/fixtures/trace-modules.mjs", "--input-type=module", "-e", "await import('./src/index.ts');"],
+      {
+        cwd: root,
+        env: { PATH: process.env.PATH ?? "", LLM_PROVIDER: "mock", ADMIN_MODE: "on", DATABASE_URL: "postgres://u:p@127.0.0.1:1/x", ADMIN_GOOGLE_CLIENT_ID: "x", ADMIN_ORIGIN: "https://a.example" },
+        encoding: "utf8",
+      },
+    );
+    expect(Number(/DB_MODULES (\d+)/.exec(out)![1])).toBeGreaterThan(0);
+    expect(Number(/ADMIN_MODULES (\d+)/.exec(out)![1])).toBe(0);
+  }, 60_000);
+
+  it("admin and CONTENT_SOURCE off (the default): no admin module, no database code", () => {
+    const out = execFileSync(
+      process.execPath,
+      ["--import", "tsx", "--import", "./test/fixtures/trace-modules.mjs", "--input-type=module", "-e", "await import('./src/index.ts');"],
+      { cwd: root, env: { PATH: process.env.PATH ?? "", LLM_PROVIDER: "mock", DATABASE_URL: "postgres://u:p@127.0.0.1:1/x", ADMIN_ORIGIN: "https://a.example" }, encoding: "utf8" },
+    );
+    expect(Number(/DB_MODULES (\d+)/.exec(out)![1])).toBe(0);
+    expect(Number(/ADMIN_MODULES (\d+)/.exec(out)![1])).toBe(0);
+  }, 60_000);
+
   it("counting on: they are (so the check above can see them)", () => {
     expect(dbModulesLoaded({ METRICS_ENABLED: "true", DATABASE_URL: "postgres://u:p@127.0.0.1:1/x" })).toBeGreaterThan(0);
   }, 60_000);

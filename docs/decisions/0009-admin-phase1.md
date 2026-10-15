@@ -1,6 +1,6 @@
 # 0009 — Admin, phase 1: Google sign-in, dashboard, cases and rubrics in the database
 
-Date: 2026-10-15. Status: **proposed** (contract PR; the implementation follows in its own PR).
+Date: 2026-10-15. Status: **accepted** (#105); built behind `ADMIN_MODE` and `CONTENT_SOURCE`, both off by default.
 The product decisions are in [`product/admin.md`](../product/admin.md) (D-A1–D-A10) and the
 phase-1 scope in `product/admin-phase1.md` (product's PR). The HTTP contract is
 [`admin-api.md`](../admin-api.md).
@@ -93,7 +93,7 @@ login (`admin.md` §5). `admins.last_login_at` is updated too. No IP, no user ag
    **Publish app** (in "Testing", only listed test users can sign in).
 2. **Credentials → Create credentials → OAuth client ID**, type **Web application**, name
    `psygym-admin`. **Authorized JavaScript origins**: `https://admin.psygym.novawerk.io` and
-   `http://localhost:5173` (local admin). No redirect URI is needed (the button gives the token
+   `http://localhost:5180` (local admin). No redirect URI is needed (the button gives the token
    to the page).
 3. Copy the **Client ID** (it ends in `.apps.googleusercontent.com`; it is not a secret) and
    give it to the lead. It goes into `ADMIN_GOOGLE_CLIENT_ID` on `psygym-api` and into the admin
@@ -106,8 +106,8 @@ login (`admin.md` §5). `admins.last_login_at` is updated too. No IP, no user ag
 | `admins` | `id` (uuid), `email` (lower-case, unique), `google_sub` (set on first sign-in), `role` (`admin`/`editor`/`viewer`), `org` (`novawerk`/`lingjing`), `enabled`, `created_at`, `last_login_at` | Our own members' data. |
 | `admin_sessions` | `token_hash` (sha256, pk), `admin_id` (fk, cascade), `created_at`, `expires_at` | Expired rows are deleted on the next login. |
 | `admin_logins` | `id`, `admin_id` (fk, cascade), `at` | 90 days. |
-| `content_versions` | `kind` (`case`/`rubric`), `item_id`, `version`, `source`, `action` (`import`/`publish`/`rollback`), `from_version` (rollback only), `published_by` (fk, set null), `published_at` | pk (`kind`, `item_id`, `version`). Only published versions; never updated, never deleted. This table *is* the publish log. |
-| `content_drafts` | `kind`, `item_id` (pk together), `source`, `revision`, `base_version`, `updated_by`, `updated_at` | At most one draft per item, shared by all editors. |
+| `content_versions` | `kind` (`case`/`rubric`), `item_id`, `version`, `source`, `action` (`import`/`publish`/`rollback`), `from_version` (rollback only), `note` ("what changed", ≤ 200 characters, optional), `published_by` (fk, set null), `published_at` | pk (`kind`, `item_id`, `version`). Only published versions; never updated, never deleted. This table *is* the publish log. |
+| `content_drafts` | `kind`, `item_id` (pk together), `source`, `revision`, `base_version`, `updated_by`, `updated_at` | At most one draft per item, shared by all editors. `revision` comes from one sequence (`content_draft_revisions`): a number is never used twice, so a page holding an old draft's revision can't save over or publish a newer draft (review of #108). |
 
 The migration only adds tables; it changes nothing that exists. Order: migrate first, then
 deploy (the new code expects the tables only when `ADMIN_MODE` or `CONTENT_SOURCE=db` is on).

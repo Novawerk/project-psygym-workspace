@@ -2,13 +2,21 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { SKILL_ALIASES, contentDir, loadCases, loadPrompts, parseCase, rubricForPrompt, rubricSkillIds, stripComments } from "../src/content.js";
+import { SKILL_ALIASES, casesWithoutRubric, contentDir, loadCases, loadPrompts, parseCase, rubricForPrompt, rubricProblems, rubricSkillIds, stripComments } from "../src/content.js";
 
 const rawRubric = fs.readFileSync(path.join(contentDir(), "rubrics/cbt.md"), "utf8");
 const rubric = loadPrompts().rubrics.cbt;
 
 describe("the CBT rubric", () => {
   const ids = rubricSkillIds(rawRubric);
+
+  it("passes the shared rubric checks (the same ones the admin's publish runs)", () => {
+    expect(rubricProblems("cbt", rawRubric)).toEqual([]);
+  });
+
+  it("every bundled case has a rubric for its school", () => {
+    expect(casesWithoutRubric(loadCases(), loadPrompts().rubrics)).toEqual([]);
+  });
 
   it("gives every point a skill id", () => {
     const points = rawRubric.match(/^### \d+\./gm) ?? [];
@@ -80,5 +88,23 @@ describe("live supervision has no harm category", () => {
   it("the full report still judges harmful remarks", () => {
     expect(supervisor).toContain("伤害性的话");
     expect(supervisor).toContain("指责受害者");
+  });
+});
+
+describe("rubricProblems", () => {
+  const ok = "---\nid: cbt\nschool: cbt\n---\n## 要看的点\n\n### 1. 风险\n- 技能 id：risk_screening\n\n### 2. 议程\n- 技能 id：agenda_setting\n";
+  it("accepts a good rubric", () => expect(rubricProblems("cbt", ok)).toEqual([]));
+  it("finds each problem", () => {
+    const paths = (raw: string, id = "cbt") => rubricProblems(id, raw).map((p) => p.path);
+    expect(paths(ok, "dbt")).toContain("id");
+    expect(paths(ok.replace("id: cbt", "id: x"))).toEqual(["frontmatter.id"]);
+    expect(paths(ok.replace("agenda_setting", "risk_screening"))).toEqual(["body"]);
+    expect(paths(ok.replace("risk_screening", "rapport"))).toEqual(["body"]);
+    expect(paths(ok.replace("- 技能 id：agenda_setting\n", ""))).toEqual(["body"]);
+    expect(paths(ok + "<!-- open")).toEqual(["body"]);
+    expect(paths("no frontmatter")).toEqual(["source"]);
+  });
+  it("counts an alias as the id it stands for", () => {
+    expect(rubricProblems("cbt", ok.replace("risk_screening", "initial_assessment_and_safety"))).toEqual([]);
   });
 });
