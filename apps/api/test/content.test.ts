@@ -67,3 +67,18 @@ describe("case briefs", () => {
     expect(() => parseCase("x-1.md", raw, () => {})).toThrow("x-1.md: unclosed HTML comment");
   });
 });
+
+describe("harm: the AI client and live supervision use one standard", () => {
+  const { client, supervisorLive } = loadPrompts();
+  it.each(["贬低", "嘲讽", "不耐烦", "矫情", "更惨的人", "否定", "来咨询的理由", "性骚扰", "歧视", "拒绝细说", "指责受害者"])(
+    "both name %s",
+    (term) => {
+      expect(client).toContain(term);
+      expect(supervisorLive).toContain(term);
+    },
+  );
+  it.each(["复述", "正常化", "说教", "温和地问起创伤经历", "主动收尾"])("both list %s as not harm", (term) => {
+    expect(client).toContain(term);
+    expect(supervisorLive).toContain(term);
+  });
+});
