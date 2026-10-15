@@ -290,6 +290,11 @@ The app shows a friendly message for each code, in the current language.
 
 ## Changes
 
+- **admin phase 1 (this PR)** — no change for the app. The admin page has its own contract,
+  [`admin-api.md`](./admin-api.md) (ADR 0009). `GET /admin/stats` (Bearer) stays as it is. With
+  `CONTENT_SOURCE=db`, `/cases`, `/chat` and `/supervision` read the published version from the
+  database (cached 1 minute, the bundled `content/` as fallback); the shapes don't change.
+
 - **sign-in implementation (this PR)** — the Sign-in section is built, behind `AUTH_MODE` (off by
   default: no change). Backend first; the app follows in its own PR, as with #62 and #70. With
   `AUTH_MODE` off, `/auth/*` and `/me` are `404 not_found` even when `INVITE_CODES` is set.
