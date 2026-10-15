@@ -6,7 +6,8 @@ import { createApp, type Logger } from "../src/app.js";
 import { loadConfig } from "../src/config.js";
 import { loadCases, loadPrompts } from "../src/content.js";
 import { EndTagFilter } from "../src/end-tag.js";
-import { emptyUsage, type ModelProvider, type ModelRequest, type ModelResponse, type StreamHandlers } from "../src/llm/types.js";
+import { emptyUsage, type ModelProvider, type ModelRequest, type ModelResponse, type StreamHandlers, type ToolCall } from "../src/llm/types.js";
+import { FAREWELL } from "../src/session.js";
 
 /** Runs `deltas` through a filter, returns what went out. */
 function run(deltas: string[]) {
@@ -35,6 +36,7 @@ describe("EndTagFilter", () => {
     "<END_SESSION/>我想今天先到这里。",
     "我想今天先到这里。<end session>",
     "我想今天先到这里。</endsession>",
+    "<end-session>我想今天先到这里。</end-session>",
   ])("variant %s", (text) => {
     for (const deltas of splits(text)) expect(run(deltas)).toEqual({ out: "我想今天先到这里。", found: true });
   });
@@ -55,8 +57,8 @@ describe("EndTagFilter", () => {
   });
 });
 
-/** A provider that streams the given deltas and calls no tool. */
-function textOnly(deltas: string[]): ModelProvider {
+/** A provider that streams the given deltas and makes the given tool calls (none by default). */
+function textOnly(deltas: string[], toolCalls: ToolCall[] = []): ModelProvider {
   return {
     name: "mock",
     model: "tags",
@@ -64,8 +66,8 @@ function textOnly(deltas: string[]): ModelProvider {
     async stream(_req: ModelRequest, h: StreamHandlers): Promise<ModelResponse> {
       for (const d of deltas) h.onText?.(d);
       return {
-        message: { role: "assistant", text: deltas.join(""), toolCalls: [] },
-        stopReason: "end_turn",
+        message: { role: "assistant", text: deltas.join(""), toolCalls },
+        stopReason: toolCalls.length ? "tool_use" : "end_turn",
         usage: emptyUsage(),
       };
     },
@@ -100,6 +102,19 @@ describe("/chat with the end tag in the text", () => {
     expect(text).toBe("我想今天先到这里。");
     expect(frames.map((f) => f.type).slice(-2)).toEqual(["session_end", "turn_end"]);
     expect(lines.find((l) => l.msg === "turn")).toMatchObject({ sessionEnd: true, endTagInText: true });
+  });
+
+  it("a reply that is only tags gets the farewell line and session_end", async () => {
+    const { frames } = await framesFor("/chat", textOnly(["<end_session>", "\n\n</end_session>"]));
+    expect(frames.filter((f) => f.type === "text_delta").map((f) => f.text).join("")).toBe(FAREWELL.zh);
+    expect(frames.map((f) => f.type).slice(-2)).toEqual(["session_end", "turn_end"]);
+  });
+
+  it("a real tool call plus a tag in the text: one session_end", async () => {
+    const call: ToolCall = { id: "t1", name: "end_session", args: {} };
+    const { frames } = await framesFor("/chat", textOnly(["我想今天先到这里。</end_session>"], [call]));
+    expect(frames.filter((f) => f.type === "text_delta").map((f) => f.text).join("")).toBe("我想今天先到这里。");
+    expect(frames.filter((f) => f.type === "session_end")).toHaveLength(1);
   });
 
   it("no tag, no session_end", async () => {

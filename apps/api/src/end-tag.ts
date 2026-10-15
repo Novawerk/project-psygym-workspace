@@ -4,10 +4,10 @@
 // remembers that it saw one; the server then ends the session as if the tool had been called.
 //
 // Variants: half- and full-width angle brackets, a slash at either end, spaces inside, any case,
-// "end_session" / "end session" / "endsession". A tag can be split across deltas, so text that may
+// "end_session" / "end-session" / "end session" / "endsession". A tag can be split across deltas, so text that may
 // still turn into a tag is held back until it can't.
 
-const TAG = /[<＜]\s*\/?\s*end[\s_]?session\s*\/?\s*[>＞]/gi;
+const TAG = /[<＜]\s*\/?\s*end[\s_-]?session\s*\/?\s*[>＞]/gi;
 const OPEN = /[<＜]/g;
 /** Longer than any tag we strip ("＜ / end_session / ＞" with a few spaces). */
 const MAX_TAG = 32;
@@ -65,7 +65,7 @@ function couldBeTag(tail: string): boolean {
   const word = tail
     .slice(1)
     .replace(/[\s/]/g, "")
-    .replace(/_/g, "")
+    .replace(/[_-]/g, "")
     .toLowerCase();
   return "endsession".startsWith(word);
 }
