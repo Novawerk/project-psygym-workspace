@@ -13,6 +13,7 @@
 | [skill-tags.md](./skill-tags.md) | 督导报告技能标签的格式草案（等督导标准）。 |
 | [copy.md](./copy.md) | 文案规范和中英文对照表。 |
 | [open-decisions.md](./open-decisions.md) | 待决策项：会改合同、数据存储或验收的事，写清利弊。 |
+| [content-review-2026-10-15.md](./content-review-2026-10-15.md) | 聆镜初稿（病例和督导标准）的审阅意见和回信草稿。 |
 
 **设计稿：** <https://claude.ai/artifact/UkqiioLoNiSB618ks8dPvg>（可点击原型，17 屏）。
 
