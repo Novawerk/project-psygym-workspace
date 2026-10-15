@@ -2,7 +2,7 @@
 
 /**
  * Where the admin API lives. In production a Vercel rewrite sends /api/* on the admin domain to
- * psygym-api (same-origin cookie); locally the Vite dev server proxies /api to apps/api.
+ * psygym-api (same-origin cookie); locally the Vite dev server proxies /api to apps/api on port 8790.
  */
 export const API_BASE = "/api"
 

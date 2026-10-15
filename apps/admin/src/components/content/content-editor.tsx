@@ -152,8 +152,11 @@ function Editor({ kind, id, data }: { kind: Kind; id: string; data: ContentDetai
     },
     onError: async (e) => {
       setDiscarding(false)
-      if (isConflict(e)) await refresh()
-      toast.error(isConflict(e) ? "草稿刚被别人改过，已刷新。" : COPY.error)
+      if (!isConflict(e)) return void toast.error(COPY.error)
+      // Never discard after the refresh on its own: the colleague's save shows first.
+      const fresh = await fetchFresh().catch(() => null)
+      const who = fresh?.draft?.updatedBy?.email ?? "别人"
+      toast.error(`草稿刚被 ${who} 改过，已刷新。还要放弃的话，再点一次「放弃草稿」。`, { duration: 10_000 })
     },
   })
 
@@ -286,7 +289,7 @@ function Editor({ kind, id, data }: { kind: Kind; id: string; data: ContentDetai
           </AlertDialogHeader>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="publish-note">改了什么（可选，只写进发布记录）</Label>
-            <Textarea id="publish-note" rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
+            <Textarea id="publish-note" rows={2} maxLength={200} value={note} onChange={(e) => setNote(e.target.value)} />
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel>取消</AlertDialogCancel>

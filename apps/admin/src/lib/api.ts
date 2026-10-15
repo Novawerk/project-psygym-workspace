@@ -42,6 +42,6 @@ export async function toError(res: Response) {
     body?.error?.code ?? "unknown",
     body?.error?.message ?? res.statusText,
     body?.errors,
-    body?.error?.reason ?? body?.reason,
+    body?.reason ?? body?.error?.reason,
   )
 }

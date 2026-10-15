@@ -29,7 +29,8 @@ pnpm --filter admin dev     # http://localhost:5180
 
 默认是示例数据，不用登录。侧栏底部能切换角色（管理员 / 编辑 / 只读），看各自能看到什么。
 连本地接口：复制 `.env.example` 成 `.env.local`，设 `VITE_USE_SAMPLE_DATA=false`。`/api/*` 由 Vite
-代理到 `localhost:8787`；apps/api 要开 `ADMIN_MODE=on`，`ADMIN_ORIGIN=http://localhost:5180`。
+代理到 `localhost:8790`：apps/api 用 `PORT=8790 pnpm --filter api dev` 起，`apps/api/.env` 里设
+`ADMIN_MODE=on`、`ADMIN_ORIGIN=http://localhost:5180`。不用 8787，那是本机 Novawerk 主仓库的 dev server。
 
 ## 部署
 

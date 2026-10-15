@@ -60,8 +60,8 @@ export type VersionInfo = {
   fromVersion: number | null
   publishedAt: string
   publishedBy: Publisher | null
-  /** 「改了什么」. Not in the contract yet; asked the backend to add it. */
-  note?: string | null
+  /** 「改了什么」, written on publish or rollback. */
+  note: string | null
 }
 
 export type Draft = ContentDoc & {

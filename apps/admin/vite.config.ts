@@ -16,12 +16,13 @@ export default defineConfig({
     alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
   },
   server: {
-    // 8787 is the local API; the admin panel runs beside it and proxies /api to it, the way the
-    // Vercel rewrite does in production (vercel.json), so the session cookie is same-origin.
+    // Proxies /api to apps/api on 8790 (`PORT=8790 pnpm --filter api dev`), the way the Vercel
+    // rewrite does in production (vercel.json), so the session cookie is same-origin. Not 8787:
+    // that port belongs to the Novawerk workspace's dev server on this machine.
     port: 5180,
     strictPort: true,
     proxy: {
-      "/api": { target: "http://localhost:8787", rewrite: (path) => path.replace(/^\/api/, "") },
+      "/api": { target: "http://localhost:8790", rewrite: (path) => path.replace(/^\/api/, "") },
     },
   },
   preview: { port: 4180 },

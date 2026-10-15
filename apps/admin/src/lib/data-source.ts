@@ -26,9 +26,9 @@ export type DraftInput = {
   frontmatter: Record<string, unknown>
   body: string
 }
-/** `note` (「改了什么」) is not in the contract yet; asked the backend to add it. */
+/** `note` is 「改了什么」: optional, at most 200 characters, only in the publish log (not Slack). */
 export type PublishInput = { draftRevision: number; basePublishedVersion: number | null; note?: string }
-export type RollbackInput = { toVersion: number; basePublishedVersion: number }
+export type RollbackInput = { toVersion: number; basePublishedVersion: number; note?: string }
 export type PreviewChatInput = { locale: "zh" | "en"; messages: ChatMessage[]; source?: string }
 
 export interface AdminDataSource {
