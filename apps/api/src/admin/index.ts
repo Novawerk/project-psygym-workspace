@@ -6,8 +6,9 @@
 // Logs carry admin ids, never emails, tokens or cookies.
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 
-import { and, asc, count, desc, eq, gt, gte, lt, max, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, gte, isNull, lt, max, sql } from "drizzle-orm";
 import { Hono, type Context } from "hono";
+import { createMiddleware } from "hono/factory";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { z } from "zod";
 
@@ -24,6 +25,7 @@ import { LocaleSchema, MAX_MESSAGES, MessageSchema } from "../schema.js";
 import { rateCounters } from "../auth/schema.js";
 import { googleVerifier, type GoogleVerifier } from "./google.js";
 import { adminLogins, adminSessions, admins, contentDrafts, contentVersions } from "./schema.js";
+import { readBody } from "../read-body.js";
 import type { AdminHooks } from "./types.js";
 
 /** __Host-: Secure, Path=/, no Domain; browsers take it on http://localhost too. */
@@ -84,6 +86,8 @@ const ROLE_ZH: Record<Role, string> = { admin: "管理员", editor: "编辑", vi
 
 const Kind = z.enum(["case", "rubric"]);
 const Revision = z.number().int().min(1);
+/** A new draft revision: never used before for any draft (see draftRevisions). */
+const nextRevision = sql<number>`nextval('content_draft_revisions')`;
 const Frontmatter = z.record(z.string(), z.unknown());
 const Source = z.string().min(1);
 /** {source} or {frontmatter, body}. */
@@ -92,8 +96,16 @@ const SignInBody = z.object({ idToken: z.string().min(1).max(8192) });
 const DraftBody = z.intersection(z.object({ draftRevision: Revision.nullable(), rebase: z.literal(true).optional() }), Doc);
 const CreateBody = z.intersection(z.object({ kind: Kind, id: z.string() }), Doc);
 const DiscardBody = z.object({ draftRevision: Revision });
-const PublishBody = z.object({ draftRevision: Revision, basePublishedVersion: z.number().int().min(1).nullable() });
-const RollbackBody = z.object({ toVersion: z.number().int().min(1), basePublishedVersion: z.number().int().min(1) });
+/** Optional "what changed": trimmed, at most 200 characters, empty means none. */
+export const NOTE_MAX = 200;
+const Note = z
+  .string()
+  .optional()
+  .nullable()
+  .transform((s) => s?.trim() || null)
+  .refine((s) => s === null || [...s].length <= NOTE_MAX, `note is longer than ${NOTE_MAX} characters`);
+const PublishBody = z.object({ draftRevision: Revision, basePublishedVersion: z.number().int().min(1).nullable(), note: Note });
+const RollbackBody = z.object({ toVersion: z.number().int().min(1), basePublishedVersion: z.number().int().min(1), note: Note });
 const PreviewBody = z
   .object({
     locale: LocaleSchema,
@@ -139,11 +151,16 @@ export function createAdmin(deps: AdminDeps): Hono {
     return next();
   });
 
-  /** The body, validated; or the 400 to send. */
+  /** The body, read with the app's 1 MB cap and validated; or the 400 to send. */
   async function body<T>(c: Context, schema: z.ZodType<T>): Promise<T | Response> {
+    const read = await readBody(c.req.raw);
+    if (read.tooLarge) {
+      if (!read.drained) c.header("Connection", "close");
+      return fail(c, 400, "invalid_request", {}, "The request body is too large.");
+    }
     let raw: unknown;
     try {
-      raw = await c.req.json();
+      raw = JSON.parse(read.text);
     } catch {
       raw = undefined;
     }
@@ -189,11 +206,16 @@ export function createAdmin(deps: AdminDeps): Hono {
       await failedSignIn(failures.windowStart);
       return fail(c, 401, "unauthorized", {}, "The Google sign-in didn't work. Please try again.");
     }
-    const [admin] = await db.select().from(admins).where(eq(admins.email, google.email)).limit(1);
-    // The Google account that first signed in with this address, and no other.
-    if (!admin || !admin.enabled || (admin.googleSub !== null && admin.googleSub !== google.sub)) {
+    let [admin] = await db.select().from(admins).where(eq(admins.email, google.email)).limit(1);
+    // First sign-in: bind this Google account, unless another one got there first.
+    if (admin && admin.enabled && admin.googleSub === null) {
+      await db.update(admins).set({ googleSub: google.sub }).where(and(eq(admins.id, admin.id), isNull(admins.googleSub)));
+      [admin] = await db.select().from(admins).where(eq(admins.id, admin.id)).limit(1);
+    }
+    // The Google account bound to this address, and no other.
+    if (!admin || !admin.enabled || admin.googleSub !== google.sub) {
       await failedSignIn(failures.windowStart);
-      logger.info({ msg: "admin sign-in refused", ...(admin ? { adminId: admin.id, subMismatch: admin.googleSub !== null && admin.googleSub !== google.sub } : {}) });
+      logger.info({ msg: "admin sign-in refused", ...(admin ? { adminId: admin.id, subMismatch: admin.googleSub !== google.sub } : {}) });
       return fail(c, 403, "not_admin");
     }
     const token = randomBytes(32).toString("base64url");
@@ -203,7 +225,7 @@ export function createAdmin(deps: AdminDeps): Hono {
     if (old) await db.delete(adminSessions).where(eq(adminSessions.tokenHash, sha256(old)));
     await db.insert(adminSessions).values({ tokenHash: sha256(token), adminId: admin.id, createdAt: at, expiresAt: new Date(now() + SESSION_MS) });
     await db.insert(adminLogins).values({ adminId: admin.id, at });
-    await db.update(admins).set({ lastLoginAt: at, googleSub: google.sub }).where(eq(admins.id, admin.id));
+    await db.update(admins).set({ lastLoginAt: at }).where(eq(admins.id, admin.id));
     // Housekeeping: expired sessions, logins past 90 days.
     await db.delete(adminSessions).where(lt(adminSessions.expiresAt, at));
     await db.delete(adminLogins).where(lt(adminLogins.at, new Date(now() - LOGIN_LOG_MS)));
@@ -219,8 +241,9 @@ export function createAdmin(deps: AdminDeps): Hono {
     return c.body(null, 204);
   });
 
-  // Everything else needs a session of an enabled admin, looked up on every request.
-  app.use("/admin/*", async (c, next) => {
+  // Everything else needs a session of an enabled admin, looked up on every request. Only on our
+  // own paths: an unknown /admin path is a 404, signed in or not.
+  const signedIn = createMiddleware<Env>(async (c, next) => {
     const token = getCookie(c, SESSION_COOKIE);
     if (!token) return fail(c, 401, "unauthorized");
     const [row] = await db
@@ -233,6 +256,7 @@ export function createAdmin(deps: AdminDeps): Hono {
     c.set("admin", row.admin);
     return next();
   });
+  for (const path of ["/admin/me", "/admin/dashboard", "/admin/content", "/admin/content/*", "/admin/publish-log"]) app.use(path, signedIn);
 
   /** editor and admin write; viewer only reads. */
   const canWrite = (c: Context<Env>) => c.get("admin").role === "admin" || c.get("admin").role === "editor";
@@ -270,6 +294,7 @@ export function createAdmin(deps: AdminDeps): Hono {
     version: v.version,
     action: v.action,
     fromVersion: v.fromVersion,
+    note: v.note,
     publishedAt: v.publishedAt.toISOString(),
     publishedBy: who(v.publishedBy),
   });
@@ -378,7 +403,7 @@ export function createAdmin(deps: AdminDeps): Hono {
     }
     if ((await latestVersion("case", b.id)) || (await draftOf("case", b.id))) return fail(c, 409, "conflict", {}, "A case with this id exists.");
     try {
-      await db.insert(contentDrafts).values({ kind: "case", itemId: b.id, source, revision: 1, baseVersion: null, updatedBy: c.get("admin").id, updatedAt: new Date(now()) });
+      await db.insert(contentDrafts).values({ kind: "case", itemId: b.id, source, revision: nextRevision, baseVersion: null, updatedBy: c.get("admin").id, updatedAt: new Date(now()) });
     } catch (err) {
       if (isConflict(err)) return fail(c, 409, "conflict", {}, "A case with this id exists.");
       throw err;
@@ -410,7 +435,7 @@ export function createAdmin(deps: AdminDeps): Hono {
       const big = tooBig(c, source);
       if (big) return big;
       try {
-        await db.insert(contentDrafts).values({ kind: p.kind, itemId: p.id, source, revision: 1, baseVersion: published!.version, updatedBy: by, updatedAt: at });
+        await db.insert(contentDrafts).values({ kind: p.kind, itemId: p.id, source, revision: nextRevision, baseVersion: published!.version, updatedBy: by, updatedAt: at });
       } catch (err) {
         if (isConflict(err)) return fail(c, 409, "conflict");
         throw err;
@@ -424,7 +449,7 @@ export function createAdmin(deps: AdminDeps): Hono {
       const baseVersion = b.rebase ? (published?.version ?? null) : draft.baseVersion;
       const updated = await db
         .update(contentDrafts)
-        .set({ source, revision: draft.revision + 1, baseVersion, updatedBy: by, updatedAt: at })
+        .set({ source, revision: nextRevision, baseVersion, updatedBy: by, updatedAt: at })
         .where(and(eq(contentDrafts.kind, p.kind), eq(contentDrafts.itemId, p.id), eq(contentDrafts.revision, b.draftRevision)))
         .returning({ revision: contentDrafts.revision });
       if (updated.length === 0) return fail(c, 409, "conflict");
@@ -512,7 +537,7 @@ export function createAdmin(deps: AdminDeps): Hono {
     if (errors.length) return fail(c, 422, "invalid_content", { errors, warnings: checked.warnings });
     const admin = c.get("admin");
     const version = (published?.version ?? 0) + 1;
-    const row = { kind: p.kind, itemId: p.id, version, source: draft.source, action: "publish", fromVersion: null, publishedBy: admin.id, publishedAt: new Date(now()) };
+    const row = { kind: p.kind, itemId: p.id, version, source: draft.source, action: "publish", fromVersion: null, note: b.note, publishedBy: admin.id, publishedAt: new Date(now()) };
     const conflict = await insertVersion(c, row, draft.revision);
     if (conflict) return conflict;
     logger.info({ msg: "content published", kind: p.kind, id: p.id, version, adminId: admin.id });
@@ -542,7 +567,7 @@ export function createAdmin(deps: AdminDeps): Hono {
     if (errors.length) return fail(c, 422, "invalid_content", { errors, warnings: checked.warnings });
     const admin = c.get("admin");
     const version = published.version + 1;
-    const row = { kind: p.kind, itemId: p.id, version, source: target.source, action: "rollback", fromVersion: b.toVersion, publishedBy: admin.id, publishedAt: new Date(now()) };
+    const row = { kind: p.kind, itemId: p.id, version, source: target.source, action: "rollback", fromVersion: b.toVersion, note: b.note, publishedBy: admin.id, publishedAt: new Date(now()) };
     const conflict = await insertVersion(c, row);
     if (conflict) return conflict;
     logger.info({ msg: "content rolled back", kind: p.kind, id: p.id, version, fromVersion: b.toVersion, adminId: admin.id });
@@ -604,11 +629,6 @@ export function createAdmin(deps: AdminDeps): Hono {
     if (!CASE_ID.test(id)) return fail(c, 404, "not_found");
     if (!canWrite(c)) return fail(c, 403, "forbidden");
     const admin = c.get("admin");
-    const retry = previewLimiter.take(`admin:${admin.id}`);
-    if (retry) {
-      c.header("Retry-After", String(retry));
-      return fail(c, 429, "rate_limited");
-    }
     const b = await body(c, PreviewBody);
     if (b instanceof Response) return b;
     let source = b.source;
@@ -618,6 +638,12 @@ export function createAdmin(deps: AdminDeps): Hono {
     }
     const checked = checkCase(id, source);
     if (!checked.value) return fail(c, 422, "invalid_content", { errors: checked.errors, warnings: checked.warnings });
+    // Only a turn that will reach the model counts against the limit.
+    const retry = previewLimiter.take(`admin:${admin.id}`);
+    if (retry) {
+      c.header("Retry-After", String(retry));
+      return fail(c, 429, "rate_limited");
+    }
     logger.info({ msg: "preview chat", id, adminId: admin.id, messages: b.messages.length });
     return deps.previewTurn(c, checked.value, b.locale, b.messages);
   });

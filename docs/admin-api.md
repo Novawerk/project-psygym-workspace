@@ -18,15 +18,17 @@ reasons: [`decisions/0009-admin-phase1.md`](./decisions/0009-admin-phase1.md).
 
 ### Errors
 
-`{"error": {"code": "...", "message": "..."}}`, plus `errors` / `warnings` for content checks.
+`{"error": {"code": "...", "message": "..."}}`, plus, next to `error` (top level): `errors` /
+`warnings` for content checks, `reason` for some `409`s. Example:
+`{"error": {"code": "conflict", "message": "..."}, "reason": "draft_outdated"}`.
 
 | Status | `code` | When |
 |---|---|---|
-| 400 | `invalid_request` | bad body or query |
+| 400 | `invalid_request` | bad body or query; a body over 1 MB |
 | 401 | `unauthorized` | no session, expired, or the admin was disabled |
 | 403 | `not_admin` | sign-in: the Google account isn't an enabled admin |
 | 403 | `forbidden` | the role can't do this; or the Origin / Content-Type check failed |
-| 404 | `not_found` | unknown route, item, version; or `ADMIN_MODE` off |
+| 404 | `not_found` | unknown route (signed in or not), item, version; or `ADMIN_MODE` off |
 | 409 | `conflict` | the draft or the published version changed since the page loaded it; `reason: "draft_outdated"` when the draft started from an older version than the current one |
 | 422 | `invalid_content` | publish (or create) refused by the content checks; see `errors` |
 | 429 | `rate_limited` | with `Retry-After` |
@@ -57,6 +59,7 @@ type VersionInfo = {
   version: number;
   action: "import" | "publish" | "rollback";
   fromVersion: number | null;        // rollback only
+  note: string | null;               // "what changed", from the publisher; null for the import
   publishedAt: string;
   publishedBy: { email: string; role: Role } | null;   // null for the import or a deleted admin
 };
@@ -150,7 +153,8 @@ Without `kind`: both. Sorted by kind, then id.
   kind: Kind; id: string;
   published: (ContentDoc & VersionInfo) | null;
   draft: (ContentDoc & {
-    revision: number;                // send it back on save, discard and publish
+    revision: number;                // send it back on save, discard and publish; never reused
+                                     // (a new draft never gets an old draft's number)
     baseVersion: number | null;      // the published version it started from
     updatedAt: string;
     updatedBy: { email: string; role: Role } | null;
@@ -187,20 +191,22 @@ Body `{ draftRevision }`; `409` if it changed. Discards the draft. The published
 
 ### `POST /admin/content/:kind/:id/publish` → `200 VersionInfo` (editor)
 
-Body `{ draftRevision: number, basePublishedVersion: number | null }`.
+Body `{ draftRevision: number, basePublishedVersion: number | null, note?: string }`.
 
 - `409` if the draft's revision changed, or the published version isn't
   `basePublishedVersion` any more (someone published or rolled back in between).
 - `409` with `reason: "draft_outdated"` if the draft's `baseVersion` isn't the current version:
   it started before someone else's publish and would overwrite it. Save it again with
   `rebase: true` after looking at the new version.
+- `note`: optional "what changed", kept in the version (versions, publish log). Trimmed; empty
+  is none; at most 200 characters, else `400`. Not sent to Slack.
 - `422 invalid_content` with `errors` if the checks fail. Warnings don't block.
 - Success: a new version (`current + 1`, `action: "publish"`), the draft is gone, one Slack
   line. The app uses it within about a minute.
 
 ### `POST /admin/content/:kind/:id/rollback` → `200 VersionInfo` (editor)
 
-Body `{ toVersion: number, basePublishedVersion: number }`. Publishes a copy of `toVersion` as
+Body `{ toVersion: number, basePublishedVersion: number, note?: string }` (`note` as in publish). Publishes a copy of `toVersion` as
 `current + 1` (`action: "rollback"`, `fromVersion: toVersion`). `409` if the current version
 isn't `basePublishedVersion`; `400` if `toVersion` is the current one or doesn't exist; `422
 invalid_content` if that version no longer passes the checks. Publishes directly, no review.
@@ -249,14 +255,16 @@ phase 1.
 |---|---|
 | `ADMIN_MODE` | `on` turns the admin routes on. Default off. On but a variable below missing: stays off (`404`), one config error in the log. |
 | `ADMIN_GOOGLE_CLIENT_ID` | the OAuth client id (not a secret) |
-| `ADMIN_ORIGIN` | `https://admin.psygym.novawerk.io` (local: `http://localhost:5173`) |
+| `ADMIN_ORIGIN` | `https://admin.psygym.novawerk.io` (local: `http://localhost:5180`) |
 | `CONTENT_SOURCE` | `db`: the app reads the published versions. Default `files`. |
 | `CONTENT_SLACK_WEBHOOK_URL` | Slack incoming webhook for `#project-psygym` (secret). Unset: log only. |
 | `DATABASE_URL` | as today |
 
 ## Changes
 
-- **implementation (this PR)** — built as written, behind `ADMIN_MODE` (off by default).
+- **implementation (this PR)** — built as written, behind `ADMIN_MODE` (off by default). Agreed
+  with the admin page (#106): optional `note` on publish and rollback, `VersionInfo.note`; `reason`
+  sits next to `error`; the local admin runs on port 5180.
 
 - **#105** — first version: sign-in, dashboard, content, preview, commands. Contract only;
   the implementation follows.

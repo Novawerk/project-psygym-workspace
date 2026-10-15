@@ -42,6 +42,12 @@ describe("dashboardView", () => {
     expect(v.duration.total).toEqual({ sessions: 15, avgSec: 400 });
   });
 
+  it("fewer than 5 sessions with a duration are never shown, whatever the tables say", () => {
+    const v = dashboardView(q, [row("2026-10-12", "report_generated", 9, { dim: "6-15", durationCount: 3, durationSumSec: 900 })], []);
+    expect(v.duration.points[0]!.value).toEqual({ sessions: "<5", avgSec: null });
+    expect(v.duration.total).toEqual({ sessions: "<5", avgSec: null });
+  });
+
   it("weeks start on Monday; every period is listed, zeros included", () => {
     expect(mondayOf("2026-10-18")).toBe("2026-10-12");
     expect(periodsOf({ from: "2026-10-10", to: "2026-10-20", granularity: "week" })).toEqual(["2026-10-05", "2026-10-12", "2026-10-19"]);

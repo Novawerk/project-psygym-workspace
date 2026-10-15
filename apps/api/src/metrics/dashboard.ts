@@ -150,7 +150,7 @@ export function dashboardView(q: DashboardQuery, rows: CountRow[], cases: { id: 
       value:
         durSessions[i] === 0
           ? { sessions: 0, avgSec: null }
-          : durHide[i]
+          : durHide[i] || durSessions[i]! < MIN_SHOWN
             ? { sessions: "<5" as const, avgSec: null }
             : { sessions: durSessions[i]!, avgSec: Math.round(durSum[i]! / durSessions[i]!) },
     })),

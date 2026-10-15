@@ -1,5 +1,5 @@
 {
-  "id": "9854ba37-b427-40ea-be5a-3f98eac5b296",
+  "id": "15a1aefa-2c36-4ee6-afdd-aa080cd8278c",
   "prevId": "46e469e9-17ed-4d7c-ba69-b44e59bfd009",
   "version": "7",
   "dialect": "postgresql",
@@ -665,6 +665,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "published_by": {
           "name": "published_by",
           "type": "text",
@@ -729,7 +735,18 @@
   },
   "enums": {},
   "schemas": {},
-  "sequences": {},
+  "sequences": {
+    "public.content_draft_revisions": {
+      "name": "content_draft_revisions",
+      "schema": "public",
+      "increment": "1",
+      "startWith": "1",
+      "minValue": "1",
+      "maxValue": "9223372036854775807",
+      "cache": "1",
+      "cycle": false
+    }
+  },
   "roles": {},
   "policies": {},
   "views": {},

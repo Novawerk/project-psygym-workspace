@@ -110,7 +110,9 @@ async function setup(opts: { env?: Record<string, string>; imported?: boolean } 
       headers: { cookie, ...(method === "GET" ? {} : { origin: ORIGIN, "content-type": "application/json" }) },
       ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
     });
-  return { app, db, lines, slack, settle, signIn, call, content, mock, tick: (ms: number) => (now += ms) };
+  /** The current draft's revision of an item (the page sends it back). */
+  const revisionOf = async (cookie: string, kind: string, id: string): Promise<number> => (await (await call(cookie, "GET", `/admin/content/${kind}/${id}`)).json()).draft.revision;
+  return { app, db, lines, slack, settle, signIn, call, revisionOf, content, mock, tick: (ms: number) => (now += ms) };
 }
 
 describe("admin off", () => {
@@ -205,6 +207,21 @@ describe("sign-in", () => {
     expect((await t.signIn("ed@example.com")).res.status).toBe(200);
   });
 
+  it("an unknown /admin path is a 404, signed in or not; /admin/accounts/delete is as before", async () => {
+    const t = await setup();
+    expect((await t.app.request("/admin/nope")).status).toBe(404);
+    const { cookie } = await t.signIn("ed@example.com");
+    expect((await t.call(cookie, "GET", "/admin/nope")).status).toBe(404);
+    // Sign-in (AUTH_MODE) is off here: no such route, as before the admin.
+    expect((await t.call(cookie, "POST", "/admin/accounts/delete", { email: "x@example.com" })).status).toBe(404);
+  });
+
+  it("an oversized body is a 400 before anything else, even on sign-in", async () => {
+    const t = await setup();
+    const res = await t.app.request("/admin/auth/google", { method: "POST", headers: { origin: ORIGIN, "content-type": "application/json" }, body: JSON.stringify({ idToken: "x".repeat(2 * 1024 * 1024) }) });
+    expect(res.status).toBe(400);
+  });
+
   it("without a session: 401", async () => {
     const t = await setup();
     expect((await t.app.request("/admin/me")).status).toBe(401);
@@ -242,14 +259,20 @@ describe("content", () => {
     const saved = await t.call(cookie, "PUT", `/admin/content/case/${PLACEHOLDER}/draft`, { draftRevision: null, frontmatter: fm, body: item.published.body });
     expect(saved.status).toBe(200);
     const draft = (await saved.json()).draft;
-    expect(draft).toMatchObject({ revision: 1, baseVersion: 1, errors: [] });
+    expect(draft).toMatchObject({ baseVersion: 1, errors: [] });
+    const rev = draft.revision as number;
     // The YAML comment in that frontmatter survives the edit.
     expect(draft.source).toContain("# 以下公开字段也是占位");
     expect(draft.source).toContain("zh: 新标题");
 
-    const pub = await t.call(cookie, "POST", `/admin/content/case/${PLACEHOLDER}/publish`, { draftRevision: 1, basePublishedVersion: 1 });
+    const long = await t.call(cookie, "POST", `/admin/content/case/${PLACEHOLDER}/publish`, { draftRevision: rev, basePublishedVersion: 1, note: "长".repeat(201) });
+    expect(long.status).toBe(400);
+    t.tick(1000);
+    const pub = await t.call(cookie, "POST", `/admin/content/case/${PLACEHOLDER}/publish`, { draftRevision: rev, basePublishedVersion: 1, note: "  改了标题  " });
     expect(pub.status).toBe(200);
-    expect(await pub.json()).toMatchObject({ version: 2, action: "publish", publishedBy: { email: "ed@example.com", role: "editor" } });
+    expect(await pub.json()).toMatchObject({ version: 2, action: "publish", note: "改了标题", publishedBy: { email: "ed@example.com", role: "editor" } });
+    const log = await (await t.call(cookie, "GET", "/admin/publish-log?limit=1")).json();
+    expect(log.entries[0]).toMatchObject({ id: PLACEHOLDER, version: 2, note: "改了标题" });
     await t.settle();
     expect(t.slack).toEqual([`病例 ${PLACEHOLDER} 发布了 v2（编辑）`]);
 
@@ -277,11 +300,12 @@ describe("content", () => {
     const bad = item.published.source.replace(/^school: cbt$/m, "school: dbt");
     const saved = await (await t.call(cookie, "PUT", `/admin/content/case/${CASE}/draft`, { draftRevision: null, source: bad })).json();
     expect(saved.draft.errors.map((e: { path: string }) => e.path)).toEqual(["frontmatter.school"]);
-    const res = await t.call(cookie, "POST", `/admin/content/case/${CASE}/publish`, { draftRevision: 1, basePublishedVersion: 1 });
+    const rev = saved.draft.revision as number;
+    const res = await t.call(cookie, "POST", `/admin/content/case/${CASE}/publish`, { draftRevision: rev, basePublishedVersion: 1 });
     expect(res.status).toBe(422);
     expect((await res.json()).errors[0].path).toBe("frontmatter.school");
-    expect((await t.call(cookie, "PUT", `/admin/content/case/${CASE}/draft`, { draftRevision: 7, source: bad })).status).toBe(409);
-    expect((await t.call(cookie, "POST", `/admin/content/case/${CASE}/publish`, { draftRevision: 1, basePublishedVersion: 2 })).status).toBe(409);
+    expect((await t.call(cookie, "PUT", `/admin/content/case/${CASE}/draft`, { draftRevision: rev + 100, source: bad })).status).toBe(409);
+    expect((await t.call(cookie, "POST", `/admin/content/case/${CASE}/publish`, { draftRevision: rev, basePublishedVersion: 2 })).status).toBe(409);
   });
 
   it("an outdated draft can't overwrite a newer version until rebased", async () => {
@@ -291,21 +315,45 @@ describe("content", () => {
     const src = item.published.source as string;
     // v2, then a draft from v2, then a rollback to v1 (v3): the draft is outdated.
     await t.call(cookie, "PUT", `/admin/content/case/${PLACEHOLDER}/draft`, { draftRevision: null, source: src.replace("毕业后的低落", "二版") });
-    await t.call(cookie, "POST", `/admin/content/case/${PLACEHOLDER}/publish`, { draftRevision: 1, basePublishedVersion: 1 });
+    await t.call(cookie, "POST", `/admin/content/case/${PLACEHOLDER}/publish`, { draftRevision: await t.revisionOf(cookie, "case", PLACEHOLDER), basePublishedVersion: 1 });
     await t.call(cookie, "PUT", `/admin/content/case/${PLACEHOLDER}/draft`, { draftRevision: null, source: src.replace("毕业后的低落", "三版") });
+    const rev = await t.revisionOf(cookie, "case", PLACEHOLDER);
     const rb = await t.call(cookie, "POST", `/admin/content/case/${PLACEHOLDER}/rollback`, { toVersion: 1, basePublishedVersion: 2 });
-    expect(await rb.json()).toMatchObject({ version: 3, action: "rollback", fromVersion: 1 });
-    const outdated = await t.call(cookie, "POST", `/admin/content/case/${PLACEHOLDER}/publish`, { draftRevision: 1, basePublishedVersion: 3 });
+    expect(await rb.json()).toMatchObject({ version: 3, action: "rollback", fromVersion: 1, note: null });
+    const outdated = await t.call(cookie, "POST", `/admin/content/case/${PLACEHOLDER}/publish`, { draftRevision: rev, basePublishedVersion: 3 });
     expect(outdated.status).toBe(409);
     expect((await outdated.json()).reason).toBe("draft_outdated");
-    const rebased = await (await t.call(cookie, "PUT", `/admin/content/case/${PLACEHOLDER}/draft`, { draftRevision: 1, rebase: true, source: src.replace("毕业后的低落", "三版") })).json();
-    expect(rebased.draft).toMatchObject({ revision: 2, baseVersion: 3 });
-    expect((await t.call(cookie, "POST", `/admin/content/case/${PLACEHOLDER}/publish`, { draftRevision: 2, basePublishedVersion: 3 })).status).toBe(200);
+    const rebased = await (await t.call(cookie, "PUT", `/admin/content/case/${PLACEHOLDER}/draft`, { draftRevision: rev, rebase: true, source: src.replace("毕业后的低落", "三版") })).json();
+    expect(rebased.draft.baseVersion).toBe(3);
+    expect(rebased.draft.revision).toBeGreaterThan(rev);
+    expect((await t.call(cookie, "POST", `/admin/content/case/${PLACEHOLDER}/publish`, { draftRevision: rebased.draft.revision, basePublishedVersion: 3 })).status).toBe(200);
     await t.settle();
     expect(t.slack[1]).toBe(`病例 ${PLACEHOLDER} 回滚到 v1，生成 v3（编辑）`);
     const versions = (await (await t.call(cookie, "GET", `/admin/content/case/${PLACEHOLDER}/versions`)).json()).versions;
     expect(versions.map((v: { version: number; action: string }) => `${v.version}${v.action}`)).toEqual(["4publish", "3rollback", "2publish", "1import"]);
     expect((await (await t.call(cookie, "GET", `/admin/content/case/${PLACEHOLDER}/versions/3`)).json()).source).toBe(src);
+  });
+
+  it("a page holding an old draft can't save over a newer draft or publish it (revisions are never reused)", async () => {
+    // Review of #108: A opens a draft (base v1); B publishes v2 and starts a new draft (base v2);
+    // A's old page saves with its old revision, then publishes. Both must be 409.
+    const t = await setup();
+    const { cookie } = await t.signIn("ed@example.com");
+    const src = (await (await t.call(cookie, "GET", `/admin/content/case/${PLACEHOLDER}`)).json()).published.source as string;
+    await t.call(cookie, "PUT", `/admin/content/case/${PLACEHOLDER}/draft`, { draftRevision: null, source: src.replace("毕业后的低落", "A") });
+    const aRev = await t.revisionOf(cookie, "case", PLACEHOLDER);
+    // B publishes A's draft as it is (v2), then starts a draft of its own.
+    expect((await t.call(cookie, "POST", `/admin/content/case/${PLACEHOLDER}/publish`, { draftRevision: aRev, basePublishedVersion: 1 })).status).toBe(200);
+    await t.call(cookie, "PUT", `/admin/content/case/${PLACEHOLDER}/draft`, { draftRevision: null, source: src.replace("毕业后的低落", "B") });
+    const bRev = await t.revisionOf(cookie, "case", PLACEHOLDER);
+    expect(bRev).not.toBe(aRev);
+    const aSave = await t.call(cookie, "PUT", `/admin/content/case/${PLACEHOLDER}/draft`, { draftRevision: aRev, source: src.replace("毕业后的低落", "A2") });
+    expect(aSave.status).toBe(409);
+    expect((await t.call(cookie, "POST", `/admin/content/case/${PLACEHOLDER}/publish`, { draftRevision: aRev, basePublishedVersion: 2 })).status).toBe(409);
+    expect((await t.call(cookie, "DELETE", `/admin/content/case/${PLACEHOLDER}/draft`, { draftRevision: aRev })).status).toBe(409);
+    const item = await (await t.call(cookie, "GET", `/admin/content/case/${PLACEHOLDER}`)).json();
+    expect(item.draft.source).toContain("B");
+    expect(item.published.version).toBe(2);
   });
 
   it("rollback runs the checks too (422)", async () => {
@@ -341,8 +389,13 @@ describe("content", () => {
     expect(t.mock.requests.at(-1)!.system).toContain("## 认知模式和核心信念"); // the draft's brief
     const huge = await t.call(cookie, "POST", "/admin/content/case/new-case/preview-chat", { locale: "zh", messages: [{ role: "counselor", text: "你好" }], source: "x".repeat(201 * 1024) });
     expect(huge.status).toBe(400);
+    // Bad requests don't use up the hourly preview turns: only turns that reach the model do.
+    for (let i = 0; i < LIMITS.previewPerAdminHour; i++) {
+      expect((await t.call(cookie, "POST", "/admin/content/case/new-case/preview-chat", { locale: "zh", messages: [] })).status).toBe(400);
+    }
+    expect((await t.call(cookie, "POST", "/admin/content/case/new-case/preview-chat", { locale: "zh", messages: [{ role: "counselor", text: "再来" }] })).status).toBe(200);
 
-    expect((await t.call(cookie, "DELETE", "/admin/content/case/new-case/draft", { draftRevision: 1 })).status).toBe(204);
+    expect((await t.call(cookie, "DELETE", "/admin/content/case/new-case/draft", { draftRevision: (await created.json()).draft.revision })).status).toBe(204);
     expect((await t.call(cookie, "GET", "/admin/content/case/new-case")).status).toBe(404);
   });
 });

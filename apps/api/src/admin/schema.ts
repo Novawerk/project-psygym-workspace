@@ -1,7 +1,7 @@
 // Admin tables (docs/decisions/0009-admin-phase1.md): our own members, their sessions and logins,
 // and the published versions and drafts of cases and rubrics. content_versions is never updated
 // or deleted: it is the publish log.
-import { bigserial, index, integer, pgTable, primaryKey, text, timestamp, boolean } from "drizzle-orm/pg-core";
+import { bigserial, boolean, index, integer, pgSequence, pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
 
 const at = (name: string) => timestamp(name, { withTimezone: true, mode: "date" });
 
@@ -49,11 +49,20 @@ export const contentVersions = pgTable(
     source: text("source").notNull(),
     action: text("action").notNull(), // import | publish | rollback
     fromVersion: integer("from_version"),
+    /** "What changed", written by the publisher; at most 200 characters. Never sent to Slack. */
+    note: text("note"),
     publishedBy: text("published_by").references(() => admins.id, { onDelete: "set null" }),
     publishedAt: at("published_at").notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.kind, t.itemId, t.version] }), index("content_versions_published_at_idx").on(t.publishedAt)],
 );
+
+/**
+ * Draft revisions come from one sequence, so a number is never used twice, not even after a
+ * draft is published or discarded and a new one started: a page holding an old revision always
+ * gets 409.
+ */
+export const draftRevisions = pgSequence("content_draft_revisions");
 
 /** At most one draft per item, shared by everyone who edits it. */
 export const contentDrafts = pgTable(

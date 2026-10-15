@@ -28,15 +28,13 @@ import { ClosingHold, END_THRESHOLD, JUDGE_TIMEOUT_MS, NEUTRAL_LINE, REGENERATE_
 import { EndTagFilter } from "./end-tag.js";
 import { statsRange, statsView } from "./metrics/stats.js";
 import { FixedWindowLimiter, clientIp } from "./rate-limit.js";
+import { readBody } from "./read-body.js";
 import { ReportBody, reportSlackMessage } from "./report.js";
 import { ChatBody, SupervisionBody, type ErrorCode, type Locale, type Message, type StreamEvent } from "./schema.js";
 import { FAREWELL, clientRequest, endsSession, liveSupervisorRequest, supervisorRequest } from "./session.js";
 
 /** Keeps proxies from closing the stream while the model thinks. */
 export const PING_MS = 15_000;
-/** 80 messages × 2000 characters of CJK is ~480 KB of UTF-8; leave room for JSON. */
-const MAX_BODY_BYTES = 1024 * 1024;
-
 export interface Logger {
   info(line: Record<string, unknown>): void;
   error(line: Record<string, unknown>): void;
@@ -88,50 +86,15 @@ type Status = 400 | 401 | 404 | 426 | 429 | 503;
 const fail = (c: Context, status: Status, code: ErrorCode, message = MESSAGES[code]) =>
   c.json({ error: { code, message } }, status);
 
-/** Past MAX_BODY_BYTES we keep reading (and dropping) up to this, so the client can finish sending. */
-const MAX_DRAIN_BYTES = 16 * 1024 * 1024;
-
-type BodyRead = { tooLarge: false; text: string } | { tooLarge: true; drained: boolean };
-
-/**
- * Reads the request body with a size cap. An oversized body is read to its end and dropped
- * (up to MAX_DRAIN_BYTES), so the client isn't cut off mid-upload and the connection survives.
- */
-async function readBody(req: Request): Promise<BodyRead> {
-  const declared = Number(req.headers.get("content-length") ?? NaN);
-  if (declared > MAX_DRAIN_BYTES) {
-    await req.body?.cancel().catch(() => {});
-    return { tooLarge: true, drained: false };
-  }
-  if (!req.body) return { tooLarge: false, text: "" };
-  const reader = req.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let total = 0;
-  try {
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      total += value.byteLength;
-      if (total > MAX_DRAIN_BYTES) {
-        await reader.cancel().catch(() => {});
-        return { tooLarge: true, drained: false };
-      }
-      if (total <= MAX_BODY_BYTES) chunks.push(value);
-      else chunks.length = 0;
-    }
-  } catch {
-    return { tooLarge: true, drained: false };
-  }
-  if (total > MAX_BODY_BYTES) return { tooLarge: true, drained: true };
-  return { tooLarge: false, text: Buffer.concat(chunks).toString("utf8") };
-}
-
 /** Constant-time comparison for the admin token; hashing first hides its length too. */
 function sameToken(given: string, expected: string): boolean {
   const a = createHash("sha256").update(given).digest();
   const b = createHash("sha256").update(expected).digest();
   return timingSafeEqual(a, b);
 }
+
+/** The routes of docs/admin-api.md. */
+const ADMIN_PATHS = /^\/admin\/(?:auth\/(?:google|logout)|me|dashboard|content(?:\/.*)?|publish-log)$/;
 
 /** The model finished without any text to show. */
 class EmptyReplyError extends Error {
@@ -245,7 +208,9 @@ export function createApp(deps: AppDeps) {
   if (deps.admin) {
     const load = deps.admin;
     let routes: Promise<Hono> | null = null;
-    app.all("/admin/*", (c) => {
+    app.all("/admin/*", (c, next) => {
+      // Only the admin's own paths; any other /admin path goes on as before (the gate, then 404).
+      if (!ADMIN_PATHS.test(c.req.path)) return next();
       routes ??= load({ content, previewTurn }).catch((err) => {
         routes = null;
         throw err;

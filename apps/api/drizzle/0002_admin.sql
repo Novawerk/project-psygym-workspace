@@ -1,3 +1,4 @@
+CREATE SEQUENCE "public"."content_draft_revisions" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1;--> statement-breakpoint
 CREATE TABLE "admin_logins" (
 	"id" bigserial PRIMARY KEY NOT NULL,
 	"admin_id" text NOT NULL,
@@ -41,6 +42,7 @@ CREATE TABLE "content_versions" (
 	"source" text NOT NULL,
 	"action" text NOT NULL,
 	"from_version" integer,
+	"note" text,
 	"published_by" text,
 	"published_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "content_versions_kind_item_id_version_pk" PRIMARY KEY("kind","item_id","version")
