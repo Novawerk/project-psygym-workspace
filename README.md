@@ -42,7 +42,7 @@ patients.
 
 | Path        | What                                                        |
 |-------------|-------------------------------------------------------------|
-| `apps/`     | Things people run: the practice app, later an API.          |
+| `apps/`     | Things people run: the practice app, the API, the website and the admin panel. |
 | `packages/` | Shared code: the AI client, the supervisor, prompts, types.  |
 | `content/`  | Cases and supervision rubrics, written by our psychologists. |
 | `docs/`     | Problem statement, decisions, notes.                         |
