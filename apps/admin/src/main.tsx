@@ -9,12 +9,18 @@ import { ThemeProvider } from "next-themes"
 import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { isUnauthorized } from "@/lib/api"
+import { queryKeys } from "@/lib/queries"
 
 import { routeTree } from "./routeTree.gen"
 
-/** A 401 after sign-in (expired, or the admin was disabled) goes back to the sign-in page. */
+/**
+ * A 401 mid-session (expired, or the admin was disabled) goes back to the sign-in page with
+ * 「登录已过期」. Only when someone was signed in on this page: a first visit's 401 from
+ * GET /admin/me is just the way in, and _app's beforeLoad sends it to a plain /login.
+ */
 const onError = (error: unknown) => {
-  if (isUnauthorized(error) && router.state.location.pathname !== "/login") {
+  const signedIn = queryClient.getQueryData(queryKeys.me) !== undefined
+  if (isUnauthorized(error) && signedIn && router.state.location.pathname !== "/login") {
     queryClient.clear()
     void router.navigate({ to: "/login", search: { expired: true } })
   }
