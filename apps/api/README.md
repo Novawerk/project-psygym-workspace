@@ -68,6 +68,11 @@ Blank values count as unset. `apps/api/.env` is read on start; shell variables w
 | `AUTH_EMAIL_FROM` | `聆镜 PSYGYM <no-reply@novawerk.io>` | The code email's sender. |
 | `REVIEW_LOGIN_EMAIL`, `REVIEW_LOGIN_CODE` | — | The store reviewer: one address, one fixed 6-digit code. Clear both after review. |
 | `ADMIN_TOKEN` | — | Bearer token for `POST /admin/accounts/delete`. Unset → 404. |
+| `ADMIN_MODE` | `off` | `on` turns the admin routes on (`docs/admin-api.md`; needs `DATABASE_URL`, `ADMIN_GOOGLE_CLIENT_ID`, `ADMIN_ORIGIN`, else it stays off with a config error). The admin code loads on the first `/admin` request. |
+| `ADMIN_GOOGLE_CLIENT_ID` | — | The admin page's Google OAuth client id (not a secret). |
+| `ADMIN_ORIGIN` | — | The admin page's origin, e.g. `https://admin.psygym.novawerk.io`. Admin writes must carry it as `Origin`. |
+| `CONTENT_SOURCE` | `files` | `db`: cases and rubrics come from the published versions in the database (cached 1 minute; fallback: the last good copy, then the bundled `content/`). |
+| `CONTENT_SLACK_WEBHOOK_URL` | — | Slack incoming webhook (https) for `#project-psygym`: one line per publish or rollback. Unset → log only. |
 | `PORT` | `8787` | Local server only. Port 8787 is often taken by another project on our machines; pick a free one (`PORT=8790`). |
 
 A role with no provider, or no key for its provider, answers 503 `model_unavailable`. So does
@@ -272,6 +277,41 @@ Migrations never run at deploy; run them by hand (below) before the code that ne
 
 To switch off: remove `METRICS_ENABLED` (or set it to `false`) and redeploy. Nothing else
 changes; the table stays.
+
+## Admin (phase 1)
+
+Google sign-in, a dashboard, and cases and rubrics edited and published in the database.
+Contract: [`docs/admin-api.md`](../../docs/admin-api.md); decisions:
+[ADR 0009](../../docs/decisions/0009-admin-phase1.md). Both switches (`ADMIN_MODE`,
+`CONTENT_SOURCE`) are off by default; off, nothing changes and no admin code loads.
+
+- `src/admin/`: routes (`index.ts`), Google token check (`google.ts`), tables (`schema.ts`).
+- `src/content-doc.ts`: the checks every case and rubric source passes (shared with the loader).
+- `src/content-source.ts`, `src/content-db.ts`: how the app reads the published versions.
+- `src/metrics/dashboard.ts`: `GET /admin/dashboard`, filtered, summed and hidden.
+
+Commands (the lead runs them with the production env, like migrations):
+
+```bash
+pnpm --filter api admin:add --email <email> --role admin --org novawerk
+pnpm --filter api admin:disable --email <email>
+pnpm --filter api content:import
+pnpm --filter api content:export
+```
+
+### Switch-over day
+
+1. Merge or close every open PR that touches `content/cases/` or `content/rubrics/`.
+2. Migrate (`0002_admin`, adds tables only), then deploy.
+3. `admin:add` the first admin. Set `ADMIN_GOOGLE_CLIENT_ID`, `ADMIN_ORIGIN`,
+   `CONTENT_SLACK_WEBHOOK_URL` (by clipboard), then `ADMIN_MODE=on`.
+4. `content:import`; look at the cases and the rubric in the admin.
+5. Set `CONTENT_SOURCE=db`. Check: publish a small change, `/cases` shows it within a minute,
+   and `#project-psygym` gets one line.
+6. Same day: `content/README.md` and `docs/for-psygym-team.md` say that cases and rubrics are now
+   edited in the admin.
+
+After each publish, until the GitHub sync (phase 2): `content:export` and a PR.
 
 ## Deploy (Vercel)
 

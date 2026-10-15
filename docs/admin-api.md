@@ -256,5 +256,7 @@ phase 1.
 
 ## Changes
 
-- **(this PR)** — first version: sign-in, dashboard, content, preview, commands. Contract only;
+- **implementation (this PR)** — built as written, behind `ADMIN_MODE` (off by default).
+
+- **#105** — first version: sign-in, dashboard, content, preview, commands. Contract only;
   the implementation follows.

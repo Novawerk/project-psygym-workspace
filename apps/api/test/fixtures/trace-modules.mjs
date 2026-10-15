@@ -15,4 +15,6 @@ process.on("exit", () => {
   process.stdout.write(`DB_MODULES ${JSON.stringify(db.length)}\n`);
   const auth = [...seen].filter((u) => /\/src\/auth\/(?!types)/.test(u));
   process.stdout.write(`AUTH_MODULES ${JSON.stringify(auth.length)}\n`);
+  const admin = [...seen].filter((u) => /\/src\/admin\/(?!types)|node_modules\/(?:\.pnpm\/[^/]+\/node_modules\/)?jose\//.test(u));
+  process.stdout.write(`ADMIN_MODULES ${JSON.stringify(admin.length)}\n`);
 });

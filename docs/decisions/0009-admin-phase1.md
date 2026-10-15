@@ -1,6 +1,6 @@
 # 0009 — Admin, phase 1: Google sign-in, dashboard, cases and rubrics in the database
 
-Date: 2026-10-15. Status: **proposed** (contract PR; the implementation follows in its own PR).
+Date: 2026-10-15. Status: **accepted** (#105); built behind `ADMIN_MODE` and `CONTENT_SOURCE`, both off by default.
 The product decisions are in [`product/admin.md`](../product/admin.md) (D-A1–D-A10) and the
 phase-1 scope in `product/admin-phase1.md` (product's PR). The HTTP contract is
 [`admin-api.md`](../admin-api.md).

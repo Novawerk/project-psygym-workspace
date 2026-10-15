@@ -17,6 +17,8 @@ import type { z } from "zod";
 
 import type { AppConfig, Role } from "./config.js";
 import { publicSummary, type Case, type Prompts } from "./content.js";
+import { staticContent, type ContentSource } from "./content-source.js";
+import type { AdminLoader } from "./admin/types.js";
 import { createProvider, type ModelProvider } from "./llm/index.js";
 import { addUsage, type ModelRequest, type ModelResponse, type Usage } from "./llm/types.js";
 import { FeedbackBody, postToSlack, slackMessage, type FetchLike } from "./feedback.js";
@@ -24,7 +26,7 @@ import type { Auth, AuthUser } from "./auth/types.js";
 import { disabledCounter, durationBucket, normalizeEvent, turnBucket, type Counter, type MetricsStore } from "./metrics/counter.js";
 import { ClosingHold, END_THRESHOLD, JUDGE_TIMEOUT_MS, NEUTRAL_LINE, REGENERATE_NOTE, harmfulCount, isClosing, judgeRequest } from "./end-judge.js";
 import { EndTagFilter } from "./end-tag.js";
-import { statsView } from "./metrics/stats.js";
+import { statsRange, statsView } from "./metrics/stats.js";
 import { FixedWindowLimiter, clientIp } from "./rate-limit.js";
 import { ReportBody, reportSlackMessage } from "./report.js";
 import { ChatBody, SupervisionBody, type ErrorCode, type Locale, type Message, type StreamEvent } from "./schema.js";
@@ -66,6 +68,10 @@ export interface AppDeps {
   pingMs?: number;
   /** Sign-in (AUTH_MODE=on); null or unset: off, invite codes as before. */
   auth?: Auth | null;
+  /** CONTENT_SOURCE=db: the published versions. Unset: `cases` and `prompts.rubrics`, as always. */
+  content?: ContentSource;
+  /** ADMIN_MODE=on: builds the admin routes on the first /admin request. Unset: they don't exist. */
+  admin?: AdminLoader | null;
 }
 
 const MESSAGES: Record<ErrorCode, string> = {
@@ -127,19 +133,6 @@ function sameToken(given: string, expected: string): boolean {
   return timingSafeEqual(a, b);
 }
 
-const DAY_MS = 86_400_000;
-/** ?from=&to= as UTC days. Default: the last 30 days up to today. */
-function statsRange(from: string | undefined, to: string | undefined, nowMs: number) {
-  const ok = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(`${s}T00:00:00Z`));
-  const t = to ?? new Date(nowMs).toISOString().slice(0, 10);
-  if (!ok(t)) return null;
-  const f = from ?? new Date(Date.parse(`${t}T00:00:00Z`) - 29 * DAY_MS).toISOString().slice(0, 10);
-  if (!ok(f)) return null;
-  const days = (Date.parse(`${t}T00:00:00Z`) - Date.parse(`${f}T00:00:00Z`)) / DAY_MS;
-  if (days < 0 || days > 365) return null;
-  return { from: f, to: t };
-}
-
 /** The model finished without any text to show. */
 class EmptyReplyError extends Error {
   constructor(readonly stop: string) {
@@ -154,12 +147,13 @@ function describe(err: unknown) {
 }
 
 export function createApp(deps: AppDeps) {
-  const { config, cases, prompts } = deps;
+  const { config, prompts } = deps;
+  const content = deps.content ?? staticContent({ cases: deps.cases, rubrics: prompts.rubrics, versions: new Map() });
   const logger = deps.logger ?? consoleLogger;
   const pingMs = deps.pingMs ?? PING_MS;
   const rawCounter = deps.counter ?? disabledCounter;
   // Every count goes through normalizeEvent: unknown case ids and languages become "unknown".
-  const counter: Counter = { enabled: rawCounter.enabled, count: (e) => rawCounter.count(normalizeEvent(e, cases)) };
+  const counter: Counter = { enabled: rawCounter.enabled, count: (e) => rawCounter.count(normalizeEvent(e, content.latest().cases)) };
   /**
    * The error answer, counted by its code only (no case, language, invite code or IP).
    * 401 and 429 are not counted: they come before or from the rate limit, so anyone could make
@@ -245,6 +239,33 @@ export function createApp(deps: AppDeps) {
     }
   });
 
+  // ADMIN_MODE=on: the admin's routes (docs/admin-api.md), loaded on the first request that needs
+  // them, so serving the app never loads the admin code. /admin/stats above and
+  // /admin/accounts/delete (sign-in's routes) answered already. Off: nothing here, as before.
+  if (deps.admin) {
+    const load = deps.admin;
+    let routes: Promise<Hono> | null = null;
+    app.all("/admin/*", (c) => {
+      routes ??= load({ content, previewTurn }).catch((err) => {
+        routes = null;
+        throw err;
+      });
+      return routes.then((r) => r.fetch(c.req.raw, c.env));
+    });
+  }
+
+  /** The admin's preview chat: one /chat turn for a case that isn't published. Never counted. */
+  function previewTurn(c: Context, theCase: Case, locale: Locale, messages: Message[]) {
+    const provider = providerFor("client");
+    if (typeof provider === "string") {
+      logger.error({ msg: "model unavailable", route: "preview-chat", reason: provider });
+      return fail(c, 503, "model_unavailable");
+    }
+    const request = clientRequest(prompts, theCase, locale, messages);
+    const judge = config.endSessionJudge ? { messages } : undefined;
+    return streamTurn(c, { path: "/admin/preview-chat", caseId: theCase.id, locale, count: messages.length, provider, request, judge });
+  }
+
   // The gate for everything below. A request with Authorization is judged by its token alone.
   // Without a token: 426 once sign-in is required, else the invite code (when INVITE_CODES is set).
   app.use("*", async (c, next) => {
@@ -275,9 +296,7 @@ export function createApp(deps: AppDeps) {
     if (c.req.method === "POST" && c.req.path === "/chat") counter.count({ metric: "auth", dim: how });
   }
 
-  app.get("/cases", (c) =>
-    c.json({ cases: [...cases.values()].map(publicSummary) }),
-  );
+  app.get("/cases", async (c) => c.json({ cases: [...(await content.current()).cases.values()].map(publicSummary) }));
 
   /** 429 with Retry-After when this caller (invite code, else IP) is over the limit. */
   function rateLimited(c: Context, l: FixedWindowLimiter): Response | null {
@@ -320,7 +339,8 @@ export function createApp(deps: AppDeps) {
         // /supervision only: "live" is mid-session notes, a different prompt and different counts.
         const live = role === "supervisor" && (body as { mode?: string }).mode === "live";
 
-        const theCase = cases.get(caseId);
+        const snap = await content.current();
+        const theCase = snap.cases.get(caseId);
         if (!theCase) return failCounted(c, 404, "case_not_found");
 
         const provider = providerFor(role);
@@ -329,7 +349,7 @@ export function createApp(deps: AppDeps) {
           return failCounted(c, 503, "model_unavailable");
         }
 
-        const request = (live ? liveSupervisorRequest : build)(prompts, theCase, locale, messages);
+        const request = (live ? liveSupervisorRequest : build)({ ...prompts, rubrics: snap.rubrics }, theCase, locale, messages);
         // What we count when the stream ends (aborted streams aren't counted). /chat is stateless,
         // so a session "starts" with the turn that answers the counselor's first line.
         const at = { caseId: theCase.id, locale };
@@ -358,7 +378,8 @@ export function createApp(deps: AppDeps) {
         };
         // END_SESSION_JUDGE (src/end-judge.ts): /chat only. Off: no judge, the stream as it always was.
         const judge = role === "client" && config.endSessionJudge ? { messages } : undefined;
-        return streamTurn(c, { path, caseId, locale, count: messages.length, provider, request, onDone, judge });
+        const caseVersion = snap.versions.get(`case:${caseId}`);
+        return streamTurn(c, { path, caseId, caseVersion, locale, count: messages.length, provider, request, onDone, judge });
       },
     );
   }
@@ -368,6 +389,8 @@ export function createApp(deps: AppDeps) {
     t: {
       path: string;
       caseId: string;
+      /** CONTENT_SOURCE=db: the published version used; logged. */
+      caseVersion?: number;
       locale: Locale;
       count: number;
       provider: ModelProvider;
@@ -399,7 +422,7 @@ export function createApp(deps: AppDeps) {
         chain = chain.then(() => stream.write(": ping\n\n")).catch(() => {});
       }, pingMs);
 
-      const log = { route: t.path, caseId: t.caseId, locale: t.locale, messages: t.count, provider: t.provider.name, model: t.provider.model };
+      const log = { route: t.path, caseId: t.caseId, ...(t.caseVersion !== undefined ? { caseVersion: t.caseVersion } : {}), locale: t.locale, messages: t.count, provider: t.provider.name, model: t.provider.model };
       send({ type: "turn_start" });
       try {
         let said = "";
@@ -603,7 +626,7 @@ export function createApp(deps: AppDeps) {
     if (limited) return limited;
     const body = await readJson(c, FeedbackBody);
     if (body instanceof Response) return body;
-    if (!cases.has(body.caseId)) return failCounted(c, 404, "case_not_found");
+    if (!(await content.current()).cases.has(body.caseId)) return failCounted(c, 404, "case_not_found");
     counter.count({ metric: "feedback", caseId: body.caseId, locale: body.locale, dim: body.rating });
     const log = { msg: "feedback", caseId: body.caseId, locale: body.locale, rating: body.rating, commentChars: chars(body.comment) };
     return forwardToSlack(c, "feedback", log, slackMessage(body, now()));
@@ -615,7 +638,7 @@ export function createApp(deps: AppDeps) {
     if (limited) return limited;
     const body = await readJson(c, ReportBody);
     if (body instanceof Response) return body;
-    if (!cases.has(body.caseId)) return failCounted(c, 404, "case_not_found");
+    if (!(await content.current()).cases.has(body.caseId)) return failCounted(c, 404, "case_not_found");
     counter.count({ metric: "user_report", caseId: body.caseId, locale: body.locale, dim: body.reason });
     const log = {
       msg: "report",

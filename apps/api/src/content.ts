@@ -32,7 +32,7 @@ const Localized = z
 export type LocalizedText = z.infer<typeof Localized>;
 
 /** Required: a case without these doesn't load. */
-const Required = z.object({
+export const Required = z.object({
   id: z.string().regex(/^[a-z0-9-]+$/),
   school: z.literal("cbt"),
   title: Localized,
@@ -81,7 +81,7 @@ export function publicSummary(c: Case): CaseSummary {
   return out;
 }
 
-const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/;
+export const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/;
 
 export type Warn = (message: string) => void;
 const consoleWarn: Warn = (m) => console.warn(JSON.stringify({ msg: "case warning", warning: m }));
@@ -149,7 +149,7 @@ export interface Prompts {
 }
 
 const read = (file: string) => fs.readFileSync(file, "utf8").trim();
-const stripFrontmatter = (raw: string) => FRONTMATTER.exec(raw)?.[2]?.trim() ?? raw;
+export const stripFrontmatter = (raw: string) => FRONTMATTER.exec(raw)?.[2]?.trim() ?? raw;
 
 /**
  * Notes for us and for 聆镜 (<!-- … -->) never reach a model. An unclosed one would send the
@@ -187,12 +187,77 @@ export function rubricForPrompt(raw: string): string {
     .trim();
 }
 
+/** Rubric ids are schools. Phase 1 has one. */
+export const SCHOOLS = ["cbt"] as const;
+
+export interface Problem {
+  path: string;
+  message: string;
+}
+
+/**
+ * Everything a rubric file must pass, wherever it comes from: content/ at start, the import,
+ * a publish or rollback in the admin (docs/decisions/0009-admin-phase1.md), and the tests.
+ * A known school as id; frontmatter id and school match it; comments closed; every numbered
+ * point (### 1.) has a skill id; ids unique; risk_screening among them (after the aliases).
+ */
+export function rubricProblems(id: string, raw: string): Problem[] {
+  const problems: Problem[] = [];
+  if (!(SCHOOLS as readonly string[]).includes(id)) problems.push({ path: "id", message: `unknown school; known: ${SCHOOLS.join(", ")}` });
+  const m = FRONTMATTER.exec(raw);
+  if (!m) return [...problems, { path: "source", message: "missing the --- frontmatter --- block" }];
+  let parsed: unknown = null;
+  try {
+    parsed = parseYaml(m[1]!);
+  } catch {
+    problems.push({ path: "frontmatter", message: "not valid YAML" });
+  }
+  const meta = parsed && typeof parsed === "object" ? (parsed as { id?: unknown; school?: unknown }) : null;
+  if (meta) {
+    if (meta.id !== id) problems.push({ path: "frontmatter.id", message: `must be "${id}"` });
+    if (meta.school !== id) problems.push({ path: "frontmatter.school", message: `must be "${id}"` });
+  }
+  let body: string;
+  try {
+    body = stripComments(m[2]!);
+  } catch (e) {
+    return [...problems, { path: "body", message: (e as Error).message }];
+  }
+  const ids = rubricSkillIds(body);
+  const points = body.match(/^### \d+\./gm) ?? [];
+  if (ids.length === 0) problems.push({ path: "body", message: "no skill ids (lines like「- 技能 id：risk_screening」)" });
+  else {
+    if (points.length !== ids.length) problems.push({ path: "body", message: `${points.length} numbered points (### 1.) but ${ids.length} skill ids` });
+    const dup = ids.find((x, i) => ids.indexOf(x) !== i);
+    if (dup) problems.push({ path: "body", message: `skill id ${dup} appears twice` });
+    if (!ids.includes("risk_screening")) problems.push({ path: "body", message: "needs the skill id risk_screening" });
+  }
+  return problems;
+}
+
+/** Across items: every case's school needs a rubric. The ids of cases whose school has none. */
+export function casesWithoutRubric(cases: Map<string, Case>, rubrics: Partial<Record<string, string>>): string[] {
+  return [...cases.values()].filter((c) => !rubrics[c.school]).map((c) => c.id);
+}
+
+/** The bundled rubrics, each checked; a bad one stops the start (and CI). */
+function loadRubrics(content: string): Prompts["rubrics"] {
+  const out: Partial<Prompts["rubrics"]> = {};
+  for (const school of SCHOOLS) {
+    const raw = read(path.join(content, `rubrics/${school}.md`));
+    const problems = rubricProblems(school, raw);
+    if (problems.length) throw new Error(`rubrics/${school}.md: ${problems.map((p) => `${p.path}: ${p.message}`).join("; ")}`);
+    out[school] = rubricForPrompt(raw);
+  }
+  return out as Prompts["rubrics"];
+}
+
 export function loadPrompts(dir = promptsDir(), content = contentDir()): Prompts {
   return {
     client: read(path.join(dir, "client.md")),
     supervisor: read(path.join(dir, "supervisor.md")),
     supervisorLive: read(path.join(dir, "supervisor-live.md")),
     endJudge: read(path.join(dir, "end-judge.md")),
-    rubrics: { cbt: rubricForPrompt(read(path.join(content, "rubrics/cbt.md"))) },
+    rubrics: loadRubrics(content),
   };
 }
