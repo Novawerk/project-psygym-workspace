@@ -18,15 +18,16 @@ import type { z } from "zod";
 import type { AppConfig, Role } from "./config.js";
 import { publicSummary, type Case, type Prompts } from "./content.js";
 import { createProvider, type ModelProvider } from "./llm/index.js";
-import type { ModelRequest } from "./llm/types.js";
+import { addUsage, type ModelRequest, type ModelResponse, type Usage } from "./llm/types.js";
 import { FeedbackBody, postToSlack, slackMessage, type FetchLike } from "./feedback.js";
 import type { Auth, AuthUser } from "./auth/types.js";
 import { disabledCounter, durationBucket, normalizeEvent, turnBucket, type Counter, type MetricsStore } from "./metrics/counter.js";
+import { ClosingHold, END_THRESHOLD, JUDGE_TIMEOUT_MS, NEUTRAL_LINE, REGENERATE_NOTE, harmfulCount, isClosing, judgeRequest } from "./end-judge.js";
 import { EndTagFilter } from "./end-tag.js";
 import { statsView } from "./metrics/stats.js";
 import { FixedWindowLimiter, clientIp } from "./rate-limit.js";
 import { ReportBody, reportSlackMessage } from "./report.js";
-import { ChatBody, SupervisionBody, type ErrorCode, type Locale, type StreamEvent } from "./schema.js";
+import { ChatBody, SupervisionBody, type ErrorCode, type Locale, type Message, type StreamEvent } from "./schema.js";
 import { FAREWELL, clientRequest, endsSession, liveSupervisorRequest, supervisorRequest } from "./session.js";
 
 /** Keeps proxies from closing the stream while the model thinks. */
@@ -60,6 +61,8 @@ export interface AppDeps {
   counter?: Counter;
   /** Where GET /admin/stats reads from; null when counting is off. */
   metricsStore?: MetricsStore | null;
+  /** END_SESSION_JUDGE: how long the check may take. Default JUDGE_TIMEOUT_MS. */
+  judgeTimeoutMs?: number;
   pingMs?: number;
   /** Sign-in (AUTH_MODE=on); null or unset: off, invite codes as before. */
   auth?: Auth | null;
@@ -353,7 +356,9 @@ export function createApp(deps: AppDeps) {
           }
           if (!o.ok) counter.count({ metric: "error", dim: "stream_error" });
         };
-        return streamTurn(c, { path, caseId, locale, count: messages.length, provider, request, onDone });
+        // END_SESSION_JUDGE (src/end-judge.ts): /chat only. Off: no judge, the stream as it always was.
+        const judge = role === "client" && config.endSessionJudge ? { messages } : undefined;
+        return streamTurn(c, { path, caseId, locale, count: messages.length, provider, request, onDone, judge });
       },
     );
   }
@@ -369,6 +374,8 @@ export function createApp(deps: AppDeps) {
       request: Omit<ModelRequest, "signal">;
       /** After the last frame is queued; never for an aborted stream. */
       onDone?: (o: { ok: boolean; sessionEnd: boolean }) => void;
+      /** Set only with END_SESSION_JUDGE on, for /chat. */
+      judge?: { messages: Message[] };
     },
   ) {
     // Tell proxies (and Vercel) not to buffer or transform the stream.
@@ -379,6 +386,9 @@ export function createApp(deps: AppDeps) {
       const abort = new AbortController();
       stream.onAbort(() => abort.abort());
       c.req.raw.signal?.addEventListener("abort", () => abort.abort(), { once: true });
+      // A request already cancelled never fires "abort". Only on the judged path, so the default
+      // stream stays exactly as it was.
+      if (t.judge && c.req.raw.signal?.aborted) abort.abort();
 
       // Writes go out in order; once the client is gone they fail quietly.
       let chain: Promise<unknown> = Promise.resolve();
@@ -398,19 +408,29 @@ export function createApp(deps: AppDeps) {
           said += text;
           send({ type: "text_delta", text });
         };
-        // Only /chat offers the tool, so only there can its call show up as text.
-        const endTags = t.request.tools.length > 0 ? new EndTagFilter() : undefined;
-        const res = await t.provider.stream(
-          { ...t.request, signal: abort.signal },
-          { onText: (text) => say(endTags ? endTags.push(text) : text) },
-        );
-        if (endTags) say(endTags.flush());
+        let res: ModelResponse;
+        let usage: Usage;
+        let endTagInText: boolean;
+        let sessionEnd: boolean;
+        let judged: Record<string, unknown> = {};
+        if (!t.judge) {
+          // Only /chat offers the tool, so only there can its call show up as text.
+          const endTags = t.request.tools.length > 0 ? new EndTagFilter() : undefined;
+          res = await t.provider.stream(
+            { ...t.request, signal: abort.signal },
+            { onText: (text) => say(endTags ? endTags.push(text) : text) },
+          );
+          if (endTags) say(endTags.flush());
+          usage = res.usage;
+          // The AI client ends the session by calling end_session (only /chat offers the tool).
+          // The tool call itself never reaches the app: it becomes one session_end frame. A call
+          // written into the text as a tag counts the same (src/end-tag.ts).
+          endTagInText = endTags?.found === true;
+          sessionEnd = t.request.tools.length > 0 && (endsSession(res.message.toolCalls) || endTagInText);
+        } else {
+          ({ res, usage, endTagInText, sessionEnd, judged } = await judgedTurn(t.provider, t.request, t.locale, t.judge.messages, abort.signal, say, () => said));
+        }
         const saidSomething = said.trim() !== "";
-        // The AI client ends the session by calling end_session (only /chat offers the tool).
-        // The tool call itself never reaches the app: it becomes one session_end frame. A call
-        // written into the text as a tag counts the same (src/end-tag.ts).
-        const endTagInText = endTags?.found === true;
-        const sessionEnd = t.request.tools.length > 0 && (endsSession(res.message.toolCalls) || endTagInText);
         if (sessionEnd) {
           // Some models call the tool without saying goodbye; the app still needs a last line.
           if (!saidSomething) send({ type: "text_delta", text: FAREWELL[t.locale] });
@@ -419,7 +439,7 @@ export function createApp(deps: AppDeps) {
           // Nothing to show (e.g. only an unknown tool call): let the app offer a retry.
           throw new EmptyReplyError(res.stopReason);
         }
-        send({ type: "turn_end", usage: { inputTokens: res.usage.inputTokens, outputTokens: res.usage.outputTokens } });
+        send({ type: "turn_end", usage: { inputTokens: usage.inputTokens, outputTokens: usage.outputTokens } });
         t.onDone?.({ ok: true, sessionEnd });
         logger.info({
           ...log,
@@ -427,8 +447,9 @@ export function createApp(deps: AppDeps) {
           stop: res.stopReason,
           ...(sessionEnd ? { sessionEnd: true } : {}),
           ...(endTagInText ? { endTagInText: true } : {}),
-          inputTokens: res.usage.inputTokens,
-          outputTokens: res.usage.outputTokens,
+          ...judged,
+          inputTokens: usage.inputTokens,
+          outputTokens: usage.outputTokens,
           ms: Date.now() - started,
         });
       } catch (err) {
@@ -450,6 +471,108 @@ export function createApp(deps: AppDeps) {
         await chain;
       }
     });
+  }
+
+  /**
+   * One /chat turn with END_SESSION_JUDGE on (src/end-judge.ts). Finished sentences go out as they
+   * come; from the first one that reads like a closing line, the rest is held. An end_session call
+   * (or tag) ends the session only when the check finds END_THRESHOLD harmful counselor messages.
+   * Otherwise the held closing line is dropped; if nothing else was said, the client is asked once
+   * more, without the tool. `judged` goes to the log: no text, only outcomes and token counts.
+   */
+  async function judgedTurn(
+    provider: ModelProvider,
+    request: Omit<ModelRequest, "signal">,
+    locale: Locale,
+    messages: Message[],
+    signal: AbortSignal,
+    say: (text: string) => void,
+    said: () => string,
+  ): Promise<{ res: ModelResponse; usage: Usage; endTagInText: boolean; sessionEnd: boolean; judged: Record<string, unknown> }> {
+    const endTags = new EndTagFilter();
+    const hold = new ClosingHold();
+    const res = await provider.stream({ ...request, signal }, { onText: (text) => say(hold.push(endTags.push(text))) });
+    say(hold.push(endTags.flush()));
+    const endTagInText = endTags.found;
+    const wantsEnd = endsSession(res.message.toolCalls) || endTagInText;
+    const { rest, closing } = hold.finish();
+    if (!wantsEnd) {
+      say(rest + closing);
+      return { res, usage: res.usage, endTagInText, sessionEnd: false, judged: {} };
+    }
+
+    const verdict = await checkEnd(locale, messages, signal);
+    const judged: Record<string, unknown> = {
+      endJudge: verdict.outcome,
+      ...(verdict.count !== undefined ? { harmfulCount: verdict.count } : {}),
+      ...(verdict.usage ? { judgeInputTokens: verdict.usage.inputTokens, judgeOutputTokens: verdict.usage.outputTokens } : {}),
+    };
+    if (verdict.outcome === "confirmed") {
+      say(rest + closing);
+      return { res, usage: res.usage, endTagInText, sessionEnd: true, judged };
+    }
+
+    // Not confirmed: the closing line never goes out; what came before it does.
+    say(rest);
+    // No closing line was held: it didn't read like one and went out already (logged as "late").
+    if (!closing) judged.late = true;
+    if (said().trim() !== "") return { res, usage: res.usage, endTagInText, sessionEnd: false, judged };
+
+    // Nothing to show: ask once more, without the tool. The answer is held whole and checked: a
+    // closing line or tag there too gives way to a neutral line.
+    let usage = res.usage;
+    let again = "";
+    try {
+      const retryTags = new EndTagFilter();
+      const r = await provider.stream(
+        { ...request, system: `${request.system}\n\n${REGENERATE_NOTE[locale]}`, tools: [], signal },
+        { onText: (text) => void (again += retryTags.push(text)) },
+      );
+      again += retryTags.flush();
+      usage = addUsage(usage, r.usage);
+      if (retryTags.found || isClosing(again)) {
+        judged.retryClosing = true;
+        again = "";
+      }
+    } catch (err) {
+      if (signal.aborted) throw err;
+      logger.error({ msg: "end judge: second try failed", ...describe(err) });
+      again = "";
+    }
+    say(again.trim() ? again : NEUTRAL_LINE[locale]);
+    return { res, usage, endTagInText, sessionEnd: false, judged: { ...judged, regenerated: true } };
+  }
+
+  /** The independent check. Any failure, or no answer within the timeout, is "error": no end. */
+  async function checkEnd(
+    locale: Locale,
+    messages: Message[],
+    signal: AbortSignal,
+  ): Promise<{ outcome: "confirmed" | "rejected" | "error"; count?: number; usage?: Usage }> {
+    const judge = providerFor("supervisor");
+    if (typeof judge === "string") return { outcome: "error" };
+    const timeout = new AbortController();
+    const onAbort = () => timeout.abort();
+    signal.addEventListener("abort", onAbort, { once: true });
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const expired = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+          timeout.abort();
+          reject(new Error("end judge timed out"));
+        }, deps.judgeTimeoutMs ?? JUDGE_TIMEOUT_MS);
+      });
+      const r = await Promise.race([judge.stream({ ...judgeRequest(prompts, locale, messages), signal: timeout.signal }, {}), expired]);
+      const count = harmfulCount(r.message.text, messages);
+      return { outcome: count >= END_THRESHOLD ? "confirmed" : "rejected", count, usage: r.usage };
+    } catch (err) {
+      if (signal.aborted) throw err;
+      logger.error({ msg: "end judge failed", ...describe(err) });
+      return { outcome: "error" };
+    } finally {
+      clearTimeout(timer);
+      signal.removeEventListener("abort", onAbort);
+    }
   }
 
   /**
