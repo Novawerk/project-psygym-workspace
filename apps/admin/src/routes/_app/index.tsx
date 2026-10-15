@@ -10,7 +10,6 @@ import { Segmented } from "@/components/segmented"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
-import { ApiError } from "@/lib/api"
 import {
   MAX_DAYS,
   clampRange,
@@ -138,10 +137,10 @@ function DashboardPage() {
       }
     >
       {error ? (
-        <Notice>{error instanceof ApiError && error.status === 404 ? "统计没有开启。" : COPY.error}</Notice>
+        <Notice>{COPY.error}</Notice>
       ) : !d ? (
         <DashboardSkeleton />
-      ) : d.series.length === 0 && !d.active ? (
+      ) : isEmpty(d) ? (
         <Notice>这段时间没有数据。</Notice>
       ) : (
         <DashboardBody d={d} rangeLabel={rangeKey === "custom" ? `${d.from} – ${d.to}` : `最近 ${rangeKey} 天`} />
@@ -265,6 +264,12 @@ function DashboardBody({ d, rangeLabel }: { d: Dashboard; rangeLabel: string }) 
       </div>
     </>
   )
+}
+
+/** No counts at all in the range (also what the API answers while counting is switched off). */
+function isEmpty(d: Dashboard) {
+  const zero = (s: { total: unknown }) => s.total === 0
+  return d.series.every(zero) && (!d.active || (zero(d.active.day) && zero(d.active.week)))
 }
 
 function Kpi({ label, value, sub, muted }: { label: string; value: string; sub: string; muted?: boolean }) {
