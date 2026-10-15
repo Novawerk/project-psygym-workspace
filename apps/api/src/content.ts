@@ -92,7 +92,13 @@ export function parseCase(file: string, raw: string, warn: Warn = consoleWarn): 
   const yaml: unknown = parseYaml(m[1]!);
   const meta = Required.safeParse(yaml);
   if (!meta.success) throw new Error(`${file}: bad frontmatter\n${z.prettifyError(meta.error)}`);
-  const c: Case = { ...meta.data, brief: m[2]!.trim() };
+  let brief: string;
+  try {
+    brief = stripComments(m[2]!);
+  } catch (e) {
+    throw new Error(`${file}: ${(e as Error).message}`);
+  }
+  const c: Case = { ...meta.data, brief };
   const fields = (yaml ?? {}) as Record<string, unknown>;
   for (const key of OPTIONAL_FIELDS) {
     let input = fields[key];
@@ -143,11 +149,47 @@ export interface Prompts {
 const read = (file: string) => fs.readFileSync(file, "utf8").trim();
 const stripFrontmatter = (raw: string) => FRONTMATTER.exec(raw)?.[2]?.trim() ?? raw;
 
+/**
+ * Notes for us and for 聆镜 (<!-- … -->) never reach a model. An unclosed one would send the
+ * rest of the file as is, so it fails the load (and CI) instead.
+ */
+export function stripComments(text: string): string {
+  const stripped = text.replace(/<!--[\s\S]*?-->/g, "");
+  if (stripped.includes("<!--") || stripped.includes("-->")) throw new Error("unclosed HTML comment");
+  return stripped.replace(/\n{3,}/g, "\n\n").trim();
+}
+
+/**
+ * Skill ids 聆镜 wrote → the ids we had already fixed. The app's shield and skill-tags.md use
+ * risk_screening, so the model only ever sees that one.
+ */
+export const SKILL_ALIASES: Record<string, string> = { initial_assessment_and_safety: "risk_screening" };
+
+/** Rubric sections we don't send: the report's shape and length come from prompts/supervisor.md. */
+const RUBRIC_DROPPED_SECTIONS = ["报告结构"];
+
+const SKILL_ID_LINE = /^([ \t]*-[ \t]*技能 id：[ \t]*)([a-z0-9_]+)[ \t]*$/gm;
+
+/** The skill ids in a rubric, in order, after aliasing. */
+export function rubricSkillIds(rubric: string): string[] {
+  return [...rubric.matchAll(SKILL_ID_LINE)].map((m) => SKILL_ALIASES[m[2]!] ?? m[2]!);
+}
+
+/** A rubric file as the supervisor reads it: no frontmatter, no comments, no dropped sections, aliased ids. */
+export function rubricForPrompt(raw: string): string {
+  const sections = stripComments(stripFrontmatter(raw)).split(/^(?=## )/m);
+  return sections
+    .filter((s) => !RUBRIC_DROPPED_SECTIONS.some((title) => s.startsWith(`## ${title}`)))
+    .join("")
+    .replace(SKILL_ID_LINE, (_, head: string, id: string) => `${head}${SKILL_ALIASES[id] ?? id}`)
+    .trim();
+}
+
 export function loadPrompts(dir = promptsDir(), content = contentDir()): Prompts {
   return {
     client: read(path.join(dir, "client.md")),
     supervisor: read(path.join(dir, "supervisor.md")),
     supervisorLive: read(path.join(dir, "supervisor-live.md")),
-    rubrics: { cbt: stripFrontmatter(read(path.join(content, "rubrics/cbt.md"))) },
+    rubrics: { cbt: rubricForPrompt(read(path.join(content, "rubrics/cbt.md"))) },
   };
 }

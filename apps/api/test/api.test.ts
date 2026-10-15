@@ -256,7 +256,7 @@ describe("what the supervisor sees", () => {
     expect(prompts.supervisor.indexOf("## 写完后，交出前检查一遍")).toBeGreaterThan(prompts.supervisor.indexOf("## 报告结构"));
     expect(prompts.supervisor).toContain("**只在心里检查，不要把这份清单写进报告。**");
     expect(prompts.supervisor).toContain("咨询师说过伤害性的话时，「需要改进」里有它，没有被删掉。");
-    expect(prompts.supervisor).toContain("指来访者时用「来访者」，没有用「他」「她」。");
+    expect(prompts.supervisor).toContain("指来访者时用「来访者」，没有用「他」「她」「他的」「她的」，一处都没有。");
     // Examples carry placeholders, never content a model could copy as if it had been said.
     expect(prompts.supervisor).toContain("**示例里的〔方括号〕是占位**");
     for (const copied of ["睡不好", "一直绷着", "我也不太确定", "有点慌"]) expect(prompts.supervisor).not.toContain(copied);
