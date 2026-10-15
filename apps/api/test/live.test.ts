@@ -83,16 +83,15 @@ describe("what the model gets", () => {
     for (const s of ["**不用标题**", "**最少 1 条，最多 3 条**", "**不写结尾的 AI 声明**", "中文 150–250 字", "**一个字都不改，包括人称**", "〔方括号〕是占位", "对话还很短时，只说已经能看到的"]) {
       expect(prompts.supervisorLive).toContain(s);
     }
-    // Risk, then a harmful remark, then what went well, then what to try; the first 3 that apply.
-    const order = ["1. **风险提醒**", "2. **伤害性的话**", "3. **一条做得好的**", "4. **一条接下来可以试的**"].map((s) => prompts.supervisorLive.indexOf(s));
+    // Risk, then what went well, then what to try. Harmful remarks are the full report's job.
+    const order = ["1. **风险提醒**", "2. **一条做得好的**", "3. **一条接下来可以试的**"].map((s) => prompts.supervisorLive.indexOf(s));
     expect(order.every((i, k) => i > 0 && (k === 0 || i > order[k - 1]!))).toBe(true);
     for (const copied of ["睡不好", "一直绷着", "有点慌"]) expect(prompts.supervisorLive).not.toContain(copied);
-    expect(prompts.supervisorLive).toContain("`- 你说「原话」，这句话会伤到来访者，真实会谈里可能让对方直接离开。可以换成：〔一句话〕`");
     // Every item in both languages, and everything in the session's language.
     expect(prompts.supervisorLive).toContain("| 条目 | 中文会谈 | English session |");
     expect(prompts.supervisorLive).toContain("**提示的每一个字都用会谈的语言写**");
     expect(prompts.supervisorLive).toContain("**只问感受、问睡眠、问发生了什么，都不算。**");
-    expect(prompts.supervisorLive).toContain("剩下一个位置先给「做得好的」");
+    expect(prompts.supervisorLive).toContain("**只有这三类。**");
   });
 });
 
