@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { createApp, type Logger } from "../src/app.js";
 import { loadConfig } from "../src/config.js";
 import { loadCases, loadPrompts } from "../src/content.js";
-import { HOLD_MAX_CHARS, NEUTRAL_LINE, REGENERATE_NOTE, ShortHold, harmfulCount, judgeRequest } from "../src/end-judge.js";
+import { ClosingHold, NEUTRAL_LINE, REGENERATE_NOTE, harmfulCount, isClosing, judgeRequest } from "../src/end-judge.js";
 import { MOCK_END_TRIGGER, MockProvider, type MockStep } from "../src/llm/mock.js";
 import type { ModelProvider, ModelRequest, ToolCall } from "../src/llm/types.js";
 import type { Message } from "../src/schema.js";
@@ -59,35 +59,47 @@ async function chat(app: ReturnType<typeof makeApp>["app"], messages: Message[] 
 const says = (text: string, toolCalls: ToolCall[] = []): MockStep => () => ({ text, toolCalls });
 const finds = (...harmful: number[]): MockStep => () => ({ text: JSON.stringify({ harmful }), toolCalls: [] });
 
-describe("ShortHold", () => {
-  it("holds one short sentence until the end", () => {
-    const h = new ShortHold();
-    expect(h.push("我想今天")).toBe("");
-    expect(h.push("先到这里。")).toBe("");
-    expect(h.released).toBe(false);
-    expect(h.take()).toBe("我想今天先到这里。");
+/** Runs `deltas` through a ClosingHold: what went out during the stream, and what finish() kept. */
+function hold(deltas: string[]) {
+  const h = new ClosingHold();
+  const out = deltas.map((d) => h.push(d)).join("");
+  return { out, ...h.finish() };
+}
+
+describe("ClosingHold", () => {
+  it("holds a closing line until the end, in either language", () => {
+    expect(hold(["我想今天", "先到这里。"])).toEqual({ out: "", rest: "", closing: "我想今天先到这里。" });
+    expect(hold(["I think I'd like ", "to stop here for today."])).toEqual({ out: "", rest: "", closing: "I think I'd like to stop here for today." });
+    expect(hold(["I'll go now."])).toMatchObject({ out: "", closing: "I'll go now." });
   });
 
-  it("lets go once a second sentence starts", () => {
-    const h = new ShortHold();
-    expect(h.push("嗯。")).toBe("");
-    expect(h.push("我")).toBe("嗯。我");
+  it("lets a reaction out and holds the closing line after it", () => {
+    const r = hold(["……你这么说，", "我不知道还要不要说下去。我想今天", "先到这里。"]);
+    expect(r).toEqual({ out: "……你这么说，我不知道还要不要说下去。", rest: "", closing: "我想今天先到这里。" });
+    const en = hold(["...I don't know if I want to keep talking after that. ", "I think I'd like to stop here for today."]);
+    expect(en.out).toBe("...I don't know if I want to keep talking after that.");
+    expect(en.closing).toContain("stop here for today");
+  });
+
+  it("everything after a closing line stays held", () => {
+    expect(hold(["我先走了。", "谢谢你。"])).toEqual({ out: "", rest: "", closing: "我先走了。谢谢你。" });
+  });
+
+  it("ordinary sentences go out as soon as they end; the unfinished one waits", () => {
+    const h = new ClosingHold();
+    expect(h.push("嗯……我也不")).toBe("嗯……");
+    expect(h.push("知道。就是")).toBe("我也不知道。");
     expect(h.released).toBe(true);
-    expect(h.push("也不知道")).toBe("我也不知道".slice(1));
+    expect(h.finish()).toEqual({ rest: "就是", closing: "" });
   });
 
-  it("lets go past the length limit", () => {
-    const h = new ShortHold();
-    const long = "就".repeat(HOLD_MAX_CHARS + 1);
-    expect(h.push(long)).toBe(long);
-    expect(h.released).toBe(true);
+  it("a closing line without a full stop is caught at the end", () => {
+    expect(hold(["我想今天先到这里"])).toEqual({ out: "", rest: "", closing: "我想今天先到这里" });
   });
 
-  it("closing punctuation runs are still the first sentence", () => {
-    const h = new ShortHold();
-    expect(h.push("就是……")).toBe("");
-    expect(h.push("」")).toBe("");
-    expect(h.released).toBe(false);
+  it("isClosing: the client's closing lines, not its reactions", () => {
+    for (const t of ["我想今天先到这里。", "今天先这样吧。", "我先走了。", "I'd like to stop here for today.", "I'll go now.", "Goodbye."]) expect(isClosing(t), t).toBe(true);
+    for (const t of ["……你这么说，我不知道还要不要说下去。", "嗯……可能吧。", "I don't know if I want to keep talking after that.", "I'm going to try."]) expect(isClosing(t), t).toBe(false);
   });
 });
 
@@ -231,16 +243,111 @@ describe("END_SESSION_JUDGE on", () => {
     }
   });
 
-  it("a long reply that ends with the tool: its text stays, session_end only if confirmed", async () => {
-    const reply = "我其实一直都挺努力的，可是你这么说，我真的不知道还要不要说下去。我想今天先到这里。";
-    const rejected = makeApp({ judge: true, client: [says(reply, [END])], checker: [finds(3)] });
-    const r = await chat(rejected.app);
-    expect(r.text).toBe(reply);
-    expect(r.types).not.toContain("session_end");
-    expect(rejected.lines.find((l) => l.msg === "turn")).toMatchObject({ endJudge: "rejected", late: true });
+  it("a reaction, then the closing line: rejected, the reaction stays and the closing line never goes out", async () => {
+    const reply = "……你这么说，我不知道还要不要说下去。我想今天先到这里。";
+    const { app, client, lines } = makeApp({ judge: true, client: [says(reply, [END])], checker: [finds(3)] });
+    const { text, types } = await chat(app);
+    expect(text).toBe("……你这么说，我不知道还要不要说下去。");
+    expect(types).not.toContain("session_end");
+    expect((client as MockProvider).requests).toHaveLength(1);
+    expect(lines.find((l) => l.msg === "turn")).toMatchObject({ endJudge: "rejected" });
+    expect(lines.find((l) => l.msg === "turn")).not.toHaveProperty("late");
+  });
 
-    const confirmed = makeApp({ judge: true, client: [says(reply, [END])], checker: [finds(3, 5)] });
-    expect((await chat(confirmed.app)).types.slice(-2)).toEqual(["session_end", "turn_end"]);
+  it("a reaction, then the closing line: confirmed, both go out, then session_end", async () => {
+    const reply = "……你这么说，我不知道还要不要说下去。我想今天先到这里。";
+    const { app } = makeApp({ judge: true, client: [says(reply, [END])], checker: [finds(3, 5)] });
+    const { text, types } = await chat(app);
+    expect(text).toBe(reply);
+    expect(types.slice(-2)).toEqual(["session_end", "turn_end"]);
+  });
+
+  it("English: the closing line is held and dropped when rejected", async () => {
+    const { app } = makeApp({
+      judge: true,
+      client: [says("I think I'd like to stop here for today.", [END]), says("Maybe… I'm not sure it helps, though.")],
+      checker: [finds(3)],
+    });
+    const res = await app.request("/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ caseId: CASE_ID, locale: "en", messages: MESSAGES }),
+    });
+    const body = await res.text();
+    expect(body).not.toContain("stop here");
+    expect(body).toContain("Maybe");
+    expect(body).not.toContain("session_end");
+  });
+
+  it("the second try writes a closing line or a tag: the neutral line instead", async () => {
+    for (const second of ["<end_session>我想今天先到这里。</end_session>", "我想今天先到这里。", "好吧，那我先走了。"]) {
+      const { app, lines } = makeApp({ judge: true, client: [says("我想今天先到这里。", [END]), says(second)], checker: [finds()] });
+      const { text, types } = await chat(app);
+      expect(text, second).toBe(NEUTRAL_LINE.zh);
+      expect(types).not.toContain("session_end");
+      expect(lines.find((l) => l.msg === "turn")).toMatchObject({ regenerated: true, retryClosing: true });
+    }
+  });
+
+  it("a closing line the hold didn't recognise: rejected, no session_end, logged as late", async () => {
+    const reply = "嗯。那就这样。";
+    const { app, lines } = makeApp({ judge: true, client: [says(reply, [END])], checker: [finds(3)] });
+    const { text, types } = await chat(app);
+    expect(text).toBe(reply);
+    expect(types).not.toContain("session_end");
+    expect(lines.find((l) => l.msg === "turn")).toMatchObject({ endJudge: "rejected", late: true });
+  });
+
+  it("logs the check's token counts", async () => {
+    const { app, lines } = makeApp({ judge: true, client: [says("我想今天先到这里。", [END])], checker: [finds(3, 5)] });
+    await chat(app);
+    const turn = lines.find((l) => l.msg === "turn")!;
+    expect(turn.judgeInputTokens).toEqual(expect.any(Number));
+    expect(turn.judgeOutputTokens).toEqual(expect.any(Number));
+  });
+
+  it("the app goes away while the check runs: no session_end, logged as aborted", async () => {
+    const controller = new AbortController();
+    const hanging: ModelProvider = {
+      name: "mock",
+      model: "hang",
+      buildRequest: () => ({}),
+      stream: (req: ModelRequest) =>
+        new Promise((_, reject) => {
+          req.signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")));
+          controller.abort();
+        }),
+    };
+    const { app, lines } = makeApp({ judge: true, client: [says("我想今天先到这里。", [END])], checker: hanging, judgeTimeoutMs: 5000 });
+    const res = await app.request("/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ caseId: CASE_ID, locale: "zh", messages: MESSAGES }),
+      signal: controller.signal,
+    });
+    const body = await res.text().catch(() => "");
+    expect(body).not.toContain("session_end");
+    expect(body).not.toContain("先到这里");
+    await new Promise((r) => setTimeout(r, 20));
+    expect(lines.some((l) => l.msg === "turn aborted")).toBe(true);
+    expect(lines.some((l) => l.msg === "turn")).toBe(false);
+  });
+
+  it("a request cancelled before it starts: nothing from the model, no check", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const { app, checker, lines } = makeApp({ judge: true, client: [says("我想今天先到这里。", [END])], checker: [finds(3, 5)] });
+    const res = await app.request("/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ caseId: CASE_ID, locale: "zh", messages: MESSAGES }),
+      signal: controller.signal,
+    });
+    const body = await res.text().catch(() => "");
+    expect(body).not.toContain("session_end");
+    await new Promise((r) => setTimeout(r, 20));
+    expect((checker as MockProvider).requests).toHaveLength(0);
+    expect(lines.some((l) => l.msg === "turn")).toBe(false);
   });
 
   it("the built-in mock: #end in one message doesn't end, in two it does", async () => {
@@ -256,4 +363,14 @@ describe("END_SESSION_JUDGE on", () => {
     ]);
     expect(two.types.slice(-2)).toEqual(["session_end", "turn_end"]);
   });
+});
+
+describe("the check and the AI client use one harm standard", () => {
+  it.each(["贬低", "嘲讽", "不耐烦", "矫情", "更惨的人", "来咨询的理由", "性骚扰", "歧视", "拒绝细说", "指责受害者", "复述", "正常化", "说教", "温和地问起创伤经历", "主动收尾", "别想太多"])(
+    "both name %s",
+    (term) => {
+      expect(prompts.client).toContain(term);
+      expect(prompts.endJudge).toContain(term);
+    },
+  );
 });

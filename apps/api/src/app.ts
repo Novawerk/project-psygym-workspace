@@ -22,7 +22,7 @@ import { addUsage, type ModelRequest, type ModelResponse, type Usage } from "./l
 import { FeedbackBody, postToSlack, slackMessage, type FetchLike } from "./feedback.js";
 import type { Auth, AuthUser } from "./auth/types.js";
 import { disabledCounter, durationBucket, normalizeEvent, turnBucket, type Counter, type MetricsStore } from "./metrics/counter.js";
-import { END_THRESHOLD, JUDGE_TIMEOUT_MS, NEUTRAL_LINE, REGENERATE_NOTE, ShortHold, harmfulCount, judgeRequest } from "./end-judge.js";
+import { ClosingHold, END_THRESHOLD, JUDGE_TIMEOUT_MS, NEUTRAL_LINE, REGENERATE_NOTE, harmfulCount, isClosing, judgeRequest } from "./end-judge.js";
 import { EndTagFilter } from "./end-tag.js";
 import { statsView } from "./metrics/stats.js";
 import { FixedWindowLimiter, clientIp } from "./rate-limit.js";
@@ -386,6 +386,9 @@ export function createApp(deps: AppDeps) {
       const abort = new AbortController();
       stream.onAbort(() => abort.abort());
       c.req.raw.signal?.addEventListener("abort", () => abort.abort(), { once: true });
+      // A request already cancelled never fires "abort". Only on the judged path, so the default
+      // stream stays exactly as it was.
+      if (t.judge && c.req.raw.signal?.aborted) abort.abort();
 
       // Writes go out in order; once the client is gone they fail quietly.
       let chain: Promise<unknown> = Promise.resolve();
@@ -471,10 +474,11 @@ export function createApp(deps: AppDeps) {
   }
 
   /**
-   * One /chat turn with END_SESSION_JUDGE on (src/end-judge.ts). The start of the reply is held
-   * while it could be a closing line; an end_session call (or tag) ends the session only when the
-   * check finds END_THRESHOLD harmful counselor messages. Otherwise the held line is dropped and the
-   * client is asked once more, without the tool. `judged` goes to the log: no text, only outcomes.
+   * One /chat turn with END_SESSION_JUDGE on (src/end-judge.ts). Finished sentences go out as they
+   * come; from the first one that reads like a closing line, the rest is held. An end_session call
+   * (or tag) ends the session only when the check finds END_THRESHOLD harmful counselor messages.
+   * Otherwise the held closing line is dropped; if nothing else was said, the client is asked once
+   * more, without the tool. `judged` goes to the log: no text, only outcomes and token counts.
    */
   async function judgedTurn(
     provider: ModelProvider,
@@ -486,52 +490,65 @@ export function createApp(deps: AppDeps) {
     said: () => string,
   ): Promise<{ res: ModelResponse; usage: Usage; endTagInText: boolean; sessionEnd: boolean; judged: Record<string, unknown> }> {
     const endTags = new EndTagFilter();
-    const hold = new ShortHold();
+    const hold = new ClosingHold();
     const res = await provider.stream({ ...request, signal }, { onText: (text) => say(hold.push(endTags.push(text))) });
-    const tail = endTags.flush();
+    say(hold.push(endTags.flush()));
     const endTagInText = endTags.found;
     const wantsEnd = endsSession(res.message.toolCalls) || endTagInText;
+    const { rest, closing } = hold.finish();
     if (!wantsEnd) {
-      say(hold.push(tail));
-      say(hold.take());
+      say(rest + closing);
       return { res, usage: res.usage, endTagInText, sessionEnd: false, judged: {} };
     }
 
     const verdict = await checkEnd(locale, messages, signal);
-    const judged: Record<string, unknown> = { endJudge: verdict.outcome, ...(verdict.count !== undefined ? { harmfulCount: verdict.count } : {}) };
-    const confirmed = verdict.outcome === "confirmed";
-    if (hold.released) {
-      // A long reply that ended with the tool: its text is out already. Without the check's
-      // agreement we only hold back session_end.
-      say(tail);
-      return { res, usage: res.usage, endTagInText, sessionEnd: confirmed, judged: { ...judged, late: true } };
-    }
-    const line = hold.take() + tail;
-    if (confirmed) {
-      say(line);
+    const judged: Record<string, unknown> = {
+      endJudge: verdict.outcome,
+      ...(verdict.count !== undefined ? { harmfulCount: verdict.count } : {}),
+      ...(verdict.usage ? { judgeInputTokens: verdict.usage.inputTokens, judgeOutputTokens: verdict.usage.outputTokens } : {}),
+    };
+    if (verdict.outcome === "confirmed") {
+      say(rest + closing);
       return { res, usage: res.usage, endTagInText, sessionEnd: true, judged };
     }
 
-    // Not confirmed: the closing line never goes out. Ask once more, without the tool.
+    // Not confirmed: the closing line never goes out; what came before it does.
+    say(rest);
+    // No closing line was held: it didn't read like one and went out already (logged as "late").
+    if (!closing) judged.late = true;
+    if (said().trim() !== "") return { res, usage: res.usage, endTagInText, sessionEnd: false, judged };
+
+    // Nothing to show: ask once more, without the tool. The answer is held whole and checked: a
+    // closing line or tag there too gives way to a neutral line.
     let usage = res.usage;
-    const retryTags = new EndTagFilter();
+    let again = "";
     try {
-      const again = await provider.stream(
+      const retryTags = new EndTagFilter();
+      const r = await provider.stream(
         { ...request, system: `${request.system}\n\n${REGENERATE_NOTE[locale]}`, tools: [], signal },
-        { onText: (text) => say(retryTags.push(text)) },
+        { onText: (text) => void (again += retryTags.push(text)) },
       );
-      say(retryTags.flush());
-      usage = addUsage(usage, again.usage);
+      again += retryTags.flush();
+      usage = addUsage(usage, r.usage);
+      if (retryTags.found || isClosing(again)) {
+        judged.retryClosing = true;
+        again = "";
+      }
     } catch (err) {
       if (signal.aborted) throw err;
       logger.error({ msg: "end judge: second try failed", ...describe(err) });
+      again = "";
     }
-    if (said().trim() === "") say(NEUTRAL_LINE[locale]);
+    say(again.trim() ? again : NEUTRAL_LINE[locale]);
     return { res, usage, endTagInText, sessionEnd: false, judged: { ...judged, regenerated: true } };
   }
 
   /** The independent check. Any failure, or no answer within the timeout, is "error": no end. */
-  async function checkEnd(locale: Locale, messages: Message[], signal: AbortSignal): Promise<{ outcome: "confirmed" | "rejected" | "error"; count?: number }> {
+  async function checkEnd(
+    locale: Locale,
+    messages: Message[],
+    signal: AbortSignal,
+  ): Promise<{ outcome: "confirmed" | "rejected" | "error"; count?: number; usage?: Usage }> {
     const judge = providerFor("supervisor");
     if (typeof judge === "string") return { outcome: "error" };
     const timeout = new AbortController();
@@ -547,7 +564,7 @@ export function createApp(deps: AppDeps) {
       });
       const r = await Promise.race([judge.stream({ ...judgeRequest(prompts, locale, messages), signal: timeout.signal }, {}), expired]);
       const count = harmfulCount(r.message.text, messages);
-      return { outcome: count >= END_THRESHOLD ? "confirmed" : "rejected", count };
+      return { outcome: count >= END_THRESHOLD ? "confirmed" : "rejected", count, usage: r.usage };
     } catch (err) {
       if (signal.aborted) throw err;
       logger.error({ msg: "end judge failed", ...describe(err) });
