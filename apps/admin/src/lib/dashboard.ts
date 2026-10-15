@@ -48,6 +48,20 @@ export function formatPeriod(p: string, granularity: "day" | "week") {
 
 const isoDay = (d: Date) => d.toISOString().slice(0, 10)
 
+/** The API takes at most 366 days. */
+export const MAX_DAYS = 366
+
+export const shiftDay = (day: string, days: number) =>
+  isoDay(new Date(Date.parse(`${day}T00:00:00Z`) + days * 86_400_000))
+
+/** Keeps a custom range within MAX_DAYS by moving the other end. */
+export function clampRange(r: { from: string; to: string }, moved: "from" | "to") {
+  if (r.from > r.to) return moved === "from" ? { from: r.from, to: r.from } : { from: r.to, to: r.to }
+  const span = (Date.parse(r.to) - Date.parse(r.from)) / 86_400_000 + 1
+  if (span <= MAX_DAYS) return r
+  return moved === "from" ? { from: r.from, to: shiftDay(r.from, MAX_DAYS - 1) } : { from: shiftDay(r.to, -(MAX_DAYS - 1)), to: r.to }
+}
+
 export function lastDays(n: number) {
   const to = new Date()
   const from = new Date(to.getTime() - (n - 1) * 86_400_000)

@@ -10,6 +10,8 @@ export class ApiError extends Error {
     readonly errors: Problem[] = [],
     /** 409 only: "draft_outdated" when the draft started from an older published version. */
     readonly reason?: string,
+    /** 429 only: seconds from the Retry-After header. */
+    readonly retryAfter?: number,
   ) {
     super(message)
   }
@@ -43,5 +45,15 @@ export async function toError(res: Response) {
     body?.error?.message ?? res.statusText,
     body?.errors,
     body?.reason ?? body?.error?.reason,
+    retryAfterSeconds(res.headers.get("retry-after")),
   )
+}
+
+/** Retry-After is seconds or an HTTP date. */
+function retryAfterSeconds(value: string | null) {
+  if (!value) return undefined
+  const n = Number(value)
+  if (Number.isFinite(n)) return Math.max(0, n)
+  const at = Date.parse(value)
+  return Number.isNaN(at) ? undefined : Math.max(0, Math.ceil((at - Date.now()) / 1000))
 }

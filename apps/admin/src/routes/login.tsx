@@ -20,7 +20,7 @@ export const Route = createFileRoute("/login")({
 
 function signInMessage(error: unknown) {
   if (error instanceof ApiError && error.code === "not_admin") return "这个 Google 账号没有后台权限。需要的话，请联系负责人。"
-  if (error instanceof ApiError && error.status === 429) return "登录尝试太多了，请过 10 分钟再试。"
+  if (error instanceof ApiError && error.status === 429) return "登录尝试太多了，请稍后再试。"
   return "登录没有成功，请再试一次。"
 }
 
@@ -31,6 +31,15 @@ function LoginPage() {
   const queryClient = useQueryClient()
   const [busy, setBusy] = React.useState(false)
   const [error, setError] = React.useState<string | null>(expired ? COPY.expired : null)
+  // After a 429 the button stays off until Retry-After has passed.
+  const [lockedUntil, setLockedUntil] = React.useState(0)
+  const [, tick] = React.useReducer((n: number) => n + 1, 0)
+  const locked = lockedUntil > Date.now()
+  React.useEffect(() => {
+    if (!locked) return
+    const t = setTimeout(tick, lockedUntil - Date.now() + 50)
+    return () => clearTimeout(t)
+  }, [locked, lockedUntil])
 
   const handleCredential = async (idToken: string) => {
     setBusy(true)
@@ -40,6 +49,7 @@ function LoginPage() {
       queryClient.setQueryData(queryKeys.me, me)
       await navigate({ to: "/" })
     } catch (err) {
+      if (err instanceof ApiError && err.status === 429) setLockedUntil(Date.now() + (err.retryAfter ?? 600) * 1000)
       setError(signInMessage(err))
       setBusy(false)
     }
@@ -58,10 +68,10 @@ function LoginPage() {
             {error}
           </div>
         )}
-        {GOOGLE_CLIENT_ID && !dataSource.isSample ? (
+        {GOOGLE_CLIENT_ID && !dataSource.isSample && !locked ? (
           <GoogleSignInButton clientId={GOOGLE_CLIENT_ID} onCredential={(c) => void handleCredential(c)} onError={setError} />
         ) : (
-          <Button variant="outline" size="lg" disabled={!dataSource.isSample} onClick={() => void handleCredential("sample")}>
+          <Button variant="outline" size="lg" disabled={!dataSource.isSample || locked} onClick={() => void handleCredential("sample")}>
             用 Google 登录
           </Button>
         )}

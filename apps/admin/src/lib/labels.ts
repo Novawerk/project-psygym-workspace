@@ -77,6 +77,5 @@ export const COPY = {
   loading: "正在加载…",
   error: "出错了，请刷新再试。",
   expired: "登录已过期，请重新登录。",
-  disabled: "你的后台权限已停用。需要的话，请联系负责人。",
   readOnly: "你是只读角色，不能修改。",
 }

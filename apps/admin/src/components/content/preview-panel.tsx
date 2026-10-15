@@ -1,4 +1,5 @@
 import * as React from "react"
+import DOMPurify from "dompurify"
 import { Marked } from "marked"
 
 import { SidePanel } from "@/components/content/side-panel"
@@ -109,11 +110,20 @@ function Field({ label, text }: { label: string; text: string }) {
   )
 }
 
-/** Raw HTML (and HTML comments) is dropped, so a rubric can't inject markup into the page. */
+/** Raw HTML (and HTML comments) is dropped before rendering. */
 const md = new Marked({ renderer: { html: () => "" } })
 
+/**
+ * The rendered rubric still goes through DOMPurify: links and images keep only http(s) and
+ * mailto targets, so `[x](javascript:…)`, `<javascript:…>` and data: links can't run as the admin.
+ */
+function renderRubric(body: string) {
+  const html = md.parse(body, { async: false }) as string
+  return DOMPurify.sanitize(html, { ALLOWED_URI_REGEXP: /^(?:https?:|mailto:)/i, FORBID_TAGS: ["style", "form"] })
+}
+
 function RubricPreview({ body }: { body: string }) {
-  const html = React.useMemo(() => md.parse(body, { async: false }) as string, [body])
+  const html = React.useMemo(() => renderRubric(body), [body])
   return (
     <div className="flex flex-col gap-3 p-4">
       <p className="text-xs text-muted-foreground">第一期只显示文字，不能试评。</p>
@@ -131,6 +141,14 @@ function ChatPreview({ id, lang, source }: { id: string; lang: Lang; source: str
   const [streaming, setStreaming] = React.useState(false)
   const [ended, setEnded] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
+  const [lockedUntil, setLockedUntil] = React.useState(0)
+  const [, tick] = React.useReducer((n: number) => n + 1, 0)
+  const locked = lockedUntil > Date.now()
+  React.useEffect(() => {
+    if (!locked) return
+    const t = setTimeout(tick, lockedUntil - Date.now() + 50)
+    return () => clearTimeout(t)
+  }, [locked, lockedUntil])
   const abort = React.useRef<AbortController | null>(null)
   const bottom = React.useRef<HTMLDivElement>(null)
 
@@ -151,7 +169,7 @@ function ChatPreview({ id, lang, source }: { id: string; lang: Lang; source: str
 
   const send = async () => {
     const text = draft.trim()
-    if (!text || streaming || ended) return
+    if (!text || streaming || ended || locked) return
     const history: ChatMessage[] = [...messages, { role: "counselor", text }]
     setMessages([...history, { role: "client", text: "" }])
     setDraft("")
@@ -170,7 +188,9 @@ function ChatPreview({ id, lang, source }: { id: string; lang: Lang; source: str
       if (ctrl.signal.aborted) return
       setMessages(history.slice(0, -1))
       setDraft(text)
-      setError(e instanceof ApiError && e.status === 429 ? "试聊太频繁了，过一会儿再试。" : COPY.error)
+      const limited = e instanceof ApiError && e.status === 429
+      if (limited) setLockedUntil(Date.now() + ((e as ApiError).retryAfter ?? 60) * 1000)
+      setError(limited ? "试聊太频繁了，过一会儿再试。" : COPY.error)
     } finally {
       if (!ctrl.signal.aborted) setStreaming(false)
     }
@@ -221,7 +241,7 @@ function ChatPreview({ id, lang, source }: { id: string; lang: Lang; source: str
           <Button type="button" variant="outline" size="sm" onClick={restart}>
             重新开始
           </Button>
-          <Button type="submit" size="sm" disabled={!draft.trim() || streaming || ended}>
+          <Button type="submit" size="sm" disabled={!draft.trim() || streaming || ended || locked}>
             发送
           </Button>
         </div>

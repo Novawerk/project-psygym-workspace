@@ -74,7 +74,7 @@ export function HistoryPanel({
             </span>
             <span className="text-xs text-muted-foreground">
               {formatTime(v.publishedAt)} ·{" "}
-              {v.publishedBy ? `${v.publishedBy.email} · ${ROLE_LABEL[v.publishedBy.role]}` : v.action === "import" ? "切换日导入" : "—"}
+              {v.publishedBy ? `${v.publishedBy.email} · ${ROLE_LABEL[v.publishedBy.role]}` : v.action === "import" ? "导入" : "—"}
             </span>
             {v.note && <span className="text-xs text-foreground/80">{v.note}</span>}
           </button>
@@ -203,7 +203,7 @@ function VersionDetail({
           <AlertDialogHeader>
             <AlertDialogTitle>恢复成 v{version}？</AlertDialogTitle>
             <AlertDialogDescription>
-              把 v{version} 的内容发布成 v{current + 1}？App 会在一分钟内用上。草稿不受影响。
+              把 v{version} 的内容发布成 v{current + 1}？App 会在一分钟内用上。有草稿的话，草稿会落后于新版本，要先「已合并，更新草稿」才能发布。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

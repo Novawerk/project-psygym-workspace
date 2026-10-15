@@ -12,6 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton"
 import { ApiError } from "@/lib/api"
 import {
+  MAX_DAYS,
+  clampRange,
+  shiftDay,
   dailyAverage,
   findSeries,
   formatPeriod,
@@ -92,11 +95,14 @@ function DashboardPage() {
           />
           {rangeKey === "custom" && (
             <div className="flex items-center gap-1.5">
-              <Input type="date" aria-label="开始日期" className="h-8 w-36" value={custom.from} max={custom.to}
-                onChange={(e) => e.target.value && setCustom((r) => ({ ...r, from: e.target.value }))} />
+              <Input type="date" aria-label="开始日期" className="h-8 w-36" value={custom.from}
+                min={shiftDay(custom.to, -(MAX_DAYS - 1))} max={custom.to}
+                onChange={(e) => e.target.value && setCustom((r) => clampRange({ ...r, from: e.target.value }, "from"))} />
               <span className="text-muted-foreground">–</span>
-              <Input type="date" aria-label="结束日期" className="h-8 w-36" value={custom.to} min={custom.from}
-                onChange={(e) => e.target.value && setCustom((r) => ({ ...r, to: e.target.value }))} />
+              <Input type="date" aria-label="结束日期" className="h-8 w-36" value={custom.to}
+                min={custom.from} max={shiftDay(custom.from, MAX_DAYS - 1)}
+                onChange={(e) => e.target.value && setCustom((r) => clampRange({ ...r, to: e.target.value }, "to"))} />
+              <span className="text-xs text-muted-foreground">最多 {MAX_DAYS} 天</span>
             </div>
           )}
           <Segmented

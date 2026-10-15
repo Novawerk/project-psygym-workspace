@@ -9,7 +9,7 @@ export const API_BASE = "/api"
 export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? ""
 
 /**
- * Sample-data mode: an in-memory store, no sign-in. On until apps/api serves the admin routes;
- * set VITE_USE_SAMPLE_DATA=false to talk to the API.
+ * Sample-data mode: an in-memory store, no sign-in. Only when VITE_USE_SAMPLE_DATA is exactly
+ * "true": a missing or mistyped variable must never put fake data without sign-in online.
  */
-export const USE_SAMPLE_DATA = import.meta.env.VITE_USE_SAMPLE_DATA !== "false"
+export const USE_SAMPLE_DATA = import.meta.env.VITE_USE_SAMPLE_DATA === "true"

@@ -83,6 +83,7 @@ function Row({ e }: { e: PublishLogEntry }) {
         <Link
           to={e.kind === "case" ? "/cases/$caseId" : "/rubrics/$rubricId"}
           params={e.kind === "case" ? { caseId: e.id } : { rubricId: e.id }}
+          search={{ v: e.version }}
           className="font-mono text-xs hover:underline"
         >
           {e.id} v{e.version}
@@ -98,7 +99,7 @@ function Row({ e }: { e: PublishLogEntry }) {
             <span className="text-xs text-muted-foreground">{ROLE_LABEL[e.publishedBy.role]}</span>
           </div>
         ) : (
-          <span className="text-muted-foreground">{e.action === "import" ? "切换日导入" : "—"}</span>
+          <span className="text-muted-foreground">{e.action === "import" ? "导入" : "—"}</span>
         )}
       </TableCell>
       <TableCell className="px-4 text-foreground/80">{e.note ?? ""}</TableCell>

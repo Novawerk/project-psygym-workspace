@@ -53,7 +53,7 @@ function editFrom(kind: Kind, d: ContentDetail): Edit {
   return { form: formFromFrontmatter(kind, doc?.frontmatter ?? null), body: doc?.body ?? "" }
 }
 
-export function ContentEditor({ kind, id }: { kind: Kind; id: string }) {
+export function ContentEditor({ kind, id, version }: { kind: Kind; id: string; version?: number }) {
   const { data, error } = useQuery(itemQueryOptions(kind, id))
   useCrumbs([
     { label: KIND_LABEL[kind], to: kind === "case" ? "/cases" : "/rubrics" },
@@ -69,21 +69,27 @@ export function ContentEditor({ kind, id }: { kind: Kind; id: string }) {
         <span className="sr-only">{COPY.loading}</span>
       </div>
     )
-  return <Editor kind={kind} id={id} data={data} />
+  return <Editor kind={kind} id={id} data={data} openVersion={version} />
 }
 
-function Editor({ kind, id, data }: { kind: Kind; id: string; data: ContentDetail }) {
+function Editor({ kind, id, data, openVersion }: { kind: Kind; id: string; data: ContentDetail; openVersion?: number }) {
   const me = useMe()
   const queryClient = useQueryClient()
   const initial = React.useMemo(() => editFrom(kind, data), [kind, data])
   const [edit, setEdit] = React.useState(initial)
-  // A save, publish or refresh brings new server state: the form follows it.
+  // New server state (a publish, a refetch) replaces the form only when it had no unsaved edits:
+  // someone's typing is never thrown away behind their back. A save sets the form itself.
+  const shown = React.useRef(initial)
   React.useEffect(() => {
-    setEdit(initial)
+    const unsaved = JSON.stringify(edit) !== JSON.stringify(shown.current)
+    shown.current = initial
+    if (!unsaved) setEdit(initial)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initial])
   const dirty = JSON.stringify(edit) !== JSON.stringify(initial)
-  const [panel, setPanel] = React.useState<null | "preview" | "history">(null)
-  const [focus, setFocus] = React.useState<HistoryFocus | undefined>()
+  // A link from the publish log (?v=3) opens the version history at that version.
+  const [panel, setPanel] = React.useState<null | "preview" | "history">(openVersion ? "history" : null)
+  const [focus, setFocus] = React.useState<HistoryFocus | undefined>(openVersion ? { version: openVersion } : undefined)
   const [publishing, setPublishing] = React.useState(false)
   const [note, setNote] = React.useState("")
   const [discarding, setDiscarding] = React.useState(false)
@@ -96,13 +102,22 @@ function Editor({ kind, id, data }: { kind: Kind; id: string; data: ContentDetai
 
   const published = data.published
   const draft = data.draft
-  const problems: Problem[] = draft?.errors ?? []
+  // A refused publish (422) shows the backend's own errors until the next save.
+  const [publishProblems, setPublishProblems] = React.useState<Problem[] | null>(null)
+  const problems: Problem[] = publishProblems ?? draft?.errors ?? []
   const errors = fieldErrors(problems)
   const readOnly = !me.canWrite
   const title = (published?.frontmatter as { title?: { zh?: string } } | null)?.title?.zh || edit.form.title.zh || id
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: queryKeys.content })
   const fetchFresh = () => queryClient.fetchQuery({ ...itemQueryOptions(kind, id), staleTime: 0 })
+  /** Reads the latest state without touching the cache, so the form keeps the unsaved edits. */
+  const peek = () => dataSource.content(kind, id)
+  const reload = async () => {
+    const fresh = await fetchFresh()
+    setEdit(editFrom(kind, fresh))
+    setBanner(null)
+  }
 
   const frontmatter = () => frontmatterFromForm(kind, id, edit.form, (draft ?? published)?.frontmatter ?? null)
 
@@ -110,13 +125,15 @@ function Editor({ kind, id, data }: { kind: Kind; id: string; data: ContentDetai
     mutationFn: (opts: { rebase?: true } = {}) =>
       dataSource.saveDraft(kind, id, { draftRevision: draft?.revision ?? null, ...opts, frontmatter: frontmatter(), body: edit.body }),
     onSuccess: (next) => {
+      setPublishProblems(null)
+      setEdit(editFrom(kind, next))
       queryClient.setQueryData(queryKeys.item(kind, id), next)
       void queryClient.invalidateQueries({ queryKey: queryKeys.list(kind) })
       toast.success("草稿已保存")
     },
     onError: async (e) => {
       if (isConflict(e)) {
-        const fresh = await fetchFresh().catch(() => null)
+        const fresh = await peek().catch(() => null)
         setBanner({ type: "conflict", email: fresh?.draft?.updatedBy?.email ?? "别人", at: formatTime(fresh?.draft?.updatedAt) })
       } else toast.error(COPY.error)
     },
@@ -140,7 +157,8 @@ function Editor({ kind, id, data }: { kind: Kind; id: string; data: ContentDetai
       const fresh = await fetchFresh().catch(() => null)
       if (isDraftOutdated(e)) setBanner({ type: "outdated", from: draft?.baseVersion ?? 0, to: fresh?.published?.version ?? 0 })
       else if (isConflict(e)) setBanner({ type: "published", version: fresh?.published?.version ?? 0 })
-      else if (!(e instanceof ApiError && e.status === 422)) toast.error(COPY.error)
+      else if (e instanceof ApiError && e.status === 422) setPublishProblems(e.errors.length ? e.errors : null)
+      else toast.error(COPY.error)
     },
   })
 
@@ -222,7 +240,12 @@ function Editor({ kind, id, data }: { kind: Kind; id: string; data: ContentDetai
         <div className="flex flex-col gap-5 px-8 py-6">
           {readOnly && <Callout>{COPY.readOnly}</Callout>}
           {banner?.type === "conflict" && (
-            <Callout tone="error">草稿已被 {banner.email} 在 {banner.at} 修改。复制你的改动，刷新后再改。</Callout>
+            <Callout tone="error">
+              <span>草稿已被 {banner.email} 在 {banner.at} 修改。复制你的改动，刷新后再改。</span>
+              <Button size="sm" variant="outline" className="mt-2 self-start" onClick={() => void reload()}>
+                刷新
+              </Button>
+            </Callout>
           )}
           {banner?.type === "published" && (
             <Callout tone="error">这期间有人发布了 v{banner.version}。刷新后再发布。</Callout>
