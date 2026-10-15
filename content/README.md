@@ -4,6 +4,12 @@
 
 我们把每个文件直接交给 AI 当「角色说明」或「评分标准」。所以：**写得越具体，AI 演得越像。** 不用写成论文，写成给一位扮演来访者的演员看的说明就行。
 
+> **2026-10-15 起，病例和督导标准在后台编辑。** 后台地址 `admin.psygym.novawerk.io`，在那里写草稿、预览、和 AI 来访者试聊、发布、回滚。App 读的是后台里最新的已发布版本。
+>
+> 这个目录里的文件**不再是线上来源**：改这里的文件、提 PR，都不会改到 App。目录里的文件是后台已发布版本的副本：GitHub 自动同步（第二期）上线之前，每次发布后由我们导出一次、开 PR 更新，留底用。
+>
+> 下面的模板仍然有用：后台「新建病例」会按它预填，字段和小标题都一样。后台怎么用见 [`docs/for-psygym-team.md`](../docs/for-psygym-team.md)。
+
 - 病例：`content/cases/<id>.md`，一个病例一个文件。
 - 督导标准：`content/rubrics/cbt.md`，MVP 只有 CBT 一份。
 - MVP 只要两个病例：抑郁、抑郁加焦虑。病例先写中文。
@@ -205,4 +211,4 @@ AI 督导按这个结构写，MVP 固定三部分：
 
 ## 怎么交
 
-见 [`docs/for-psygym-team.md`](../docs/for-psygym-team.md)。
+在后台写好、发布。见 [`docs/for-psygym-team.md`](../docs/for-psygym-team.md)。
