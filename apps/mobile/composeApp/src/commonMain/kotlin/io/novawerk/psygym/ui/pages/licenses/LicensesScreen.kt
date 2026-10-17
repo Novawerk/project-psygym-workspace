@@ -115,7 +115,8 @@ private fun LicenceText(file: String, padding: PaddingValues) {
     }
     LazyColumn(Modifier.fillMaxWidth(), contentPadding = padding, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         items(paragraphs) { p ->
-            Text(p.trim('\n'), style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace, modifier = Modifier.padding(vertical = 2.dp))
+            // The files are wrapped for 80 columns; let each paragraph wrap to the screen instead.
+            Text(p.trim().replace(Regex("\\s*\n\\s*"), " "), style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace, modifier = Modifier.padding(vertical = 2.dp))
         }
     }
 }
