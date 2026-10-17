@@ -9,7 +9,7 @@ import io.novawerk.psygym.ui.locale.rememberApiLocale
 
 /**
  * 中 | EN in the intro's top right (onboarding.md: switchable from the first screen). Both
- * options show, the current one as a pill (design O1–O3). The labels are language names,
+ * options show, the current one as a pill (design: O1, O2, L1). The labels are language names,
  * so they read the same in both languages.
  */
 @Composable

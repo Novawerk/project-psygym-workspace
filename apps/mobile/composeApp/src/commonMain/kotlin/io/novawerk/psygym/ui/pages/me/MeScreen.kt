@@ -81,6 +81,7 @@ import io.novawerk.psygym.resources.settings_history_section
 import io.novawerk.psygym.resources.settings_history_toggle
 import io.novawerk.psygym.resources.settings_history_toggle_desc
 import io.novawerk.psygym.resources.settings_language
+import io.novawerk.psygym.resources.settings_language_cases_note
 import io.novawerk.psygym.resources.settings_language_en
 import io.novawerk.psygym.resources.settings_language_note
 import io.novawerk.psygym.resources.settings_language_system
@@ -150,6 +151,13 @@ fun MeScreen(
             SectionTitle(Res.string.me_settings_section)
             GroupCard {
                 ValueRow(Res.string.settings_language, stringResource(languageLabel(language))) { pickLanguage = true }
+                // Moved here from the old O3 (onboarding.md, 2026-10-17).
+                Text(
+                    stringResource(Res.string.settings_language_cases_note),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
+                )
                 RowDivider()
                 // Mid-session supervisor notes (live-supervision.md L-3). On by default.
                 SwitchRow(Res.string.live_setting, null, liveNotes, onLiveNotesChange)

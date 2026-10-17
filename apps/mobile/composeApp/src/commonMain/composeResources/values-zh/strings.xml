@@ -33,9 +33,6 @@
     <string name="onb_consent_check">我已了解，这是练习工具，不是治疗。</string>
     <string name="onb_consent_accept">我知道了</string>
     <string name="onb_link_privacy">隐私说明</string>
-    <string name="onb_ready_title">准备开始</string>
-    <string name="onb_ready_language_title">界面语言</string>
-    <string name="onb_ready_language_note">病例暂时只有中文。界面是英文时，来访者和督导报告都用英文。</string>
 
     <string name="home_greeting">今天练一场？</string>
     <string name="home_tagline">选一位来访者，开始一次 CBT 会谈。</string>
@@ -112,6 +109,7 @@
     <string name="settings_title">设置</string>
     <string name="settings_general">通用</string>
     <string name="settings_language">语言</string>
+    <string name="settings_language_cases_note">病例暂时只有中文。界面是英文时，来访者和督导报告都用英文。</string>
     <string name="settings_language_system">跟随系统</string>
     <string name="settings_language_zh">中文</string>
     <string name="settings_language_en">English</string>
@@ -193,7 +191,6 @@
     <plurals name="turns_count">
         <item quantity="other">%1$d 轮</item>
     </plurals>
-    <string name="onb_ready_continue">继续</string>
     <string name="login_email_title">用邮箱登录</string>
     <string name="login_email_subtitle">我们会发一个 6 位验证码到你的邮箱。</string>
     <string name="login_email_hint">邮箱</string>

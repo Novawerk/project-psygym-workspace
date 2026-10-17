@@ -7,11 +7,8 @@ import kotlinx.serialization.Serializable
 /** O1. */
 @Serializable data object WelcomeRoute
 
-/** O2. [thenReady] false when only the disclaimer changed: back to home afterwards. */
-@Serializable data class ConsentRoute(val thenReady: Boolean = true)
-
-/** O3. */
-@Serializable data object ReadyRoute
+/** O2, the last intro page. Also shown alone when the disclaimer changed. */
+@Serializable data object ConsentRoute
 
 /** H1. */
 @Serializable data object HomeRoute
