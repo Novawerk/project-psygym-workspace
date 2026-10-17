@@ -6,9 +6,22 @@
 
 | 渠道 | 版本 | 状态 |
 |------|------|------|
-| Play 内部测试 | 0.1.0（versionCode 1） | 已推出。测试员名单「PSYGYM testers」，加入链接由发布转给用户 |
-| TestFlight 外部组「聆镜团队」 | 0.1.0（Build 5） | 已提交 Beta App Review，排队中。过审后 Apple 会给组里的测试员发邀请邮件 |
-| TestFlight 内部组「Novawerk internal」 | 0.1.0（Build 6–8，Xcode Cloud 自动打的） | 组里没有人，不会推给任何人 |
+| Play 内部测试 | 0.2.0（versionCode 2） | 2026-10-11 已推出，替换了 0.1.0。测试员名单「PSYGYM testers」，加入链接由发布转给用户 |
+| TestFlight 外部组「聆镜团队」 | 0.1.0（Build 5）、0.2.0（Build 10） | 都已提交 Beta App Review（Build 10 是 2026-10-11）。过审后 Apple 会给组里的测试员发邀请邮件 |
+| TestFlight 内部组「Novawerk internal」 | Xcode Cloud 打的每个 build | 组里没有人，不会推给任何人 |
+| 0.3.0（versionCode 3） | 按住说话 | 版本 PR #115 已合并。按下面「发 0.3.0」的顺序走 |
+
+## 发 0.3.0（按住说话）的顺序
+
+0.3.0 加了按住说话（ADR 0010）。声音只在手机上转成文字，所以隐私标签、数据安全表和分级都不改；要改的只有两边给审核员的说明（[review-notes.md](./review-notes.md) 说明正文里的「Microphone」一段）。
+
+1. **iOS**：Xcode Cloud 自动打包，进 TestFlight 内部组。
+2. **Android**：移动端打签名的 AAB，发布用 `jarsigner -verify` 验签，再请用户拖进 Play 内部测试。
+3. **后台文字**（用户点头后）：TestFlight Test Information 的 Review Notes 和 Play App content → Sign in details 的「Any other information」，加上麦克风那段。
+4. **用户点头后**：
+   - Play 内部测试推出 0.3.0。不用审核。
+   - iOS 0.3.0 的 build 加进「聆镜团队」，送 Beta App Review。新版本号的第一个 build 都要审，通常 1–2 天。
+5. **不用动的**：Apple App Privacy、Play 数据安全表（Audio 不申报，见 [privacy-labels.md](./privacy-labels.md)）；Play 权限声明表（`RECORD_AUDIO` 不在要填表的敏感权限里）；两边的分级问卷。
 
 ## 发 0.2.0（带登录）的顺序
 

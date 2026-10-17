@@ -14,6 +14,7 @@
 | 未成年人使用 | 两边的分级 | 分级定 18+，目标受众选 18+ | |
 | 功能太少，或者审核员进不去 | Apple 2.1、4.2；Play App access | **登录版**：一个固定的审核员邮箱加固定验证码（[login.md](../product/login.md) 第 4 节），不发邮件、不受尝试次数限制、不用邀请码。**登录前的 build**：用审核员专用邀请码 | 每次提交审核前换一个新码，填进后台；审核期间不清空 `REVIEW_LOGIN_EMAIL`、`REVIEW_LOGIN_CODE`，不停服务 |
 | 有账号却删不掉 | Apple 5.1.1(v)；Play 账号删除要求 | App 内「我的 → 删除账号」；网页 `https://psygym.novawerk.io/delete-account` 说明不用 App 时怎么申请 | 网页在 Google 送审前上线；提交前在真机上试一遍删除 |
+| 麦克风权限说不清楚 | Apple 5.1.1(i)、2.5.2；Play 权限和设备滥用政策 | 只在按住说话时用；声音在手机上转文字，不上传；iOS 只用端侧识别；安卓的语音模型是数据文件，不是代码 | 每次送审前确认给审核员的说明里有「Microphone」一段 |
 | 隐私标签和实际不符 | Apple 5.1.1、5.1.2；Play User Data 政策 | [privacy-labels.md](./privacy-labels.md) 按代码写 | 每次发版前核一遍 |
 
 ## 给审核员的说明（Review Notes / App access 说明）
@@ -44,6 +45,8 @@ TestFlight 的 Beta App Review、App Store 审核、Play 的 App access 都可�
 > **Safety.** Cases are low to moderate risk. The AI client may mention dark thoughts as written in the case, but never describes methods. A "Need help?" page with crisis guidance is always one tap away and works offline. If the trainee is abusive, the AI client reacts like a real person and ends the session on the second time.
 >
 > **Data.** Sign-in uses an email and a one-time code. Our server stores only the email, sign-up date, invite batch and sessions. It doesn't store conversations. Practice history stays on the device and can be deleted in the app. Accounts can be deleted in the app or via https://psygym.novawerk.io/delete-account. See the privacy policy.
+>
+> **Microphone (0.3.0 and later).** The microphone is used only for the optional "Hold to talk" button in a session. Speech is turned into text on the device and is never uploaded or stored; the text goes into the input box, and the trainee edits and sends it like typed text. On iPhone we use Apple's on-device speech recognition only; if the device can't recognise speech offline, the app says so and does not fall back to server recognition. On Android, the first use downloads a speech model of about 169 MB (data files, not executable code) from our server; after that it works offline, and it can be deleted under Me. You can complete every test step by typing; the microphone is not required.
 >
 > **Contact.** info@novawerk.io
 
