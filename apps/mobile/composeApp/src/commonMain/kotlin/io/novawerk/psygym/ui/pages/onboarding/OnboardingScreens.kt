@@ -88,7 +88,7 @@ private fun OnboardingTopBar(page: Int, onSkip: (() -> Unit)?) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            // The current page is a short pill, the others dots (design O1–O3).
+            // The current page is a short pill, the others dots (design O1–O2).
             repeat(PAGES) { i ->
                 Box(
                     Modifier.size(width = if (i == page) 20.dp else 6.dp, height = 6.dp).background(

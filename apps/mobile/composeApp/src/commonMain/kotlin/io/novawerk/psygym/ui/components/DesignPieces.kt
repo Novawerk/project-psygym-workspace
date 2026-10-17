@@ -134,7 +134,7 @@ val ShieldAlert: ImageVector by lazy {
     }.build()
 }
 
-/** A light grey card with no border (zinc-100, radius 12): O2's points, O3's groups, P3's answers. */
+/** A light grey card with no border (zinc-100, radius 12): O2's points, P3's answers. */
 @Composable
 fun GrayCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     Column(

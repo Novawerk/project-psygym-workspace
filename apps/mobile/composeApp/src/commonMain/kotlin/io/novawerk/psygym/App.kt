@@ -155,7 +155,7 @@ fun App(component: AppComponent) {
                 }
                 val caseIndex = { case: CaseSummary? -> caseStore.cases?.indexOfFirst { it.id == case?.id }?.coerceAtLeast(0) ?: 0 }
 
-                // After the intro: home when signed in, else sign-in (with O3 still behind it).
+                // After the intro: home when signed in, else sign-in (with O2 still behind it).
                 val afterIntro = {
                     if (stored != null || shot != null) nav.finishIntro() else nav.navigate(LoginRoute())
                 }
@@ -268,7 +268,7 @@ fun App(component: AppComponent) {
                                     LoginRoute.NOTICE_DELETED -> stringResource(Res.string.delete_done)
                                     else -> null
                                 },
-                                // A back arrow only with a page behind (O3, or the page whose session expired).
+                                // A back arrow only with a page behind (O2, or the page whose session expired).
                                 onBack = if (nav.previousBackStackEntry?.destination.let { it != null && it !is NavGraph }) ({ nav.popBackStack() }) else null,
                                 onLanguage = setLanguage,
                                 onPrivacy = { nav.navigate(PrivacyRoute) },

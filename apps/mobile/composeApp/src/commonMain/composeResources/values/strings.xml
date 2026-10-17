@@ -11,7 +11,7 @@
     <string name="demo_badge">Demo data</string>
     <string name="help_link">Need help?</string>
 
-    <!-- Onboarding (O1–O3) -->
+    <!-- Onboarding (O1–O2) -->
     <string name="onb_skip">Skip</string>
     <string name="onb_continue">Continue</string>
     <string name="onb_welcome_title">Practise with an AI client</string>

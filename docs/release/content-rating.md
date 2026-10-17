@@ -54,7 +54,7 @@ Apple 2025 年起换成 4+ / 9+ / 13+ / 16+ / 18+ 五档。问卷每年会变，
 |----|------|
 | **Target audience and content** | 只选 **18 and over**。不进 Families 计划 |
 | **Ads** | No ads |
-| **App access** | 部分功能需要权限：给审核员一个专用邀请码，写清楚在哪输入（第一次打开 O3 页，或「我的 → 设置 → 邀请码」）。邀请码由用户填在 Play，不进 git |
+| **App access** | 部分功能需要权限：给审核员一个专用邀请码，写清楚在哪输入（用新邮箱登录、输完验证码后的 L3 页）。邀请码由用户填在 Play，不进 git |
 | **Health apps declaration** | 我们不是给患者用的健康 App。按 Play 当时的选项，选最接近「医学 / 心理学教育培训」的那一项。不要选面向消费者的心理健康、情绪追踪或治疗类。如果没有合适的选项，选「My app does not have any health features」，并在 App 描述里写清楚是训练工具。提交前要用户确认 |
 | **Government apps / Financial features / News** | No |
 | **Data safety** | 见 [privacy-labels.md](./privacy-labels.md) |

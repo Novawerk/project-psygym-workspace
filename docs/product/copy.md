@@ -40,14 +40,6 @@ key 沿用 App 现有命名（`home_*`、`cases_*`、`practice_*`、`supervision
 | onb_consent_accept | 我知道了 | Got it |
 | onb_link_privacy | 隐私说明 | Privacy |
 | onb_link_help | 需要帮助？ | Need help? |
-| ~~onb_ready_title~~ | ~~准备开始~~（O3 已去掉，2026-10-17） | |
-| ~~onb_ready_language_title~~ | ~~界面语言~~ | |
-| onb_ready_invite_title | 邀请码 | Invite code |
-| onb_ready_invite_hint | 输入邀请码 | Enter invite code |
-| ~~onb_ready_language_note~~ | ~~病例暂时只有中文。界面是英文时，来访者和督导报告都用英文。 | Cases are written in Chinese for now. With the English interface, the client and the report are in English.~~ | |
-| onb_ready_invite_body | 测试期间需要邀请码。没有的话可以先跳过。 | We need an invite code during testing. No code? Skip for now. |
-| onb_ready_start | 开始练习 | Start practising |
-| onb_ready_skip | 先跳过 | Skip for now |
 
 ### 首页
 
