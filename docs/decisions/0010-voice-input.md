@@ -11,8 +11,8 @@ speech API. The text lands in the input box; the user edits and sends it as if t
 
 - **iOS:** Apple's Speech framework, on-device only.
   - iOS 26+: `SpeechAnalyzer` + `SpeechTranscriber` with `.fastResults` and `.volatileResults`.
-    On devices where `SpeechTranscriber.isAvailable` is false, use `DictationTranscriber`
-    (Apple's stated fallback, same on-device coverage as the old recognizer). Apple downloads
+    On devices where `SpeechTranscriber.isAvailable` is false, use `SFSpeechRecognizer` on
+    the device, as below. Apple downloads
     and manages the language model (`AssetInventory`); it doesn't count against our app size.
   - iOS 16–25: `SFSpeechRecognizer` with `requiresOnDeviceRecognition = true`, and only if
     `supportsOnDeviceRecognition` is true for that locale. `requiresOnDeviceRecognition` alone

@@ -21,8 +21,8 @@
 
 | 系统 | 用什么 | 不支持时 |
 |---|---|---|
-| iOS 26 及以上 | `SpeechAnalyzer` + `SpeechTranscriber`，打开 `fastResults` 和 `volatileResults`。设备不支持时（开发者论坛的说法是 iPhone 11、SE2 这类不行，12 及以上可以）改用 `DictationTranscriber` | 两个都不可用：说明「这台设备不支持离线语音识别」，麦克风按钮不可用 |
-| iOS 16–25 | `SFSpeechRecognizer`，`requiresOnDeviceRecognition = true`。**先检查** `supportsOnDeviceRecognition`，为 false 就不用 | 同上 |
+| iOS 26 及以上 | `SpeechAnalyzer` + `SpeechTranscriber`，打开 `fastResults` 和 `volatileResults`。设备不支持 `SpeechTranscriber` 时（开发者论坛的说法是 iPhone 11、SE2 这类不行，12 及以上可以），走下一行的 `SFSpeechRecognizer` 端侧识别 | 两个都不可用：说明「这台设备不支持离线语音识别」，麦克风按钮不可用 |
+| iOS 16–25，或 iOS 26 上不支持 `SpeechTranscriber` 的设备 | `SFSpeechRecognizer`，`requiresOnDeviceRecognition = true`。**先检查** `supportsOnDeviceRecognition`，为 false 就不用 | 同上 |
 
 - 只设 `requiresOnDeviceRecognition`、不检查 `supportsOnDeviceRecognition` 时，请求可能被发到苹果服务器。所以一定要先检查。
 - 任何情况下都**不退回云端识别**。
@@ -148,7 +148,7 @@
 | 没有麦克风权限（第一次） | 第一次按下时弹系统授权框，这次按下不录 | — |
 | 权限被拒绝 | 按下后不录 | 底部弹层：「需要麦克风权限才能按住说话。声音只在这台手机上转成文字，不会上传。」按钮「去设置」「取消」 |
 | 模型未下载（Android；iOS 26 系统模型未装） | 点麦克风图标时先出底部弹层，不切换模式 | 弹层：标题「下载语音识别模型」，正文「约 169 MB，只下载一次。下载后离线可用，声音只在这台手机上转成文字。」移动网络下多一行：「你现在用的是移动网络，建议连 Wi-Fi 再下载。」按钮「下载」「取消」 |
-| 下载中 | 语音模式按钮显示「正在下载 45%」，不可按 | 弹层可以关掉，在后台继续下载；离开会谈页也不中断（App 被杀后，下次从断点继续） |
+| 下载中 | 语音模式按钮显示「正在下载 45%」，不可按 | 弹层可以关掉，在后台继续下载；离开会谈页也不中断（App 被杀后，下次点「下载」从断点继续） |
 | 下载失败 / 校验失败 | 按钮「下载没完成，点这里重试」 | — |
 | 不支持（iOS 设备或系统不支持端侧识别） | 点麦克风图标出弹层，不切换模式 | 「这台设备不支持离线语音识别。为了不把你的声音发到网上，这个功能没有打开。请用键盘输入。」按钮「知道了」 |
 
@@ -226,7 +226,7 @@
   - 会谈页 Composer 的按钮和浮层。
 - `androidMain`：
   - `SherpaRecognizer`：用 `AudioRecord` 16 kHz 录音，按 100 ms 喂给模型，松手时补 1.5 秒静音；
-  - `HttpModelDownloader`：分文件下载，Range 续传，校验 SHA-256，用 WorkManager 在后台跑。
+  - `ModelDownloader`：分文件下载，Range 续传，校验 SHA-256。在 App 进程里后台下载，离开会谈页也不停；App 被杀后，下次点麦克风时从断点续传（不用 WorkManager）。
 - `iosMain`：
   - `AppleRecognizer`：iOS 26 用 `SpeechAnalyzer`，iOS 16–25 用 `SFSpeechRecognizer`；
   - Kotlin/Native 调不到 Swift-only 的 `SpeechAnalyzer`，所以这部分写在 `iosApp` 的 Swift 里，通过一个接口注入给 Kotlin。
