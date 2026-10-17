@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -138,12 +139,13 @@ fun HomeScreen(
                     if (cases.size == 1) Spacer(Modifier.weight(1f))
                 }
             }
-            Spacer(Modifier.height(28.dp))
+            Spacer(Modifier.height(20.dp))
+            // "Need help?" inside the safety note: the page ends on a whole card, and on tall
+            // phones the link no longer sits half under the tab bar.
             SafetyNote {
                 Text(stringResource(Res.string.home_disclaimer), style = MaterialTheme.typography.bodySmall)
+                HelpLink(onHelp, Modifier.offset(x = (-8).dp))
             }
-            Spacer(Modifier.height(8.dp))
-            HelpLink(onHelp, Modifier.align(Alignment.CenterHorizontally))
             Spacer(Modifier.height(16.dp))
         }
     }
