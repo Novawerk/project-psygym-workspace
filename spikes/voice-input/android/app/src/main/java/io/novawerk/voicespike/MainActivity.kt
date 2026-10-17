@@ -45,7 +45,7 @@ class MainActivity : Activity() {
     private lateinit var log: TextView
     private lateinit var hold: Button
 
-    private var candidate = Candidate.XAsr480
+    private var candidate = Candidate.XAsr480Punct
     private var recognizer: OnlineRecognizer? = null
     private var engine: Engine? = null
     private var loadMs = 0L

@@ -12,6 +12,10 @@ import java.io.File
 
 /** The streaming candidates. [files] are the only files the app needs from each release tarball. */
 enum class Candidate(val dir: String, val label: String, val files: List<String>) {
+    XAsr480Punct(
+        "sherpa-onnx-x-asr-480ms-streaming-zipformer-transducer-zh-en-punct-int8-2026-06-05", "X-ASR 480ms 中英 带标点（选定）",
+        listOf("tokens.txt", "encoder.int8.onnx", "decoder.onnx", "joiner.int8.onnx"),
+    ),
     XAsr480(
         "sherpa-onnx-x-asr-480ms-streaming-zipformer-transducer-zh-en-int8-2026-06-05", "X-ASR 480ms 中英",
         listOf("tokens.txt", "encoder.int8.onnx", "decoder.onnx", "joiner.int8.onnx"),
@@ -41,7 +45,7 @@ enum class Candidate(val dir: String, val label: String, val files: List<String>
     fun recognizer(root: File, threads: Int): OnlineRecognizer {
         val d = folder(root).absolutePath
         val model = when (this) {
-            XAsr480, XAsr160 -> OnlineModelConfig(
+            XAsr480Punct, XAsr480, XAsr160 -> OnlineModelConfig(
                 transducer = OnlineTransducerModelConfig("$d/encoder.int8.onnx", "$d/decoder.onnx", "$d/joiner.int8.onnx"),
             )
             SmallCtcZh -> OnlineModelConfig(zipformer2Ctc = OnlineZipformer2CtcModelConfig("$d/model.int8.onnx"))
