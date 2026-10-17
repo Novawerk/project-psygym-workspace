@@ -70,7 +70,13 @@ internal class AsrSessions<R : Any, S : Any>(
             ready = scope.async {
                 val rec = loadRecognizer() ?: return@async null
                 if (cancelled) return@async rec
-                val s = backend.createStream(rec)
+                // A stream that can't be made: treat it like a model that can't be used. The
+                // recognizer stays with us and release() frees it.
+                val s = try {
+                    backend.createStream(rec)
+                } catch (e: Exception) {
+                    return@async null
+                }
                 stream = s
                 decoder = Thread {
                     while (true) {
@@ -109,7 +115,7 @@ internal class AsrSessions<R : Any, S : Any>(
             session = null
             if (!modelReady()) return@withLock false
             val s = Session(onText)
-            s.recorder = recorder(s.queue) { s.recording } ?: return@withLock false
+            s.recorder = runCatching { recorder(s.queue) { s.recording } }.getOrNull() ?: return@withLock false
             s.recorder.apply { name = "voice-record"; start() }
             s.startDecoding()
             session = s
@@ -142,11 +148,15 @@ internal class AsrSessions<R : Any, S : Any>(
 
     suspend fun releaseNow() = withContext(NonCancellable) {
         ops.withLock {
-            session?.let { end(it, cancel = true) }
-            session = null
-            loadLock.withLock {
-                recognizer?.let { backend.free(it) }
-                recognizer = null
+            try {
+                session?.let { end(it, cancel = true) }
+            } finally {
+                // Freed even if ending the press failed: otherwise it would wait for the next release.
+                session = null
+                loadLock.withLock {
+                    recognizer?.let { backend.free(it) }
+                    recognizer = null
+                }
             }
         }
     }
@@ -156,7 +166,10 @@ internal class AsrSessions<R : Any, S : Any>(
         if (cancel) s.cancelled = true
         s.recording = false
         withContext(Dispatchers.IO) { s.recorder.join() }
-        val rec = s.ready.await()
+        // However the recorder ended (even by an exception before its own END), the decoder must
+        // not wait for more audio. A second END is harmless: the decoder stops at the first.
+        s.queue.put(END)
+        val rec = runCatching { s.ready.await() }.getOrNull()
         withContext(Dispatchers.IO) { s.decoder?.join() }
         val stream = s.stream ?: return ""
         if (rec == null || cancel) {

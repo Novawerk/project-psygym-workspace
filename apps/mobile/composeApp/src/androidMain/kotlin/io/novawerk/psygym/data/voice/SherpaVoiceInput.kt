@@ -183,16 +183,21 @@ class SherpaVoiceInput(context: Context, modelBaseUrl: String) : VoiceInput {
         val start = (12 until b.size - 8).firstOrNull { b[it] == 'd'.code.toByte() && b[it + 1] == 'a'.code.toByte() && b[it + 2] == 't'.code.toByte() && b[it + 3] == 'a'.code.toByte() }?.plus(8) ?: 44
         val pcm = FloatArray((b.size - start) / 2) { i -> ((b[start + 2 * i + 1].toInt() shl 8) or (b[start + 2 * i].toInt() and 0xff)).toShort() / 32768f }
         return Thread {
-            var i = 0
-            while (recording()) {
-                val x = if (i < pcm.size) pcm.copyOfRange(i, minOf(i + CHUNK, pcm.size)) else FloatArray(CHUNK)
-                i += x.size
-                _level.value = (rms(x) * 8).coerceIn(0f, 1f)
-                queue.put(x)
-                Thread.sleep(100)
+            try {
+                var i = 0
+                while (recording()) {
+                    val x = if (i < pcm.size) pcm.copyOfRange(i, minOf(i + CHUNK, pcm.size)) else FloatArray(CHUNK)
+                    i += x.size
+                    _level.value = (rms(x) * 8).coerceIn(0f, 1f)
+                    queue.put(x)
+                    Thread.sleep(100)
+                }
+            } catch (e: Exception) {
+                // Debug-only test audio: an error ends the take, like the microphone path.
+            } finally {
+                _level.value = 0f
+                queue.put(AsrSessions.END)
             }
-            _level.value = 0f
-            queue.put(AsrSessions.END)
         }
     }
 
