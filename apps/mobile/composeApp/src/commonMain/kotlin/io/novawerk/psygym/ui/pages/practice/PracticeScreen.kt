@@ -468,6 +468,10 @@ private fun Composer(
     onSend: () -> Unit,
     voiceUi: VoiceUi,
 ) {
+    // The field's own state (cursor, selection, IME composition). When the text comes from outside
+    // (heard by voice), show it with the cursor at the end so typing continues there.
+    var field by remember { mutableStateOf(TextFieldValue(value, TextRange(value.length))) }
+    val shown = if (field.text == value) field else TextFieldValue(value, TextRange(value.length))
     Surface(color = MaterialTheme.colorScheme.background) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().imePadding().padding(horizontal = 12.dp, vertical = 8.dp)) {
             if (hint != null) {
@@ -485,11 +489,8 @@ private fun Composer(
                     HoldButton(voiceUi, enabled, Modifier.weight(1f))
                     return@Row
                 }
-                // Text set from outside (heard by voice): cursor at the end, so typing continues there.
-                var field by remember { mutableStateOf(TextFieldValue(value, TextRange(value.length))) }
-                if (field.text != value) field = TextFieldValue(value, TextRange(value.length))
                 OutlinedTextField(
-                    value = field,
+                    value = shown,
                     onValueChange = {
                         field = it
                         onValueChange(it.text)
