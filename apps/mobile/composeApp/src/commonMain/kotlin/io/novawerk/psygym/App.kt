@@ -55,6 +55,8 @@ import io.novawerk.psygym.ui.navigation.HelpRoute
 import io.novawerk.psygym.ui.navigation.HomeRoute
 import io.novawerk.psygym.ui.navigation.PracticeRoute
 import io.novawerk.psygym.ui.navigation.PrivacyRoute
+import io.novawerk.psygym.ui.navigation.LicensesRoute
+import io.novawerk.psygym.ui.pages.licenses.LicensesScreen
 import io.novawerk.psygym.ui.navigation.HistoryDetailRoute
 import io.novawerk.psygym.ui.navigation.HistoryRoute
 import io.novawerk.psygym.ui.navigation.MeRoute
@@ -99,6 +101,7 @@ fun App(component: AppComponent) {
     val expired by sessions.expired.collectAsState()
     val realInfoHintSeen by settings.realInfoHintSeen.collectAsState(initial = true)
     val liveNotes by settings.liveNotes.collectAsState(initial = true)
+    val voiceMode by settings.voiceMode.collectAsState(initial = false)
     val demoData by settings.useFakeApi.collectAsState(initial = AppConfig.fakeApiDefault)
     // Store-screenshot mode (Android debug builds only): no demo badges, written sessions.
     val shot = component.screenshot.mode
@@ -176,6 +179,7 @@ fun App(component: AppComponent) {
                     nav.navigate(LoginRoute()) { popUpTo(nav.graph.id) { inclusive = true } }
                 }
                 val meScreen: @Composable () -> Unit = {
+                    var voiceModelBytes by remember { mutableStateOf(component.voice.modelBytes()) }
                     MeScreen(
                         language = lang,
                         email = stored?.email,
@@ -189,9 +193,17 @@ fun App(component: AppComponent) {
                         onUseFakeApiChange = { scope.launch { settings.setUseFakeApi(it) } },
                         liveNotes = liveNotes,
                         onLiveNotesChange = { scope.launch { settings.setLiveNotes(it) } },
+                        voiceModelBytes = voiceModelBytes,
+                        onDeleteVoiceModel = {
+                            scope.launch {
+                                component.voice.deleteModel()
+                                voiceModelBytes = 0
+                            }
+                        },
                         onReplayOnboarding = { nav.navigate(WelcomeRoute) },
                         onHelp = openHelp,
                         onPrivacy = { nav.navigate(PrivacyRoute) },
+                        onLicenses = { nav.navigate(LicensesRoute) },
                         onTab = onTab,
                     )
                 }
@@ -393,6 +405,9 @@ fun App(component: AppComponent) {
                             liveEnabled = liveNotes && shot == null,
                             // Screenshot mode never saves; the end sheet must say so.
                             saveHistory = saveHistory && shot == null,
+                            voice = component.voice,
+                            voiceMode = voiceMode,
+                            onVoiceModeChange = { scope.launch { settings.setVoiceMode(it) } },
                             onLeave = {
                                 // Nothing kept: coming back starts a fresh session (timer, messages).
                                 session.finish()
@@ -438,6 +453,7 @@ fun App(component: AppComponent) {
                     }
                     composable<HelpRoute> { HelpScreen(onClose = { nav.popBackStack() }) }
                     composable<PrivacyRoute> { PrivacyScreen(onBack = { nav.popBackStack() }) }
+                    composable<LicensesRoute> { LicensesScreen(onBack = { nav.popBackStack() }) }
                     composable<MeRoute> { meScreen() }
                 }
                 }

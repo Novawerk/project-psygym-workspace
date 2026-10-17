@@ -274,4 +274,41 @@
     <string name="live_back">Back to the session</string>
     <string name="live_used_up">You’ve used the mid-session notes for this session. See the full report at the end.</string>
     <string name="live_setting">Show supervisor notes during a session</string>
+
+    <!-- Hold to talk (docs/product/voice-input.md) -->
+    <string name="voice_switch_to_voice">Switch to voice</string>
+    <string name="voice_switch_to_keyboard">Switch to keyboard</string>
+    <string name="voice_hold">Hold to talk</string>
+    <string name="voice_hold_a11y">Tap to start, tap again to finish</string>
+    <string name="voice_release_send">Release to finish · Slide up to cancel</string>
+    <string name="voice_release_cancel">Release to cancel</string>
+    <string name="voice_cancel_hint">Lift your finger to discard</string>
+    <string name="voice_listening">Listening…</string>
+    <string name="voice_preparing">Getting ready…</string>
+    <string name="voice_time_left">%1$d seconds left</string>
+    <string name="voice_nothing_heard">Didn’t catch that. Try again.</string>
+    <string name="voice_failed">Couldn’t start listening. Try again.</string>
+    <string name="voice_mic_title">Microphone needed</string>
+    <string name="voice_mic_denied">Hold to talk needs the microphone. Your voice is turned into text on this phone and never uploaded.</string>
+    <string name="voice_open_settings">Open Settings</string>
+    <string name="voice_model_title">Download the speech model</string>
+    <string name="voice_model_body">About %1$d MB, downloaded once. Works offline after that; your voice is turned into text on this phone.</string>
+    <string name="voice_model_body_system">The first time, your phone downloads its speech model, once. Works offline after that; your voice is turned into text on this phone.</string>
+    <string name="voice_model_cellular">You’re on mobile data. Wi-Fi is better for this download.</string>
+    <string name="voice_model_download">Download</string>
+    <string name="voice_model_progress">Downloading %1$d%</string>
+    <string name="voice_model_progress_unknown">Downloading…</string>
+    <string name="voice_model_failed">Download didn’t finish. Tap to retry</string>
+    <string name="voice_unsupported_title">Voice input isn’t available</string>
+    <string name="voice_unsupported">This device can’t recognise speech offline. To keep your voice off the internet, this feature is off. Please type instead.</string>
+    <string name="voice_ok">OK</string>
+    <string name="voice_cancel">Cancel</string>
+    <string name="settings_voice_model">Speech model</string>
+    <string name="settings_voice_model_delete">Delete (%1$d MB)</string>
+    <string name="settings_licenses">Open-source licences</string>
+    <string name="licenses_intro">聆镜 PSYGYM uses the open-source software and models below. Thank you to their authors. Tap one to read the full licence.</string>
+    <string name="licenses_android_voice">Used for hold to talk on Android.</string>
+    <string name="licenses_show_text">Read the licence</string>
+    <string name="privacy_q_voice">Does hold to talk upload my voice?</string>
+    <string name="privacy_a_voice">No. Your voice is turned into text on your phone; it isn’t uploaded or stored. The text is like what you type: it goes to the AI model only when you send it.</string>
 </resources>

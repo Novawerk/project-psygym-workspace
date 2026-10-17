@@ -47,6 +47,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -63,8 +66,12 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.novawerk.psygym.domain.model.ApiLocale
 import io.novawerk.psygym.domain.model.ContractLimits
 import io.novawerk.psygym.domain.model.Role
+import io.novawerk.psygym.domain.voice.VoiceInput
+import io.novawerk.psygym.domain.voice.VoiceLang
+import io.novawerk.psygym.domain.voice.VoiceText
 import io.novawerk.psygym.resources.Res
 import io.novawerk.psygym.resources.back
 import io.novawerk.psygym.resources.practice_chars_left
@@ -115,6 +122,10 @@ fun PracticeScreen(
     saveHistory: Boolean,
     /** "Show supervisor notes during a session" in Me (L-3). */
     liveEnabled: Boolean,
+    /** Hold to talk (voice-input.md). */
+    voice: VoiceInput,
+    voiceMode: Boolean,
+    onVoiceModeChange: (Boolean) -> Unit,
     onLeave: () -> Unit,
     onSessionLost: () -> Unit,
     onEnd: () -> Unit,
@@ -129,6 +140,13 @@ fun PracticeScreen(
     val listState = rememberLazyListState()
     val items = viewModel.items
     val lastText = items.lastOrNull()?.message?.text
+    val voiceUi = rememberVoiceUi(
+        voice = voice,
+        lang = if (locale == ApiLocale.Zh) VoiceLang.Zh else VoiceLang.En,
+        savedMode = voiceMode,
+        persistMode = onVoiceModeChange,
+        onHeard = { heard -> input = VoiceText.append(input, heard).take(ContractLimits.MAX_MESSAGE_CHARS) },
+    )
 
     // The app was restarted and the in-memory practice is gone: back to the case list.
     LaunchedEffect(Unit) { if (viewModel.case == null) onSessionLost() }
@@ -216,11 +234,14 @@ fun PracticeScreen(
                         viewModel.send(input, locale)
                         input = ""
                     },
+                    voiceUi = voiceUi,
                 )
             }
         },
     ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding)) {
+        // The hold-to-talk bubble floats over the bottom of the conversation.
+        Box(Modifier.fillMaxSize().padding(padding)) {
+        Column(Modifier.fillMaxSize()) {
         // The supervisor chip, quiet and above the messages (live-supervision.md §1).
         if (viewModel.live.chipVisible(viewModel.turns, liveEnabled, viewModel.clientEnded)) {
             LiveChip(
@@ -274,7 +295,12 @@ fun PracticeScreen(
             }
         }
         }
+        VoiceToast(voiceUi, Modifier.align(Alignment.BottomCenter))
+        VoiceBubble(voiceUi, Modifier.align(Alignment.BottomCenter))
+        }
     }
+
+    VoiceSheets(voiceUi)
 
     // Only with something to show: after the process was killed the notes are gone, so a
     // remembered "open" mustn't bring back an empty sheet.
@@ -440,7 +466,12 @@ private fun Composer(
     sending: Boolean,
     hint: String?,
     onSend: () -> Unit,
+    voiceUi: VoiceUi,
 ) {
+    // The field's own state (cursor, selection, IME composition). When the text comes from outside
+    // (heard by voice), show it with the cursor at the end so typing continues there.
+    var field by remember { mutableStateOf(TextFieldValue(value, TextRange(value.length))) }
+    val shown = if (field.text == value) field else TextFieldValue(value, TextRange(value.length))
     Surface(color = MaterialTheme.colorScheme.background) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().imePadding().padding(horizontal = 12.dp, vertical = 8.dp)) {
             if (hint != null) {
@@ -452,9 +483,18 @@ private fun Composer(
                 )
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
+                VoiceToggle(voiceUi, enabled)
+                Spacer(Modifier.size(4.dp))
+                if (voiceUi.voiceMode) {
+                    HoldButton(voiceUi, enabled, Modifier.weight(1f))
+                    return@Row
+                }
                 OutlinedTextField(
-                    value = value,
-                    onValueChange = onValueChange,
+                    value = shown,
+                    onValueChange = {
+                        field = it
+                        onValueChange(it.text)
+                    },
                     enabled = enabled,
                     placeholder = { Text(stringResource(Res.string.practice_input_hint)) },
                     supportingText = (ContractLimits.MAX_MESSAGE_CHARS - value.length).takeIf { it <= CHARS_LEFT_FROM }?.let { left ->

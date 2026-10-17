@@ -25,6 +25,12 @@ dependencyResolutionManagement {
             }
         }
         mavenCentral()
+        // sherpa-onnx (on-device speech, ADR 0010) is published only here. Nothing else may
+        // come from JitPack.
+        exclusiveContent {
+            forRepository { maven("https://jitpack.io") }
+            filter { includeGroup("com.github.k2-fsa.sherpa-onnx") }
+        }
     }
 }
 

@@ -1,6 +1,7 @@
 package io.novawerk.psygym
 
 import io.novawerk.psygym.data.auth.KeystoreSecureStore
+import io.novawerk.psygym.data.voice.SherpaVoiceInput
 import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -36,6 +37,7 @@ private fun appComponent(context: Context, screenshot: ScreenshotLaunch?): AppCo
             // Always null in release builds (see ScreenshotHooks in src/androidRelease).
             ScreenshotModeHolder(screenshot?.mode),
             KeystoreSecureStore(context),
+            SherpaVoiceInput(context, AppConfig.modelBaseUrl),
         ).also { sharedComponent = it }
     }
 }
@@ -52,9 +54,17 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val screenshot = ScreenshotHooks.from(intent)
         val component = appComponent(this, screenshot)
+        // The microphone prompt needs an Activity.
+        (component.voice as? SherpaVoiceInput)?.activity = this
         // Screenshot mode (debug builds only): set the language before the first frame, so the
         // UI never starts in the previous language and switches mid-launch.
         screenshot?.language?.let { lang -> runBlocking { component.settingsRepository.setLanguage(lang) } }
         setContent { App(component) }
+    }
+
+    override fun onDestroy() {
+        val voice = sharedComponent?.voice as? SherpaVoiceInput
+        if (voice?.activity === this) voice.activity = null
+        super.onDestroy()
     }
 }

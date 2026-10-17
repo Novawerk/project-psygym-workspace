@@ -55,3 +55,6 @@ import kotlinx.serialization.Serializable
 
 /** P3. */
 @Serializable data object PrivacyRoute
+
+/** Open-source licences (voice-input.md §2). */
+@Serializable data object LicensesRoute

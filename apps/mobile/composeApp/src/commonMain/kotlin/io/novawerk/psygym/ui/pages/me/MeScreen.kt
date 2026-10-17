@@ -87,6 +87,9 @@ import io.novawerk.psygym.resources.settings_language_note
 import io.novawerk.psygym.resources.settings_language_system
 import io.novawerk.psygym.resources.settings_language_zh
 import io.novawerk.psygym.resources.settings_privacy
+import io.novawerk.psygym.resources.settings_licenses
+import io.novawerk.psygym.resources.settings_voice_model
+import io.novawerk.psygym.resources.settings_voice_model_delete
 import io.novawerk.psygym.resources.settings_replay_onboarding
 import io.novawerk.psygym.resources.settings_version
 import io.novawerk.psygym.ui.components.BottomBar
@@ -114,9 +117,13 @@ fun MeScreen(
     onUseFakeApiChange: (Boolean) -> Unit,
     liveNotes: Boolean,
     onLiveNotesChange: (Boolean) -> Unit,
+    /** The downloaded speech model (Android); 0 hides the row. */
+    voiceModelBytes: Long,
+    onDeleteVoiceModel: () -> Unit,
     onReplayOnboarding: () -> Unit,
     onHelp: () -> Unit,
     onPrivacy: () -> Unit,
+    onLicenses: () -> Unit,
     onTab: (TopTab) -> Unit,
 ) {
     var confirmDeleteAll by rememberSaveable { mutableStateOf(false) }
@@ -161,6 +168,15 @@ fun MeScreen(
                 RowDivider()
                 // Mid-session supervisor notes (live-supervision.md L-3). On by default.
                 SwitchRow(Res.string.live_setting, null, liveNotes, onLiveNotesChange)
+                // Hold to talk's model (voice-input.md §3): delete it; it downloads again on next use.
+                if (voiceModelBytes > 0) {
+                    RowDivider()
+                    ValueRow(
+                        Res.string.settings_voice_model,
+                        stringResource(Res.string.settings_voice_model_delete, (voiceModelBytes / 1_000_000).toInt()),
+                        onDeleteVoiceModel,
+                    )
+                }
             }
 
             SectionTitle(Res.string.settings_history_section)
@@ -188,6 +204,8 @@ fun MeScreen(
                 LinkRow(Res.string.help_link, onClick = onHelp)
                 RowDivider()
                 LinkRow(Res.string.settings_privacy, onClick = onPrivacy)
+                RowDivider()
+                LinkRow(Res.string.settings_licenses, onClick = onLicenses)
                 RowDivider()
                 LinkRow(Res.string.settings_replay_onboarding, onClick = onReplayOnboarding)
             }

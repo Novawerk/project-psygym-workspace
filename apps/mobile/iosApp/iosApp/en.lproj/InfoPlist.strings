@@ -1,2 +1,6 @@
 /* App name on the home screen, English. */
 CFBundleDisplayName = "PSYGYM";
+
+/* Hold to talk (docs/product/voice-input.md §5). */
+NSMicrophoneUsageDescription = "To hear you while you hold to talk. Your voice is turned into text on this phone and never uploaded.";
+NSSpeechRecognitionUsageDescription = "To turn what you say into text on this phone, offline.";

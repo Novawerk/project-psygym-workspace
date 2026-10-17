@@ -1,6 +1,9 @@
 package io.novawerk.psygym
 
 import io.novawerk.psygym.data.auth.KeychainSecureStore
+import io.novawerk.psygym.data.voice.AppleSpeechBridge
+import io.novawerk.psygym.data.voice.AppleVoiceInput
+import platform.UIKit.UIViewController
 import androidx.compose.ui.window.ComposeUIViewController
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import io.novawerk.psygym.di.AppComponent
@@ -17,6 +20,9 @@ import platform.Foundation.NSUserDomainMask
 
 private const val DATA_STORE_FILE_NAME = "psygym.preferences_pb"
 
+// Set by Swift before the first frame: Apple's speech APIs live in iosApp (SpeechBridge.swift).
+private var speechBridge: AppleSpeechBridge? = null
+
 // One component per process: DataStore must be a singleton.
 private val component: AppComponent by lazy {
     AppComponent.create(
@@ -25,10 +31,14 @@ private val component: AppComponent by lazy {
         // Store-screenshot mode is Android-debug only.
         ScreenshotModeHolder(null),
         KeychainSecureStore(),
+        AppleVoiceInput(requireNotNull(speechBridge)),
     )
 }
 
-fun MainViewController() = ComposeUIViewController { App(component) }
+fun MainViewController(speech: AppleSpeechBridge): UIViewController {
+    speechBridge = speech
+    return ComposeUIViewController { App(component) }
+}
 
 // Application Support, not Documents: Documents is user-visible and backed up to iCloud.
 // The whole directory is excluded from backup: it holds settings and practice history.
