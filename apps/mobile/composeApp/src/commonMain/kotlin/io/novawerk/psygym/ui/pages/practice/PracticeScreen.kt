@@ -47,6 +47,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -482,9 +485,15 @@ private fun Composer(
                     HoldButton(voiceUi, enabled, Modifier.weight(1f))
                     return@Row
                 }
+                // Text set from outside (heard by voice): cursor at the end, so typing continues there.
+                var field by remember { mutableStateOf(TextFieldValue(value, TextRange(value.length))) }
+                if (field.text != value) field = TextFieldValue(value, TextRange(value.length))
                 OutlinedTextField(
-                    value = value,
-                    onValueChange = onValueChange,
+                    value = field,
+                    onValueChange = {
+                        field = it
+                        onValueChange(it.text)
+                    },
                     enabled = enabled,
                     placeholder = { Text(stringResource(Res.string.practice_input_hint)) },
                     supportingText = (ContractLimits.MAX_MESSAGE_CHARS - value.length).takeIf { it <= CHARS_LEFT_FROM }?.let { left ->

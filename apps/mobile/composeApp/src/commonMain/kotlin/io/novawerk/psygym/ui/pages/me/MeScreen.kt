@@ -87,6 +87,7 @@ import io.novawerk.psygym.resources.settings_language_note
 import io.novawerk.psygym.resources.settings_language_system
 import io.novawerk.psygym.resources.settings_language_zh
 import io.novawerk.psygym.resources.settings_privacy
+import io.novawerk.psygym.resources.settings_licenses
 import io.novawerk.psygym.resources.settings_voice_model
 import io.novawerk.psygym.resources.settings_voice_model_delete
 import io.novawerk.psygym.resources.settings_replay_onboarding
@@ -122,6 +123,7 @@ fun MeScreen(
     onReplayOnboarding: () -> Unit,
     onHelp: () -> Unit,
     onPrivacy: () -> Unit,
+    onLicenses: () -> Unit,
     onTab: (TopTab) -> Unit,
 ) {
     var confirmDeleteAll by rememberSaveable { mutableStateOf(false) }
@@ -202,6 +204,8 @@ fun MeScreen(
                 LinkRow(Res.string.help_link, onClick = onHelp)
                 RowDivider()
                 LinkRow(Res.string.settings_privacy, onClick = onPrivacy)
+                RowDivider()
+                LinkRow(Res.string.settings_licenses, onClick = onLicenses)
                 RowDivider()
                 LinkRow(Res.string.settings_replay_onboarding, onClick = onReplayOnboarding)
             }

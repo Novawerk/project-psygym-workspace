@@ -15,6 +15,7 @@ import kotlin.test.assertTrue
 private class FakeVoice(var permission: MicPermission = MicPermission.Granted, var heard: String = "你好") : VoiceInput {
     override val readiness: StateFlow<VoiceReadiness> = MutableStateFlow(VoiceReadiness.Ready)
     override val level: StateFlow<Float> = MutableStateFlow(0f)
+    override val preparing: StateFlow<Boolean> = MutableStateFlow(false)
     var started = 0
     var cancelled = 0
     var finished = 0

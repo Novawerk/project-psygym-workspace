@@ -344,9 +344,10 @@ fun VoiceBubble(ui: VoiceUi, modifier: Modifier = Modifier) {
             Spacer(Modifier.height(8.dp))
             val stable = listening?.stable ?: (phase as? HoldToTalk.Phase.Finishing)?.text.orEmpty()
             val pending = listening?.pending.orEmpty()
+            val preparing by ui.voice.preparing.collectAsState()
             if (stable.isEmpty() && pending.isEmpty()) {
                 Text(
-                    stringResource(if (phase == HoldToTalk.Phase.Starting) Res.string.voice_preparing else Res.string.voice_listening),
+                    stringResource(if (phase == HoldToTalk.Phase.Starting || preparing) Res.string.voice_preparing else Res.string.voice_listening),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

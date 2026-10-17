@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
@@ -66,16 +67,18 @@ class HoldToTalk(
         }
         _phase.value = Phase.Starting
         startJob = scope.launch {
+            // Called on the recognizer's thread: an atomic update, so a late result can never
+            // turn Idle back into Listening.
             val ok = voice.start(lang) { stable, pending ->
-                val p = _phase.value
-                if (p is Phase.Listening) _phase.value = p.copy(stable = stable, pending = pending)
+                _phase.update { if (it is Phase.Listening) it.copy(stable = stable, pending = pending) else it }
             }
             if (!ok) {
                 _phase.value = Phase.Idle
                 _events.tryEmit(Event.Failed)
                 return@launch
             }
-            _phase.value = Phase.Listening("", "", 0, cancelZone)
+            _phase.update { if (it == Phase.Starting) Phase.Listening("", "", 0, cancelZone) else it }
+            if (_phase.value !is Phase.Listening) return@launch
             if (released) finishNow() else startTimer()
         }
     }
@@ -83,8 +86,7 @@ class HoldToTalk(
     /** The finger moved into (or out of) the cancel zone above the button. */
     fun cancelZone(inside: Boolean) {
         cancelZone = inside
-        val p = _phase.value
-        if (p is Phase.Listening && p.cancelling != inside) _phase.value = p.copy(cancelling = inside)
+        _phase.update { if (it is Phase.Listening && it.cancelling != inside) it.copy(cancelling = inside) else it }
     }
 
     fun release() {
@@ -100,8 +102,8 @@ class HoldToTalk(
             while (s < maxSeconds) {
                 delay(1_000)
                 s++
-                val p = _phase.value
-                if (p is Phase.Listening) _phase.value = p.copy(seconds = s) else return@launch
+                if (_phase.value !is Phase.Listening) return@launch
+                _phase.update { if (it is Phase.Listening) it.copy(seconds = s) else it }
             }
             // Time's up: same as letting go.
             release()

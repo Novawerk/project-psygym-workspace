@@ -41,6 +41,9 @@ interface VoiceInput {
     /** Microphone level 0..1 while listening, for the wave. */
     val level: StateFlow<Float>
 
+    /** The model is loading. Listening already records; the words come once it's loaded. */
+    val preparing: StateFlow<Boolean>
+
     /** Looks again: model on disk, system support, a download in progress. */
     suspend fun refresh(lang: VoiceLang)
 
@@ -60,7 +63,10 @@ interface VoiceInput {
     /** Loads the model into memory ahead of the first press. Safe to call more than once. */
     suspend fun warmUp(lang: VoiceLang)
 
-    /** Starts listening. False when the microphone or recognizer couldn't start. */
+    /**
+     * Starts listening. Returns once the microphone records, even if the model is still loading:
+     * the audio waits for it. False when the microphone couldn't start.
+     */
     suspend fun start(lang: VoiceLang, listener: VoiceListener): Boolean
 
     /** Stops listening and returns everything heard, cleaned up ([VoiceText.clean]). */

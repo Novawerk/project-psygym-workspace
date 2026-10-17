@@ -14,10 +14,16 @@ final class SpeechBridge: NSObject, AppleSpeechBridge {
     private let pathMonitor = NWPathMonitor()
     private var expensive = false
 
+    /// Bumped by every start and cancel. A callback or a late `await` from an older press sees a
+    /// different number and does nothing, so it can't touch the current press.
+    private var gen = 0
+
     // SFSpeechRecognizer path.
     private var legacyRequest: SFSpeechAudioBufferRecognitionRequest?
     private var legacyTask: SFSpeechRecognitionTask?
     private var legacyText = ""
+    /// The recognizer stopped by itself (a pause, an error) before the finger lifted.
+    private var legacyEnded = false
     private var legacyFinal: ((String) -> Void)?
 
     // SpeechAnalyzer path (typed as Any so the class still loads before iOS 26).
@@ -27,6 +33,11 @@ final class SpeechBridge: NSObject, AppleSpeechBridge {
         super.init()
         pathMonitor.pathUpdateHandler = { [weak self] path in self?.expensive = path.isExpensive }
         pathMonitor.start(queue: DispatchQueue(label: "voice-path"))
+        // A call or another app takes the audio: stop listening; finish() keeps what was heard.
+        NotificationCenter.default.addObserver(forName: AVAudioSession.interruptionNotification, object: nil, queue: .main) { [weak self] note in
+            let type = (note.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt).flatMap(AVAudioSession.InterruptionType.init)
+            if type == .began { self?.stopAudio() }
+        }
     }
 
     // MARK: Availability
@@ -57,22 +68,39 @@ final class SpeechBridge: NSObject, AppleSpeechBridge {
 
     // MARK: Permission
 
-    /// The microphone, and on the old path also speech recognition.
+    /// The microphone and speech recognition. Both are asked on every path: whether SpeechAnalyzer
+    /// needs the speech permission isn't documented clearly, and asking costs nothing.
     func permission() -> Int32 {
-        let mic = AVAudioSession.sharedInstance().recordPermission
-        if mic == .denied { return Self.denied }
-        var speech = SFSpeechRecognizer.authorizationStatus()
-        if #available(iOS 26.0, *), SpeechTranscriber.isAvailable { speech = .authorized }
-        if speech == .denied || speech == .restricted { return Self.denied }
+        let mic = Self.micPermission()
+        let speech = SFSpeechRecognizer.authorizationStatus()
+        if mic == .denied || speech == .denied || speech == .restricted { return Self.denied }
         return mic == .granted && speech == .authorized ? Self.granted : Self.notAsked
     }
 
+    private enum Mic { case granted, denied, undetermined }
+
+    private static func micPermission() -> Mic {
+        if #available(iOS 17.0, *) {
+            switch AVAudioApplication.shared.recordPermission {
+            case .granted: return .granted
+            case .denied: return .denied
+            default: return .undetermined
+            }
+        }
+        switch AVAudioSession.sharedInstance().recordPermission {
+        case .granted: return .granted
+        case .denied: return .denied
+        default: return .undetermined
+        }
+    }
+
     func requestPermission(done: @escaping (KotlinBoolean) -> Void) {
-        AVAudioSession.sharedInstance().requestRecordPermission { micOK in
-            let finish = { (ok: Bool) in DispatchQueue.main.async { done(KotlinBoolean(bool: ok)) } }
-            guard micOK else { finish(false); return }
-            if #available(iOS 26.0, *), SpeechTranscriber.isAvailable { finish(true); return }
-            SFSpeechRecognizer.requestAuthorization { finish($0 == .authorized) }
+        let finish = { (ok: Bool) in DispatchQueue.main.async { done(KotlinBoolean(bool: ok)) } }
+        let speech = { SFSpeechRecognizer.requestAuthorization { finish($0 == .authorized) } }
+        if #available(iOS 17.0, *) {
+            AVAudioApplication.requestRecordPermission { ok in ok ? speech() : finish(false) }
+        } else {
+            AVAudioSession.sharedInstance().requestRecordPermission { ok in ok ? speech() : finish(false) }
         }
     }
 
@@ -85,29 +113,45 @@ final class SpeechBridge: NSObject, AppleSpeechBridge {
     // MARK: Listening
 
     func start(locale: String, onText: @escaping (String, String) -> Void, onLevel: @escaping (KotlinFloat) -> Void, done: @escaping (KotlinBoolean) -> Void) {
+        endCurrent()
+        gen += 1
+        let g = gen
         let loc = Locale(identifier: locale)
+        let fail = { [weak self] in
+            self?.stopAudio()
+            done(KotlinBoolean(bool: false))
+        }
         do {
             let session = AVAudioSession.sharedInstance()
             try session.setCategory(.record, mode: .measurement, options: .duckOthers)
             try session.setActive(true, options: .notifyOthersOnDeactivation)
         } catch {
-            done(KotlinBoolean(bool: false)); return
+            fail(); return
         }
         let input = engine.inputNode
         let format = input.outputFormat(forBus: 0)
+        // No usable input (the microphone is taken, or there is none): installTap would throw.
+        guard format.sampleRate > 0, format.channelCount > 0 else { fail(); return }
         let level = { (buffer: AVAudioPCMBuffer) in
             let v = Self.rms(buffer)
             DispatchQueue.main.async { onLevel(KotlinFloat(float: min(1, v * 8))) }
         }
-        let text = { (s: String, p: String) in DispatchQueue.main.async { onText(s, p) } }
+        let text = { [weak self] (s: String, p: String) in
+            DispatchQueue.main.async { if self?.gen == g { onText(s, p) } }
+        }
 
         if #available(iOS 26.0, *), SpeechTranscriber.isAvailable {
             Task { @MainActor in
                 let m = ModernSpeech()
-                guard await m.begin(locale: loc, inputFormat: format, onText: text) else {
-                    self.stopAudio(); done(KotlinBoolean(bool: false)); return
+                let ok = await m.begin(locale: loc, inputFormat: format, onText: text)
+                // Cancelled or replaced while starting: don't open the microphone.
+                guard ok, self.gen == g else {
+                    await m.cancel()
+                    if self.gen == g { fail() } else { done(KotlinBoolean(bool: false)) }
+                    return
                 }
                 self.modern = m
+                input.removeTap(onBus: 0)
                 input.installTap(onBus: 0, bufferSize: 1600, format: format) { buffer, _ in
                     level(buffer)
                     m.feed(buffer)
@@ -118,26 +162,31 @@ final class SpeechBridge: NSObject, AppleSpeechBridge {
         }
 
         guard let recognizer = SFSpeechRecognizer(locale: loc), recognizer.supportsOnDeviceRecognition else {
-            stopAudio(); done(KotlinBoolean(bool: false)); return
+            fail(); return
         }
         let request = SFSpeechAudioBufferRecognitionRequest()
         request.requiresOnDeviceRecognition = true
         request.shouldReportPartialResults = true
         legacyRequest = request
         legacyText = ""
+        legacyEnded = false
         legacyTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
             DispatchQueue.main.async {
-                guard let self else { return }
+                // A late callback from an earlier press: ignore it.
+                guard let self, self.gen == g else { return }
                 if let result {
                     self.legacyText = result.bestTranscription.formattedString
                     // The old recognizer can revise anything until the end: all of it is pending.
                     onText("", self.legacyText)
-                    if result.isFinal { self.endLegacy() }
-                } else if error != nil {
-                    self.endLegacy()
+                }
+                if error != nil || result?.isFinal == true {
+                    // Stopped by itself (a long pause, an error): keep the words for finish().
+                    self.legacyEnded = true
+                    if self.legacyFinal != nil { self.endLegacy() }
                 }
             }
         }
+        input.removeTap(onBus: 0)
         input.installTap(onBus: 0, bufferSize: 1600, format: format) { buffer, _ in
             level(buffer)
             request.append(buffer)
@@ -154,25 +203,46 @@ final class SpeechBridge: NSObject, AppleSpeechBridge {
         }
         guard let request = legacyRequest else { done(""); return }
         legacyFinal = done
+        if legacyEnded { endLegacy(); return }
         request.endAudio()
-        // The final result normally arrives within a second; don't wait forever.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in self?.endLegacy() }
+        // The final result normally arrives within a second; don't wait forever. Only for this press.
+        let g = gen
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
+            if self?.gen == g { self?.endLegacy() }
+        }
     }
 
     func cancel() {
+        // Kotlin may cancel from another thread; the audio engine is driven from the main one.
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { [weak self] in self?.cancel() }
+            return
+        }
+        gen += 1
+        endCurrent()
+    }
+
+    /// Stops whatever is running and drops it.
+    private func endCurrent() {
         stopAudio()
         if #available(iOS 26.0, *), let m = modern as? ModernSpeech {
             modern = nil
             Task { await m.cancel() }
         }
+        // A finish() still waiting gets what was heard rather than nothing at all.
+        let pending = legacyFinal
         legacyTask?.cancel()
         legacyFinal = nil
-        endLegacy()
+        legacyTask = nil
+        legacyRequest = nil
+        pending?(legacyText)
     }
 
+    /// Hands over the old recognizer's words, once.
     private func endLegacy() {
         let done = legacyFinal
         legacyFinal = nil
+        legacyTask?.cancel()
         legacyTask = nil
         legacyRequest = nil
         done?(legacyText)

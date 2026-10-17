@@ -125,8 +125,18 @@ android {
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = appVersionCode
         versionName = appVersionName
-        // sherpa-onnx ships native code; x86_64 is for the emulator. Play splits by ABI.
+        // sherpa-onnx ships native code; x86_64 is for the emulator. Play splits by ABI (AAB).
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
+    }
+    // Stores that take APKs (Chinese Android stores): one APK per ABI, about 27 MB of native code
+    // each instead of all three in one. The universal APK is still built.
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a", "armeabi-v7a", "x86_64")
+            isUniversalApk = true
+        }
     }
     packaging {
         resources {
@@ -152,6 +162,7 @@ android {
     }
     buildTypes {
         getByName("release") {
+            // If R8 is turned on: keep com.k2fsa.sherpa.onnx.** (its JNI looks classes up by name).
             isMinifyEnabled = false
             // Play App Signing re-signs for the store; this is only the upload key.
             if (hasUploadKey) signingConfig = signingConfigs.getByName("upload")

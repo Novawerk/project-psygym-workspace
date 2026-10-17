@@ -216,3 +216,45 @@ key 沿用 App 现有命名（`home_*`、`cases_*`、`practice_*`、`supervision
 | privacy_a_stats | 我们在服务器上按天统计次数，按病例和界面语言分开（开始了几场、来访者主动结束了几场、写了几份报告、每场几轮、一场多长、出了几次错、收到几次 👍/👎 和举报）。活跃人数用每天、每周轮换的假名统计，不用邮箱，明细很快就汇总后删掉。不含对话。 | On our server we count numbers per day, split by case and interface language: sessions started, sessions the client ended, reports written, turns per session, how long a session lasts, errors, and 👍/👎 ratings and reports. Active users are counted with pseudonyms that change every day and every week, never with your email, and the details are summed up and deleted soon after. No conversation. |
 | privacy_q_real | 我能输入真实来访者的信息吗？ | Can I enter real client information? |
 | privacy_a_real | 不能。请只把它当练习。 | No. Please use it for practice only. |
+
+### 按住说话（voice-input.md）
+
+规格表里没有的几条（`voice_preparing`、`voice_failed`、几个 `*_title`、`voice_model_body_system`、`voice_ok`）和开源许可页、隐私说明里的一问是实现时补的，请产品确认。
+
+| key | 中文 | English |
+|-----|------|---------|
+| voice_switch_to_voice | 切换到语音输入 | Switch to voice |
+| voice_switch_to_keyboard | 切换到键盘输入 | Switch to keyboard |
+| voice_hold | 按住说话 | Hold to talk |
+| voice_hold_a11y | 点一下开始，再点一下结束 | Tap to start, tap again to finish |
+| voice_release_send | 松开 结束 · 上滑 取消 | Release to finish · Slide up to cancel |
+| voice_release_cancel | 松开 取消 | Release to cancel |
+| voice_cancel_hint | 松开手指，取消这段 | Lift your finger to discard |
+| voice_listening | 正在听… | Listening… |
+| voice_preparing | 正在准备… | Getting ready… |
+| voice_time_left | 还能说 %1$d 秒 | %1$d seconds left |
+| voice_nothing_heard | 没听清，再试一次。 | Didn’t catch that. Try again. |
+| voice_failed | 没能开始听，再试一次。 | Couldn’t start listening. Try again. |
+| voice_mic_title | 需要麦克风权限 | Microphone needed |
+| voice_mic_denied | 需要麦克风权限才能按住说话。声音只在这台手机上转成文字，不会上传。 | Hold to talk needs the microphone. Your voice is turned into text on this phone and never uploaded. |
+| voice_open_settings | 去设置 | Open Settings |
+| voice_model_title | 下载语音识别模型 | Download the speech model |
+| voice_model_body | 约 %1$d MB，只下载一次。下载后离线可用，声音只在这台手机上转成文字。 | About %1$d MB, downloaded once. Works offline after that; your voice is turned into text on this phone. |
+| voice_model_body_system | 第一次使用要下载系统的语音识别模型，只下载一次。下载后离线可用，声音只在这台手机上转成文字。 | The first time, your phone downloads its speech model, once. Works offline after that; your voice is turned into text on this phone. |
+| voice_model_cellular | 你现在用的是移动网络，建议连 Wi-Fi 再下载。 | You’re on mobile data. Wi-Fi is better for this download. |
+| voice_model_download | 下载 | Download |
+| voice_model_progress | 正在下载 %1$d% | Downloading %1$d% |
+| voice_model_progress_unknown | 正在下载… | Downloading… |
+| voice_model_failed | 下载没完成，点这里重试 | Download didn’t finish. Tap to retry |
+| voice_unsupported_title | 不能用语音输入 | Voice input isn’t available |
+| voice_unsupported | 这台设备不支持离线语音识别。为了不把你的声音发到网上，这个功能没有打开。请用键盘输入。 | This device can’t recognise speech offline. To keep your voice off the internet, this feature is off. Please type instead. |
+| voice_ok | 知道了 | OK |
+| voice_cancel | 取消 | Cancel |
+| settings_voice_model | 语音识别模型 | Speech model |
+| settings_voice_model_delete | 删除（%1$d MB） | Delete (%1$d MB) |
+| settings_licenses | 开源许可 | Open-source licences |
+| licenses_intro | 聆镜 PSYGYM 用到了下面这些开源软件和模型，谢谢它们的作者。点一项可以看许可证全文。 | 聆镜 PSYGYM uses the open-source software and models below. Thank you to their authors. Tap one to read the full licence. |
+| licenses_android_voice | 用于 Android 版的按住说话。 | Used for hold to talk on Android. |
+| licenses_show_text | 查看全文 | Read the licence |
+| privacy_q_voice | 按住说话会上传我的声音吗？ | Does hold to talk upload my voice? |
+| privacy_a_voice | 不会。声音只在你的手机上转成文字，不上传，也不保存。转出来的文字和你打的字一样，发送后才会交给 AI 模型处理。 | No. Your voice is turned into text on your phone; it isn’t uploaded or stored. The text is like what you type: it goes to the AI model only when you send it. |

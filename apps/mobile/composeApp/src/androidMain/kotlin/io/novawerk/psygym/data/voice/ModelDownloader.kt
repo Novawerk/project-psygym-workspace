@@ -30,7 +30,8 @@ object XAsrModel {
 /**
  * Downloads [files] from `<baseUrl>/<name>` into [dir]: one file at a time, resuming a
  * `.part` with an HTTP Range request, then checking size and SHA-256 before renaming it into
- * place. A file that fails the check is deleted, so a retry starts it clean.
+ * place. A file that fails the check is deleted, so a retry starts it clean. When all files
+ * are in place and checked, a marker file says so; [installed] trusts only that marker.
  */
 class ModelDownloader(
     private val baseUrl: String,
@@ -39,25 +40,39 @@ class ModelDownloader(
 ) {
     class Failed(message: String) : Exception(message)
 
-    fun installed(): Boolean = files.all { File(dir, it.name).length() == it.bytes }
+    /** Thrown from [download] when [cancelled] says stop. */
+    class Cancelled : Exception("cancelled")
+
+    private val marker = File(dir, ".verified")
+
+    fun installed(): Boolean = marker.isFile && files.all { File(dir, it.name).length() == it.bytes }
 
     /** Bytes on disk, finished files and parts. */
     fun bytesOnDisk(): Long = dir.listFiles()?.sumOf { it.length() } ?: 0L
 
-    /** Blocking; call off the main thread. [progress] gets 0..1. Throws [Failed] or an IOException. */
-    fun download(progress: (Float) -> Unit) {
+    /**
+     * Blocking; call off the main thread. [progress] gets 0..1. [cancelled] is polled between
+     * reads; when it says stop, the connection is dropped and [Cancelled] thrown (the part stays
+     * for a later resume). Throws [Failed] or an IOException otherwise.
+     */
+    fun download(cancelled: () -> Boolean = { false }, progress: (Float) -> Unit) {
         dir.mkdirs()
+        marker.delete()
         val total = files.sumOf { it.bytes }.toFloat()
+        val missing = files.sumOf { maxOf(0L, it.bytes - File(dir, it.name).length().coerceAtMost(it.bytes) - File(dir, it.name + ".part").length()) }
+        if (dir.usableSpace < missing + SPARE_BYTES) throw Failed("not enough space: need $missing")
         var done = 0L
         for (f in files) {
             val target = File(dir, f.name)
-            if (target.length() == f.bytes) {
+            // A finished file from an earlier run: trust it only after checking it again.
+            if (target.length() == f.bytes && sha256(target) == f.sha256) {
                 done += f.bytes
                 continue
             }
+            target.delete()
             val part = File(dir, f.name + ".part")
             if (part.length() > f.bytes) part.delete()
-            fetch(f, part) { got -> progress((done + got) / total) }
+            fetch(f, part, cancelled) { got -> progress((done + got) / total) }
             if (part.length() != f.bytes || sha256(part) != f.sha256) {
                 part.delete()
                 throw Failed("${f.name}: size or checksum mismatch")
@@ -66,9 +81,10 @@ class ModelDownloader(
             done += f.bytes
             progress(done / total)
         }
+        marker.writeText("ok")
     }
 
-    private fun fetch(f: ModelFile, part: File, onBytes: (Long) -> Unit) {
+    private fun fetch(f: ModelFile, part: File, cancelled: () -> Boolean, onBytes: (Long) -> Unit) {
         var have = part.length()
         if (have == f.bytes) return
         val conn = URL("${baseUrl.trimEnd('/')}/${f.name}").openConnection() as HttpURLConnection
@@ -77,7 +93,9 @@ class ModelDownloader(
         if (have > 0) conn.setRequestProperty("Range", "bytes=$have-")
         try {
             when (conn.responseCode) {
-                HttpURLConnection.HTTP_PARTIAL -> Unit
+                // Only trust a partial answer that starts where our part ends.
+                HttpURLConnection.HTTP_PARTIAL ->
+                    if (conn.getHeaderField("Content-Range")?.startsWith("bytes $have-") != true) throw Failed("${f.name}: unexpected Content-Range")
                 // The server ignored the Range: start the file over.
                 HttpURLConnection.HTTP_OK -> { have = 0; part.delete() }
                 else -> throw Failed("${f.name}: HTTP ${conn.responseCode}")
@@ -88,8 +106,10 @@ class ModelDownloader(
                     val buf = ByteArray(64 * 1024)
                     var last = 0L
                     while (true) {
+                        if (cancelled()) throw Cancelled()
                         val n = input.read(buf)
                         if (n < 0) break
+                        if (have + n > f.bytes) throw Failed("${f.name}: longer than expected")
                         out.write(buf, 0, n)
                         have += n
                         if (have - last >= 1 shl 20) { onBytes(have); last = have }
@@ -107,6 +127,9 @@ class ModelDownloader(
     }
 
     companion object {
+        /** Room to leave free on the phone besides the model. */
+        const val SPARE_BYTES = 50L shl 20
+
         fun sha256(file: File): String {
             val md = MessageDigest.getInstance("SHA-256")
             FileInputStream(file).use { input ->

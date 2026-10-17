@@ -54,6 +54,9 @@ class AppleVoiceInput(private val bridge: AppleSpeechBridge) : VoiceInput {
     override val readiness: StateFlow<VoiceReadiness> = _readiness
     private val _level = MutableStateFlow(0f)
     override val level: StateFlow<Float> = _level
+
+    /** Apple's recognizer has no load step of ours. */
+    override val preparing: StateFlow<Boolean> = MutableStateFlow(false)
     private var installing = false
 
     override suspend fun refresh(lang: VoiceLang) {
@@ -95,6 +98,8 @@ class AppleVoiceInput(private val bridge: AppleSpeechBridge) : VoiceInput {
     override suspend fun warmUp(lang: VoiceLang) {}
 
     override suspend fun start(lang: VoiceLang, listener: VoiceListener): Boolean = suspendCancellableCoroutine { c ->
+        // Left the page while starting: the bridge must not open the microphone afterwards.
+        c.invokeOnCancellation { bridge.cancel() }
         bridge.start(
             lang.tag,
             onText = { stable, pending -> listener.onText(VoiceText.clean(stable), pending) },

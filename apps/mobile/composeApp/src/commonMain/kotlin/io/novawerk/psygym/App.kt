@@ -55,6 +55,8 @@ import io.novawerk.psygym.ui.navigation.HelpRoute
 import io.novawerk.psygym.ui.navigation.HomeRoute
 import io.novawerk.psygym.ui.navigation.PracticeRoute
 import io.novawerk.psygym.ui.navigation.PrivacyRoute
+import io.novawerk.psygym.ui.navigation.LicensesRoute
+import io.novawerk.psygym.ui.pages.licenses.LicensesScreen
 import io.novawerk.psygym.ui.navigation.HistoryDetailRoute
 import io.novawerk.psygym.ui.navigation.HistoryRoute
 import io.novawerk.psygym.ui.navigation.MeRoute
@@ -201,6 +203,7 @@ fun App(component: AppComponent) {
                         onReplayOnboarding = { nav.navigate(WelcomeRoute) },
                         onHelp = openHelp,
                         onPrivacy = { nav.navigate(PrivacyRoute) },
+                        onLicenses = { nav.navigate(LicensesRoute) },
                         onTab = onTab,
                     )
                 }
@@ -450,6 +453,7 @@ fun App(component: AppComponent) {
                     }
                     composable<HelpRoute> { HelpScreen(onClose = { nav.popBackStack() }) }
                     composable<PrivacyRoute> { PrivacyScreen(onBack = { nav.popBackStack() }) }
+                    composable<LicensesRoute> { LicensesScreen(onBack = { nav.popBackStack() }) }
                     composable<MeRoute> { meScreen() }
                 }
                 }
