@@ -103,7 +103,12 @@
 
     <string name="help_title">如果你现在需要帮助</string>
     <string name="help_body">这是一个练习工具，不能在危机中提供帮助。如果你或身边的人有危险，请马上联系当地急救电话或心理援助热线。</string>
-    <string name="help_hard_time">如果你自己正在经历困难，请联系身边的专业人员，或拨打当地的心理援助热线。</string>
+    <string name="help_hard_time">如果你自己正在经历困难，请联系身边的专业人员，或拨打下面的心理援助热线。</string>
+    <string name="help_lines_title">心理援助热线</string>
+    <string name="help_other_regions">其他地区</string>
+    <string name="help_elsewhere">不在这些地区：请拨打当地的急救电话。</string>
+    <string name="help_call_cd">拨打 %1$s</string>
+    <string name="help_checked">号码核对于 2026 年 10 月，每半年重新核对一次。</string>
     <string name="help_practice_note">如果是练习让你感到不舒服，可以停下来，和你的督导或信任的人聊聊。</string>
 
     <string name="settings_title">设置</string>

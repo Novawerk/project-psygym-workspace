@@ -153,10 +153,13 @@ key 沿用 App 现有命名（`home_*`、`cases_*`、`practice_*`、`supervision
 |-----|------|---------|
 | help_close | 关闭（读屏） | Close |
 | help_title | 如果你现在需要帮助 | If you need help now |
-| help_call | 拨打 %1$s | Call %1$s |
-| help_line_format | %1$s · %2$s | %1$s · %2$s |
 | help_body | 这是一个练习工具，不能在危机中提供帮助。如果你或身边的人有危险，请马上联系当地急救电话或心理援助热线。 | This is a practice tool. It can't help in a crisis. If you or someone near you is in danger, call your local emergency number or a crisis line now. |
-| help_hard_time | 如果你自己正在经历困难，请联系身边的专业人员，或拨打当地的心理援助热线。 | If you're going through a hard time yourself, please reach out to a professional near you or call a local crisis line. |
+| help_hard_time | 如果你自己正在经历困难，请联系身边的专业人员，或拨打下面的心理援助热线。 | If you're going through a hard time yourself, please reach out to a professional near you or call one of the crisis lines below. |
+| help_lines_title | 心理援助热线 | Crisis lines |
+| help_other_regions | 其他地区 | Other places |
+| help_elsewhere | 不在这些地区：请拨打当地的急救电话。 | Somewhere else? Call your local emergency number. |
+| help_call_cd | 拨打 %1$s（读屏用） | Call %1$s (screen readers) |
+| help_checked | 号码核对于 2026 年 10 月，每半年重新核对一次。 | Numbers checked in October 2026; we check them again every six months. |
 | help_practice_note | 如果是练习让你感到不舒服，可以停下来，和你的督导或信任的人聊聊。 | If practising has upset you, take a break and talk to your supervisor or someone you trust. |
 
 ### 设置、关于、隐私

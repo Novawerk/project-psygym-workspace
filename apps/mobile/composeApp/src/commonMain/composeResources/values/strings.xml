@@ -111,7 +111,12 @@
     <!-- Need help? (X1) -->
     <string name="help_title">If you need help now</string>
     <string name="help_body">This is a practice tool. It can’t help in a crisis. If you or someone near you is in danger, call your local emergency number or a crisis line now.</string>
-    <string name="help_hard_time">If you’re going through a hard time yourself, please reach out to a professional near you or call a local crisis line.</string>
+    <string name="help_hard_time">If you’re going through a hard time yourself, please reach out to a professional near you or call one of the crisis lines below.</string>
+    <string name="help_lines_title">Crisis lines</string>
+    <string name="help_other_regions">Other places</string>
+    <string name="help_elsewhere">Somewhere else? Call your local emergency number.</string>
+    <string name="help_call_cd">Call %1$s</string>
+    <string name="help_checked">Numbers checked in October 2026; we check them again every six months.</string>
     <string name="help_practice_note">If practising has upset you, take a break and talk to your supervisor or someone you trust.</string>
 
     <!-- Settings (P1) -->

@@ -139,15 +139,36 @@ AI 来访者在任何情况下都不：给出伤害自己或他人的方法；�
 >
 > This is a practice tool. It can't help in a crisis. If you or someone near you is in danger, call your local emergency number or a crisis line now.
 
-热线号码按地区列出，**待聆镜确认**具体号码和来源，我们不自己填。上线前每个号码都要核实一遍。MVP 如果还没拿到核实过的号码，就只用上面这段不带号码的通用文案。
+热线号码按地区列出（2026-10-17 用户确认，号码由我们按官方来源核对，不再等聆镜）。
 
-**还没有号码时的写法**：任何页面都不写「下方的热线」「below」这类指向号码的话。需要提到热线时，用这一句：
+**规则：**
 
-> 如果你自己正在经历困难，请联系身边的专业人员，或拨打当地的心理援助热线。
+- 页面先列手机系统地区（不是 App 的界面语言）对应的那一组，默认展开；其他地区折叠，排在下面。系统地区不在表里时，先显示「不在这些地区：请拨打当地的急救电话」，各地区都折叠列出。
+- 每个号码都能点：打开手机的拨号界面并填好号码，由用户自己按拨打。App 不会替用户拨出。
+- 页面底部写明核对时间。**每半年重新核对一次**（下一次：2027 年 4 月），号码有变化就改 App 和这张表，两边一起改（代码在 `apps/mobile/.../domain/help/CrisisLines.kt`）。
+- 其他页面提到热线时，指向「需要帮助？」页，例如 O2 的「请点下方『需要帮助？』」。不在其他页面单独写号码。
+
+**号码表（核对日期 2026-10-17）：**
+
+| 地区 | 热线 | 说明 | 紧急电话 | 来源 |
+|---|---|---|---|---|
+| 中国大陆 | 全国心理援助热线 **12356** | 各地开通时段不同 | 急救 120，报警 110 | gov.cn/zhengce/zhengceku/202412/content_6994470.htm |
+| | 北京心理援助热线 **010-82951332** | 24 小时 | | crisis.org.cn/lists/5.html |
+| 香港 | 精神健康支援热线 **18111** | 政府热线，24 小时 | 999 | info.gov.hk/gia/general/202312/27/P2023122700238.htm |
+| | 撒瑪利亞會 **2896 0000** | 24 小时，多语言 | | samaritans.org.hk |
+| 台湾 | 安心專線 **1925** | 24 小时，免费 | 急救 119，报警 110 | dep.mohw.gov.tw/DOMHAOH/cp-4906-54077-107.html |
+| | 生命線 **1995** | | | life1995.org.tw |
+| 德国 | TelefonSeelsorge **0800 111 0 111**、**0800 111 0 222**、**116 123** | 24 小时，免费 | 112，报警 110 | telefonseelsorge.de |
+| 美国 | 988 Suicide & Crisis Lifeline **988** | 电话或短信，24 小时，免费；西班牙语按 2，或发短信 AYUDA | 911 | 988lifeline.org/get-help |
+| 英国 | Samaritans **116 123** | 24 小时，免费 | 999 | samaritans.org/how-we-can-help/contact-samaritan |
+| | NHS **111** | 选择心理健康选项 | | nhs.uk/nhs-services/mental-health-services/where-to-get-urgent-help-for-mental-health |
+| 其他地区 | — | 请拨打当地的急救电话 | | |
+
+**「需要帮助？」页上提到热线的那句**改成指向页里的号码：
+
+> 如果你自己正在经历困难，请联系身边的专业人员，或拨打下面的心理援助热线。
 >
-> If you're going through a hard time yourself, please reach out to a professional near you or call a local crisis line.
-
-有了核实过的号码以后，再改成指向「需要帮助？」页里的号码。
+> If you're going through a hard time yourself, please reach out to a professional near you or call one of the crisis lines below.
 
 ## 6. 谁改这份文档
 
