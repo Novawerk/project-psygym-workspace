@@ -221,7 +221,7 @@ fun App(component: AppComponent) {
                         )
                     }
                     composable<ConsentRoute> {
-                        // O2 ends the intro; the language follows the system (changed in P1).
+                        // O2 ends the intro. No language page: the system language, unless changed with the 中/EN toggle on O1–O2 or in P1.
                         ConsentScreen(
                             onAccept = {
                                 scope.launch {

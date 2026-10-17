@@ -103,7 +103,7 @@ composeApp/src/commonMain/kotlin/io/novawerk/psygym/
 ├── domain/history/           # Saved sessions on the phone (decision 0005)
 ├── di/                       # kotlin-inject AppComponent
 └── ui/                       # theme, locale, components, pages/ (ids from docs/product)
-                              #   onboarding O1–O3, home H1, cases C1, briefing C2, practice S1/S2,
+                              #   onboarding O1–O2, home H1, cases C1, briefing C2, practice S1/S2,
                               #   supervision R1, help X1, me P1, privacy P3, history M1/M2
 composeApp/src/commonMain/composeResources/values{,-zh}/strings.xml
 ```
