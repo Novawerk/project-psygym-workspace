@@ -7,6 +7,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import io.novawerk.psygym.resources.practice_lost
 import androidx.compose.foundation.layout.Arrangement
+import io.novawerk.psygym.resources.help_link
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -15,7 +19,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -57,7 +60,6 @@ import io.novawerk.psygym.ui.components.TopTab
 import io.novawerk.psygym.ui.components.CaseCardSkeleton
 import io.novawerk.psygym.ui.components.DemoBadge
 import io.novawerk.psygym.ui.components.ErrorCard
-import io.novawerk.psygym.ui.components.HelpLink
 import io.novawerk.psygym.ui.components.SafetyNote
 import io.novawerk.psygym.ui.locale.rememberApiLocale
 import org.jetbrains.compose.resources.stringResource
@@ -114,9 +116,9 @@ fun HomeScreen(
             Text(stringResource(Res.string.home_greeting), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(6.dp))
             Text(stringResource(Res.string.home_tagline), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(16.dp))
             StartCard(onStart)
-            Spacer(Modifier.height(28.dp))
+            Spacer(Modifier.height(20.dp))
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(Res.string.home_cases_section), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                 TextButton(onClick = onAllCases) {
@@ -139,12 +141,18 @@ fun HomeScreen(
                     if (cases.size == 1) Spacer(Modifier.weight(1f))
                 }
             }
-            Spacer(Modifier.height(20.dp))
-            // "Need help?" inside the safety note: the page ends on a whole card, and on tall
-            // phones the link no longer sits half under the tab bar.
+            Spacer(Modifier.height(16.dp))
+            // "Need help?" inside the safety note, as a compact link: the page ends on a whole
+            // card that fits a tall phone's screen, instead of a link half under the tab bar.
             SafetyNote {
                 Text(stringResource(Res.string.home_disclaimer), style = MaterialTheme.typography.bodySmall)
-                HelpLink(onHelp, Modifier.offset(x = (-8).dp))
+                Text(
+                    stringResource(Res.string.help_link),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textDecoration = TextDecoration.Underline,
+                    modifier = Modifier.clickable(role = Role.Button, onClick = onHelp).padding(vertical = 2.dp),
+                )
             }
             Spacer(Modifier.height(16.dp))
         }
