@@ -52,6 +52,7 @@
 > **现在有什么**
 > · CBT 取向，抑郁、抑郁伴焦虑等病例
 > · 中英文界面；病例先有中文
+> · 会谈中可以按住说话，声音只在手机上转成文字。
 > · 练习记录只存在你的手机上，可以随时删除
 >
 > **说在前面**
@@ -77,6 +78,7 @@
 > **What's in it now**
 > · CBT, with cases on depression and depression with anxiety
 > · Chinese and English interface; cases in Chinese first
+> · Hold to talk in a session: your voice is turned into text on the phone.
 > · Practice history stays on your phone, and you can delete it any time
 >
 > **Before you start**
