@@ -82,6 +82,13 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         dataStore.edit { it[LIVE_NOTES] = value }
     }
 
+    /** Hold to talk instead of the keyboard on S1 (voice-input.md §4). Off by default. */
+    val voiceMode: Flow<Boolean> = dataStore.data.map { it[VOICE_MODE] ?: false }
+
+    suspend fun setVoiceMode(value: Boolean) {
+        dataStore.edit { it[VOICE_MODE] = value }
+    }
+
     /** Demo data instead of the backend. Debug builds only; always false in release. */
     val useFakeApi: Flow<Boolean> = dataStore.data.map {
         AppConfig.isDebug && (it[USE_FAKE_API] ?: AppConfig.fakeApiDefault)
@@ -151,5 +158,6 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         val LAUNCHED = booleanPreferencesKey("launched")
         val SIGNED_IN_ONCE = booleanPreferencesKey("signed_in_once")
         val LIVE_NOTES = booleanPreferencesKey("live_notes")
+        val VOICE_MODE = booleanPreferencesKey("voice_mode")
     }
 }

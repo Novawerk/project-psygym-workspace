@@ -38,6 +38,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.coroutines.resume
 import kotlin.math.sqrt
@@ -51,7 +52,6 @@ class SherpaVoiceInput(context: Context, modelBaseUrl: String) : VoiceInput {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val modelDir = File(app.filesDir, "asr/${XAsrModel.DIR}")
     private val downloader = ModelDownloader(modelBaseUrl, modelDir, XAsrModel.files)
-    private val prefs = app.getSharedPreferences("voice", Context.MODE_PRIVATE)
 
     /** Set by MainActivity: the permission prompt needs an Activity. */
     @Volatile var activity: ComponentActivity? = null
@@ -65,7 +65,7 @@ class SherpaVoiceInput(context: Context, modelBaseUrl: String) : VoiceInput {
     private val loadLock = Mutex()
     private var recognizer: OnlineRecognizer? = null
     private var stream: OnlineStream? = null
-    private var thread: Thread? = null
+    private var threads: List<Thread> = emptyList()
     @Volatile private var listening = false
 
     override suspend fun refresh(lang: VoiceLang) {
@@ -86,20 +86,20 @@ class SherpaVoiceInput(context: Context, modelBaseUrl: String) : VoiceInput {
         }
     }
 
-    override fun isMetered(): Boolean =
+    override fun isMetered(): Boolean = try {
         (app.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager).isActiveNetworkMetered
-
-    override fun micPermission(): MicPermission {
-        if (app.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) return MicPermission.Granted
-        if (!prefs.getBoolean(ASKED, false)) return MicPermission.NotAsked
-        // Asked before: the system only prompts again while it would show a rationale.
-        val a = activity ?: return MicPermission.Denied
-        return if (a.shouldShowRequestPermissionRationale(Manifest.permission.RECORD_AUDIO)) MicPermission.NotAsked else MicPermission.Denied
+    } catch (e: Exception) {
+        false
     }
+
+    // Not granted: always ask. The system answers "no" at once when the user said "don't ask
+    // again", and then HoldToTalk shows the sheet with Open Settings. This also covers a
+    // one-time grant that has expired.
+    override fun micPermission(): MicPermission =
+        if (app.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) MicPermission.Granted else MicPermission.NotAsked
 
     override suspend fun requestMic(): Boolean {
         val a = activity ?: return false
-        prefs.edit().putBoolean(ASKED, true).apply()
         return withContext(Dispatchers.Main) {
             suspendCancellableCoroutine { cont ->
                 val key = "voice-mic-${requests.incrementAndGet()}"
@@ -150,35 +150,74 @@ class SherpaVoiceInput(context: Context, modelBaseUrl: String) : VoiceInput {
         val rec = recognizer ?: return false
         if (micPermission() != MicPermission.Granted) return false
         val s = rec.createStream()
-        val min = AudioRecord.getMinBufferSize(SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
-        val ar = try {
-            AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION, SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, maxOf(min, CHUNK * 4))
-        } catch (e: Exception) {
-            s.release(); return false
+        val queue = LinkedBlockingQueue<FloatArray>()
+        val test = VoiceTestAudio.file(app.filesDir)
+        val recorder: Thread
+        if (test != null) {
+            recorder = fileRecorder(test, queue)
+        } else {
+            val min = AudioRecord.getMinBufferSize(SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
+            val ar = try {
+                AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION, SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, maxOf(min, CHUNK * 4))
+            } catch (e: Exception) {
+                s.release(); return false
+            }
+            if (ar.state != AudioRecord.STATE_INITIALIZED) { ar.release(); s.release(); return false }
+            // Only reads the microphone, never waits on the model: a slow phone mustn't lose audio.
+            recorder = Thread {
+                val buf = ShortArray(CHUNK)
+                try {
+                    ar.startRecording()
+                    while (listening) {
+                        val n = ar.read(buf, 0, buf.size)
+                        if (n <= 0) continue
+                        val x = FloatArray(n) { buf[it] / 32768f }
+                        _level.value = (rms(x) * 8).coerceIn(0f, 1f)
+                        queue.put(x)
+                    }
+                } finally {
+                    ar.stop(); ar.release(); _level.value = 0f
+                    queue.put(END)
+                }
+            }
         }
-        if (ar.state != AudioRecord.STATE_INITIALIZED) { ar.release(); s.release(); return false }
+        // Decodes everything queued, in order, until the recorder says it's done.
+        val decoder = Thread {
+            while (true) {
+                val x = queue.take()
+                if (x === END) break
+                s.acceptWaveform(x, SAMPLE_RATE)
+                while (rec.isReady(s)) rec.decode(s)
+                // A streaming transducer doesn't revise what it has emitted: all of it is stable.
+                if (listening) listener.onText(VoiceText.clean(rec.getResult(s).text), "")
+            }
+        }
         stream = s
         listening = true
-        thread = Thread {
-            val buf = ShortArray(CHUNK)
-            try {
-                ar.startRecording()
-                while (listening) {
-                    val n = ar.read(buf, 0, buf.size)
-                    if (n <= 0) continue
-                    val x = FloatArray(n) { buf[it] / 32768f }
-                    _level.value = (rms(x) * 8).coerceIn(0f, 1f)
-                    s.acceptWaveform(x, SAMPLE_RATE)
-                    while (rec.isReady(s)) rec.decode(s)
-                    val text = VoiceText.clean(rec.getResult(s).text)
-                    // A streaming transducer doesn't revise what it has emitted: all of it is stable.
-                    listener.onText(text, "")
-                }
-            } finally {
-                ar.stop(); ar.release(); _level.value = 0f
-            }
-        }.apply { name = "voice-input"; start() }
+        threads = listOf(recorder, decoder)
+        recorder.apply { name = "voice-record"; start() }
+        decoder.apply { name = "voice-decode"; start() }
         return true
+    }
+
+    /** Debug builds only ([VoiceTestAudio]): a wav file in real time instead of the microphone. */
+    private fun fileRecorder(wav: File, queue: LinkedBlockingQueue<FloatArray>): Thread {
+        val b = wav.readBytes()
+        // 16-bit PCM after the "data" chunk header.
+        val start = (12 until b.size - 8).firstOrNull { b[it] == 'd'.code.toByte() && b[it + 1] == 'a'.code.toByte() && b[it + 2] == 't'.code.toByte() && b[it + 3] == 'a'.code.toByte() }?.plus(8) ?: 44
+        val pcm = FloatArray((b.size - start) / 2) { i -> ((b[start + 2 * i + 1].toInt() shl 8) or (b[start + 2 * i].toInt() and 0xff)).toShort() / 32768f }
+        return Thread {
+            var i = 0
+            while (listening) {
+                val x = if (i < pcm.size) pcm.copyOfRange(i, minOf(i + CHUNK, pcm.size)) else FloatArray(CHUNK)
+                i += x.size
+                _level.value = (rms(x) * 8).coerceIn(0f, 1f)
+                queue.put(x)
+                Thread.sleep(100)
+            }
+            _level.value = 0f
+            queue.put(END)
+        }
     }
 
     override suspend fun finish(): String = withContext(Dispatchers.Default) {
@@ -198,10 +237,11 @@ class SherpaVoiceInput(context: Context, modelBaseUrl: String) : VoiceInput {
         scope.launch { stopRecording()?.release() }
     }
 
+    /** Stops the microphone, then waits until everything it heard has been decoded. */
     private fun stopRecording(): OnlineStream? {
         listening = false
-        thread?.join()
-        thread = null
+        threads.forEach { it.join() }
+        threads = emptyList()
         return stream.also { stream = null }
     }
 
@@ -238,7 +278,8 @@ class SherpaVoiceInput(context: Context, modelBaseUrl: String) : VoiceInput {
         /** 100 ms per read. */
         const val CHUNK = 1_600
         const val TAIL_PADDING = 24_000
-        const val ASKED = "mic_asked"
         val requests = AtomicInteger()
+        /** Marks the end of the audio queue. */
+        val END = FloatArray(0)
     }
 }

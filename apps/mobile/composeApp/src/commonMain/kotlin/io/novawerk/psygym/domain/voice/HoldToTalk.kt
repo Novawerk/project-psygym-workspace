@@ -28,8 +28,8 @@ class HoldToTalk(
 
         data class Listening(val stable: String, val pending: String, val seconds: Int, val cancelling: Boolean) : Phase
 
-        /** Released; the last words are being recognised. */
-        data object Finishing : Phase
+        /** Released; the last words are being recognised. [text]: what was shown so far. */
+        data class Finishing(val text: String) : Phase
     }
 
     sealed interface Event {
@@ -115,7 +115,8 @@ class HoldToTalk(
             _phase.value = Phase.Idle
             return
         }
-        _phase.value = Phase.Finishing
+        val shown = (_phase.value as? Phase.Listening)?.let { it.stable + it.pending }.orEmpty()
+        _phase.value = Phase.Finishing(shown)
         scope.launch {
             val text = try {
                 voice.finish()

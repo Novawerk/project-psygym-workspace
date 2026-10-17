@@ -4,6 +4,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Hold to talk (ADR 0010): recognised on the phone, never uploaded or stored. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Only to suggest Wi-Fi before the speech model download (no prompt; normal permission). -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
         android:allowBackup="false"
