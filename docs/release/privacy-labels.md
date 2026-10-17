@@ -26,7 +26,7 @@
 | 不发设备信息，也不加自定义 User-Agent | 同上 |
 | 没有分析、崩溃统计、广告或第三方登录 SDK；没有 Firebase、Crashlytics、Sentry。统计在我们自己的服务器上做 | `libs.versions.toml`、`build.gradle.kts`；iOS 没有 Pods 和 SPM 依赖 |
 | 不读广告 ID、ANDROID_ID、IDFA 或 IDFV；没有 ATT。合并后的 release manifest 里没有 `AD_ID` 权限 | 代码搜索；`processReleaseMainManifest` |
-| Android 只申请 `INTERNET` 权限；iOS 没有任何 `NS*UsageDescription` | `AndroidManifest.xml`、`Info.plist` |
+| Android 申请 `INTERNET`、`RECORD_AUDIO`（按住说话，第一次按住时才弹）和 `ACCESS_NETWORK_STATE`（只用来判断是不是移动网络，不弹框）；iOS 有 `NSMicrophoneUsageDescription` 和 `NSSpeechRecognitionUsageDescription` 两条说明。麦克风的声音只在手机上转成文字，不上传、不存盘；识别出的文字和打字一样，发送后才进对话（ADR 0010）。安卓的语音模型从我们的 Vercel Blob 下载一次，请求不带账号 | `AndroidManifest.xml`、`Info.plist`、`SherpaVoiceInput.kt`、`SpeechBridge.swift` |
 | 服务端不存对话，日志只记路由、病例、语言、条数、模型、token 数、耗时 | `apps/api/src/app.ts` |
 | 服务端按天存汇总计数（Neon 法兰克福），不存单场记录 | #62、[admin.md](../product/admin.md) |
 | 登录用邮件验证码。服务器存邮箱、注册时间、邀请码批次和登录会话；验证码邮件由 Resend 发送 | [login.md](../product/login.md)、ADR 0008 |
@@ -56,6 +56,7 @@ Apple 的「收集」指：数据离开设备，并且我们或第三方能在�
   - Health & Fitness、Sensitive Info 不选：来访者是虚构的，对话不是用户本人的健康数据。我们也在 App 里要求用户不输入真实来访者信息。
   - Diagnostics 不选：我们只在服务端按错误码计数，不从设备收集诊断数据。
 - 只存在设备上、从不发出的数据（练习记录、「关于你」）：不算收集。
+- **Audio Data 不勾**（0.3.0 起有按住说话）：声音只在设备上处理，从不离开手机。转出来的文字发送后才进对话，已经在 Other User Content 里。
 
 **Tracking：** 否。`NSPrivacyTracking = false`，没有追踪域名。
 
@@ -105,6 +106,8 @@ Google 的「收集」指：数据离开设备。「共享」指：转给第三�
 | App activity → **Other user-generated content**（对话、报告；报告评价和举报） | 收集；不共享 | 否（评价和举报留在 Slack） | 必需 | App functionality |
 
 不申报：Location、Financial info、Health and fitness、Messages、Photos and videos、Audio、Files and docs、Calendar、Contacts、Web browsing、App info and performance、Device or other IDs。
+
+Audio 不申报的理由（0.3.0 起有 `RECORD_AUDIO`）：按住说话的声音只在手机上转成文字，不上传、不保存。Play 审核如果问起这个权限，就这样回答：「Only for hold-to-talk. Audio is turned into text on the device and is never uploaded or stored.」
 
 ## 登录前版（2026-10-11 保存在 Play Console，未送审）
 
