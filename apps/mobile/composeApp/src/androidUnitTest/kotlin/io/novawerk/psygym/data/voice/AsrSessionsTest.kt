@@ -25,6 +25,7 @@ class AsrSessionsTest {
     /** Records every use of a freed object. [gate] holds the model load until opened. */
     private class FakeBackend : AsrBackend<Rec, Stream> {
         val gate = CountDownLatch(1)
+        @Volatile var failCreateStream = false
         val violations: MutableList<String> = Collections.synchronizedList(mutableListOf())
         val live = AtomicInteger()
         val loads = AtomicInteger()
@@ -42,6 +43,7 @@ class AsrSessionsTest {
         }
 
         override fun createStream(r: Rec): Stream {
+            if (failCreateStream) throw IllegalStateException("no stream")
             if (r.freed) violations += "createStream on a freed recognizer"
             live.incrementAndGet()
             return Stream()
@@ -119,6 +121,37 @@ class AsrSessionsTest {
         assertEquals("aaa", withTimeout(5_000) { asr.finish() })
         assertEquals(emptyList(), backend.violations)
         assertEquals(0, backend.live.get())
+    }
+
+    @Test
+    fun streamCantBeCreated_nothingHeardAndTheRecognizerIsStillFreed() = runBlocking {
+        backend.failCreateStream = true
+        backend.gate.countDown()
+        assertTrue(asr.start(recorder) {})
+        assertEquals("", withTimeout(5_000) { asr.finish() })
+        withTimeout(5_000) { asr.releaseNow() }
+        assertEquals(1, backend.frees.get())
+        assertEquals(emptyList(), backend.violations)
+    }
+
+    @Test
+    fun recorderDiesWithoutItsEndMarker_finishDoesNotHang() = runBlocking {
+        backend.gate.countDown()
+        val dying: RecorderFactory = { queue, _ ->
+            Thread {
+                repeat(2) { queue.put(FloatArray(160)) }
+                // Dies here: no END, as a recorder thread that threw would.
+            }
+        }
+        assertTrue(asr.start(dying) {})
+        assertEquals("aa", withTimeout(5_000) { asr.finish() })
+        assertEquals(0, backend.live.get())
+    }
+
+    @Test
+    fun recorderFactoryThrows_startSaysNo() = runBlocking {
+        assertTrue(!asr.start({ _, _ -> error("no microphone") }) {})
+        assertEquals("", asr.finish())
     }
 
     @Test
