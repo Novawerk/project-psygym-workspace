@@ -163,6 +163,7 @@ key 沿用 App 现有命名（`home_*`、`cases_*`、`practice_*`、`supervision
 
 | key | 中文 | English |
 |-----|------|---------|
+| settings_language_cases_note | 病例暂时只有中文。界面是英文时，来访者和督导报告都用英文。（「我的 → 语言」下面一行小字，原 O3 的说明，2026-10-17 挪来） | Cases are written in Chinese for now. With the English interface, the client and the report are in English. |
 | tab_practice | 练习 | Practise |
 | tab_history | 记录 | History |
 | tab_me | 我的 | Me |

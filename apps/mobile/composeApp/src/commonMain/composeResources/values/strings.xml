@@ -118,6 +118,7 @@
     <string name="settings_title">Settings</string>
     <string name="settings_general">General</string>
     <string name="settings_language">Language</string>
+    <string name="settings_language_cases_note">Cases are written in Chinese for now. With the English interface, the client and the report are in English.</string>
     <string name="settings_language_system">Follow system</string>
     <string name="settings_language_zh">中文</string>
     <string name="settings_language_en">English</string>

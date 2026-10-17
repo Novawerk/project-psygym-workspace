@@ -217,6 +217,7 @@ fun App(component: AppComponent) {
                             onContinue = { nav.navigate(ConsentRoute) },
                             // Skip goes to O2: it can't be skipped.
                             onSkip = { nav.navigate(ConsentRoute) },
+                            onLanguage = setLanguage,
                         )
                     }
                     composable<ConsentRoute> {
@@ -231,6 +232,7 @@ fun App(component: AppComponent) {
                             },
                             onPrivacy = { nav.navigate(PrivacyRoute) },
                             onHelp = openHelp,
+                            onLanguage = setLanguage,
                         )
                     }
                     composable<LoginRoute> { entry ->

@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -42,6 +41,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import io.novawerk.psygym.domain.settings.AppLanguage
 import io.novawerk.psygym.resources.Res
 import io.novawerk.psygym.resources.help_link
 import io.novawerk.psygym.resources.onb_consent_1_body
@@ -71,20 +71,20 @@ import io.novawerk.psygym.resources.onb_welcome_title
 import io.novawerk.psygym.ui.components.BottomActions
 import io.novawerk.psygym.ui.components.GrayCard
 import io.novawerk.psygym.ui.components.UnderlinedLink
+import io.novawerk.psygym.ui.components.LanguageToggle
 import io.novawerk.psygym.ui.components.PrimaryButton
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 
-// docs/product/onboarding.md: two pages, page dots, one main button at the bottom.
-// O1 can be skipped; O2 can't. No language question: it follows the system (P1 changes it).
-// No system permissions.
+// docs/product/onboarding.md: two pages, page dots, 中/EN top right, one main button
+// at the bottom. O1 can be skipped; O2 can't. No language page: the language follows the
+// system until changed with the toggle or in P1. No system permissions.
 
-/** Top row shared by O1–O2: page dots, Skip (when allowed). */
+/** Top row shared by O1–O2: page dots, Skip (when allowed), language toggle (when given). */
 @Composable
-private fun OnboardingTopBar(page: Int, onSkip: (() -> Unit)?) {
+private fun OnboardingTopBar(page: Int, onSkip: (() -> Unit)?, onLanguage: ((AppLanguage) -> Unit)?) {
     Row(
-        // Same height as when it held the 中/EN toggle, so the pages don't move up.
-        Modifier.fillMaxWidth().statusBarsPadding().padding(start = 20.dp, end = 8.dp, top = 8.dp).heightIn(min = 48.dp),
+        Modifier.fillMaxWidth().statusBarsPadding().padding(start = 20.dp, end = 8.dp, top = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -104,6 +104,7 @@ private fun OnboardingTopBar(page: Int, onSkip: (() -> Unit)?) {
                 Text(stringResource(Res.string.onb_skip), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
+        if (onLanguage != null) LanguageToggle(onChange = onLanguage)
     }
 }
 
@@ -113,11 +114,12 @@ private const val PAGES = 2
 private fun OnboardingPage(
     page: Int,
     onSkip: (() -> Unit)?,
+    onLanguage: ((AppLanguage) -> Unit)?,
     bottom: @Composable ColumnScope.() -> Unit,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Scaffold(
-        topBar = { OnboardingTopBar(page, onSkip) },
+        topBar = { OnboardingTopBar(page, onSkip, onLanguage) },
         bottomBar = { BottomActions(content = bottom) },
     ) { padding ->
         Column(
@@ -133,11 +135,12 @@ private fun OnboardingPage(
 
 /** O1 · Welcome. */
 @Composable
-fun WelcomeScreen(onContinue: () -> Unit, onSkip: () -> Unit) {
+fun WelcomeScreen(onContinue: () -> Unit, onSkip: () -> Unit, onLanguage: (AppLanguage) -> Unit) {
     // Skip sits under Continue as a text button, not up top (design O1).
     OnboardingPage(
         page = 0,
         onSkip = null,
+        onLanguage = onLanguage,
         bottom = {
             PrimaryButton(stringResource(Res.string.onb_continue), onContinue)
             TextButton(onClick = onSkip) {
@@ -220,11 +223,13 @@ fun ConsentScreen(
     onAccept: () -> Unit,
     onPrivacy: () -> Unit,
     onHelp: () -> Unit,
+    onLanguage: (AppLanguage) -> Unit,
 ) {
     var checked by rememberSaveable { mutableStateOf(false) }
     OnboardingPage(
         page = 1,
         onSkip = null,
+        onLanguage = onLanguage,
         bottom = {
             // Links, then the tick box, then the button (design O2).
             Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
