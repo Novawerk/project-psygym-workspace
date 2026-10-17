@@ -39,6 +39,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.novawerk.psygym.data.api.ApiError
@@ -144,14 +145,21 @@ fun HomeScreen(
             Spacer(Modifier.height(16.dp))
             // "Need help?" inside the safety note, as a compact link: the page ends on a whole
             // card that fits a tall phone's screen, instead of a link half under the tab bar.
-            SafetyNote {
+            // The whole card opens X1, so the touch target is the card (well over 48dp) while the
+            // card keeps its height.
+            val helpLabel = stringResource(Res.string.help_link)
+            SafetyNote(
+                Modifier
+                    .clip(MaterialTheme.shapes.large)
+                    .clickable(role = Role.Button, onClickLabel = helpLabel, onClick = onHelp),
+            ) {
                 Text(stringResource(Res.string.home_disclaimer), style = MaterialTheme.typography.bodySmall)
                 Text(
-                    stringResource(Res.string.help_link),
+                    helpLabel,
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurface,
                     textDecoration = TextDecoration.Underline,
-                    modifier = Modifier.clickable(role = Role.Button, onClick = onHelp).padding(vertical = 2.dp),
+                    modifier = Modifier.padding(vertical = 2.dp),
                 )
             }
             Spacer(Modifier.height(16.dp))
