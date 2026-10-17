@@ -11,6 +11,12 @@ object AppConfig {
 
     val apiBaseUrl: String get() = if (isDebug) BuildKonfig.DEV_API_BASE_URL else PROD_API_BASE_URL
 
+    /** Our copy of the Android speech model (voice-input.md §3). Every file is SHA-256 checked. */
+    const val PROD_MODEL_BASE_URL = "https://models.novawerk.io/asr/x-asr-480ms-zh-en-punct-int8-2026-06-05"
+
+    val modelBaseUrl: String
+        get() = if (isDebug) BuildKonfig.DEV_MODEL_BASE_URL.ifEmpty { PROD_MODEL_BASE_URL } else PROD_MODEL_BASE_URL
+
     /** Demo data is a debug-only thing. Release can't turn it on. */
     val fakeApiDefault: Boolean get() = isDebug && BuildKonfig.DEV_FAKE_API_DEFAULT
 

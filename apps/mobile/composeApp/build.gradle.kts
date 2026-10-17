@@ -30,6 +30,11 @@ val devApiBaseUrlOverride = providers.gradleProperty("psygym.apiBaseUrl").orNull
 val androidDevApiBaseUrl = devApiBaseUrlOverride ?: "http://10.0.2.2:8787"
 val iosDevApiBaseUrl = devApiBaseUrlOverride ?: "http://localhost:8787"
 
+// Where debug builds download the speech model (voice-input.md §3). Until our host is up:
+// -Ppsygym.modelBaseUrl=http://10.0.2.2:8789 with the four files served from a folder.
+// Release always uses AppConfig.PROD_MODEL_BASE_URL.
+val devModelBaseUrl = providers.gradleProperty("psygym.modelBaseUrl").orNull ?: ""
+
 // Debug builds start on demo data (FakeApi) until told otherwise. Debug only.
 val devFakeApiDefault = providers.gradleProperty("psygym.fakeApi").orNull?.toBoolean() ?: true
 
@@ -69,6 +74,7 @@ kotlin {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
             implementation(libs.ktor.client.okhttp)
+            implementation(libs.sherpa.onnx)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
@@ -119,10 +125,16 @@ android {
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = appVersionCode
         versionName = appVersionName
+        // sherpa-onnx ships native code; x86_64 is for the emulator. Play splits by ABI.
+        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
     }
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+        // We use the JNI library only; the C and C++ API libraries are for other bindings.
+        jniLibs {
+            excludes += listOf("**/libsherpa-onnx-c-api.so", "**/libsherpa-onnx-cxx-api.so")
         }
     }
     buildFeatures {
@@ -159,6 +171,7 @@ buildkonfig {
         // Only read when the binary is a debug build (see AppConfig).
         buildConfigField(BOOLEAN, "DEV_FAKE_API_DEFAULT", devFakeApiDefault.toString())
         buildConfigField(STRING, "DEV_API_BASE_URL", androidDevApiBaseUrl)
+        buildConfigField(STRING, "DEV_MODEL_BASE_URL", devModelBaseUrl)
     }
     targetConfigs {
         listOf("iosArm64", "iosSimulatorArm64").forEach { target ->
