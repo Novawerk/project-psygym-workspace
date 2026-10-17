@@ -23,7 +23,7 @@ speech API. The text lands in the input box; the user edits and sends it as if t
   AAR with onnxruntime linked in, and **X-ASR 480 ms streaming zh-en, with punctuation, int8**
   (`sherpa-onnx-x-asr-480ms-streaming-zipformer-transducer-zh-en-punct-int8-2026-06-05`,
   Apache-2.0). No Google services, so it works on phones sold in China. The model (169 MB) is
-  not in the APK: it's downloaded on first use from our own host, checked against SHA-256
+  not in the APK: it's downloaded on first use from our copy on Vercel Blob (Hong Kong), checked against SHA-256
   values built into the app, then works offline.
 - Both platforms recognise Chinese and English. The language follows the app's UI language.
 
@@ -48,15 +48,18 @@ speech API. The text lands in the input box; the user edits and sends it as if t
 - Privacy labels: no new data type. Audio is processed on the device and not collected; the
   text is sent like typed text (already "Other User Content"). `privacy-labels.md` changes only
   the "which permissions" row.
-- Android install size grows by about 9 MB download / 24 MB installed per ABI (the native
+- Android install size grows by about 10 MB download / 27 MB installed per ABI (the native
   library). The model is a separate 169 MB download.
-- We host the model files (Novawerk domain, reachable from mainland China, HTTPS, range
-  requests). Requirements are in the spec. If the host moves, the app's SHA-256 check stays.
+- We host the model files: Vercel Blob, Hong Kong region (the user's choice, 2026-10-17), HTTPS,
+  range requests. If the host moves, the app's SHA-256 check stays.
 - Not measured on real phones yet (the user's call, 2026-10-17). Accuracy numbers come from
   synthetic speech on a Mac; phone latency, CPU and battery are still open. Measure them in the
   first TestFlight / internal testing round and record them in the spec.
 
 ## Not chosen
+
+- `DictationTranscriber` as the iOS 26 fallback: the old `SFSpeechRecognizer`, on-device only,
+  covers the same devices and also iOS 16–25, so one fallback is enough.
 
 - Cloud speech APIs (any vendor): audio leaves the phone.
 - `zipformer-ctc-zh-int8-2025-07-03`: not streaming (no live text while speaking), 287 MB,

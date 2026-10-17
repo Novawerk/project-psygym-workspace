@@ -13,7 +13,7 @@
 | 引擎 | 系统 Speech 框架，只走端侧 | sherpa-onnx 1.13.8（Apache-2.0），onnxruntime 静态链接版 AAR |
 | 模型 | 系统自带，由系统下载和更新 | X-ASR 480 ms 流式中英，带标点，int8（Apache-2.0） |
 | 语言 | zh-CN、en-US，跟界面语言 | 一个模型同时识别中英，中英混说也可以 |
-| 对安装包的影响 | 没有 | 安装包增加约 9 MB（下载）/ 24 MB（安装后），按单个 ABI 算 |
+| 对安装包的影响 | 没有 | 安装包增加约 10 MB（下载）/ 27 MB（安装后），按单个 ABI 算 |
 | 第一次使用 | iOS 26：系统下载语言模型（在 Mac 上实测中文约 370 MB、英文约 390 MB，iPhone 上的大小没测） | 下载 169 MB，从我们自己的域名 |
 | 不依赖 | 网络 | 网络、Google 服务 |
 
@@ -110,15 +110,16 @@
 - 来源：`https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-x-asr-480ms-streaming-zipformer-transducer-zh-en-punct-int8-2026-06-05.tar.bz2`
   - 大小 133,895,136 字节，SHA-256 `fa5f63d618e5a01526e275a358bb7772e403f84808a4769fba52cffd8160bf74`。
   - 解开后取上面 4 个文件，其他文件不用。
-- 建议地址：`https://models.novawerk.io/asr/x-asr-480ms-zh-en-punct-int8-2026-06-05/<文件名>`。路径里带版本号，文件永不覆盖，换模型就换路径。
+- **地址（2026-10-17 用户选定 Vercel，总控已建好）**：`https://kmxspnzfkom4yjkr.public.blob.vercel-storage.com/asr/x-asr-480ms-zh-en-punct-int8-2026-06-05/<文件名>`。
+  - 放在 Vercel Blob 的香港区；4 个文件的 SHA-256 都核对过，支持 `Range`（206），`Cache-Control` 设了一年。
+  - 路径里带版本号，文件永不覆盖，换模型就换路径。地址写在 App 里（`AppConfig.PROD_MODEL_BASE_URL`），校验值也写在 App 里，换托管不影响安全性。
 - 服务器要求：
   - 只走 HTTPS，支持 `Range`；
   - 设 `Cache-Control: public, max-age=31536000, immutable`；
   - 不需要登录，也不记录 IP 以外的东西（最好连访问日志也关掉）。
 - **国内能下**：GitHub 和 HuggingFace 在国内都不稳定，所以要自己托管。
-  - 建议用阿里云 OSS 香港区或腾讯云 COS 香港区，配 CDN。这两种都不需要 ICP 备案，国内访问也快。
-  - Cloudflare R2 在国内比较慢，不建议作为唯一来源。
-  - 总控建好后，请从国内网络测一下下载速度。
+  - 当时的候选：阿里云 OSS 香港区、现有 AWS、Vercel。用户选了 Vercel。
+  - 还要从国内网络实测下载速度。如果太慢，再加一个国内能访问的镜像，App 里的校验值不用改。
 - 每个文件都单独下载、单独校验。这 4 个文件压缩后几乎不变小，打成 tar.bz2 也没意义，单独放还方便续传。
 
 ---
