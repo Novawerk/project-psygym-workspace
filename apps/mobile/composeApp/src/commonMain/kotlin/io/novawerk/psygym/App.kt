@@ -55,7 +55,6 @@ import io.novawerk.psygym.ui.navigation.HelpRoute
 import io.novawerk.psygym.ui.navigation.HomeRoute
 import io.novawerk.psygym.ui.navigation.PracticeRoute
 import io.novawerk.psygym.ui.navigation.PrivacyRoute
-import io.novawerk.psygym.ui.navigation.ReadyRoute
 import io.novawerk.psygym.ui.navigation.HistoryDetailRoute
 import io.novawerk.psygym.ui.navigation.HistoryRoute
 import io.novawerk.psygym.ui.navigation.MeRoute
@@ -68,7 +67,6 @@ import io.novawerk.psygym.ui.pages.cases.CasesScreen
 import io.novawerk.psygym.ui.pages.help.HelpScreen
 import io.novawerk.psygym.ui.pages.home.HomeScreen
 import io.novawerk.psygym.ui.pages.onboarding.ConsentScreen
-import io.novawerk.psygym.ui.pages.onboarding.ReadyScreen
 import io.novawerk.psygym.ui.pages.onboarding.WelcomeScreen
 import io.novawerk.psygym.ui.pages.practice.PracticeScreen
 import io.novawerk.psygym.ui.pages.practice.PracticeViewModel
@@ -206,7 +204,7 @@ fun App(component: AppComponent) {
                         when {
                             shot != null -> HomeRoute
                             start == StartState.Welcome -> WelcomeRoute
-                            start == StartState.Consent -> ConsentRoute(thenReady = false)
+                            start == StartState.Consent -> ConsentRoute
                             stored != null -> HomeRoute
                             // Finished the intro in the version without sign-in: straight to L1, with a word why.
                             !signedInBefore -> LoginRoute(notice = LoginRoute.NOTICE_MIGRATION)
@@ -216,32 +214,23 @@ fun App(component: AppComponent) {
                 ) {
                     composable<WelcomeRoute> {
                         WelcomeScreen(
-                            onContinue = { nav.navigate(ConsentRoute()) },
+                            onContinue = { nav.navigate(ConsentRoute) },
                             // Skip goes to O2: it can't be skipped.
-                            onSkip = { nav.navigate(ConsentRoute()) },
-                            onLanguage = setLanguage,
+                            onSkip = { nav.navigate(ConsentRoute) },
                         )
                     }
-                    composable<ConsentRoute> { entry ->
-                        val thenReady = entry.toRoute<ConsentRoute>().thenReady
+                    composable<ConsentRoute> {
+                        // O2 ends the intro; the language follows the system (changed in P1).
                         ConsentScreen(
                             onAccept = {
-                                scope.launch { settings.acceptDisclaimer() }
-                                if (thenReady) nav.navigate(ReadyRoute) else afterIntro()
+                                scope.launch {
+                                    settings.acceptDisclaimer()
+                                    settings.finishOnboarding()
+                                }
+                                afterIntro()
                             },
                             onPrivacy = { nav.navigate(PrivacyRoute) },
                             onHelp = openHelp,
-                            onLanguage = setLanguage,
-                        )
-                    }
-                    composable<ReadyRoute> {
-                        ReadyScreen(
-                            language = lang,
-                            onLanguage = setLanguage,
-                            onContinue = {
-                                scope.launch { settings.finishOnboarding() }
-                                afterIntro()
-                            },
                         )
                     }
                     composable<LoginRoute> { entry ->

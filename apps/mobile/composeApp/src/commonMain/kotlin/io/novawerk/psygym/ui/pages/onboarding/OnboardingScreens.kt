@@ -11,13 +11,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -26,9 +25,6 @@ import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -46,7 +42,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import io.novawerk.psygym.domain.settings.AppLanguage
 import io.novawerk.psygym.resources.Res
 import io.novawerk.psygym.resources.help_link
 import io.novawerk.psygym.resources.onb_consent_1_body
@@ -64,10 +59,6 @@ import io.novawerk.psygym.resources.onb_consent_check
 import io.novawerk.psygym.resources.onb_consent_title
 import io.novawerk.psygym.resources.onb_continue
 import io.novawerk.psygym.resources.onb_link_privacy
-import io.novawerk.psygym.resources.onb_ready_continue
-import io.novawerk.psygym.resources.onb_ready_language_note
-import io.novawerk.psygym.resources.onb_ready_language_title
-import io.novawerk.psygym.resources.onb_ready_title
 import io.novawerk.psygym.resources.onb_skip
 import io.novawerk.psygym.resources.onb_step1_body
 import io.novawerk.psygym.resources.onb_step1_title
@@ -77,31 +68,28 @@ import io.novawerk.psygym.resources.onb_step3_body
 import io.novawerk.psygym.resources.onb_step3_title
 import io.novawerk.psygym.resources.onb_welcome_subtitle
 import io.novawerk.psygym.resources.onb_welcome_title
-import io.novawerk.psygym.resources.settings_language_en
-import io.novawerk.psygym.resources.settings_language_system
-import io.novawerk.psygym.resources.settings_language_zh
 import io.novawerk.psygym.ui.components.BottomActions
 import io.novawerk.psygym.ui.components.GrayCard
 import io.novawerk.psygym.ui.components.UnderlinedLink
-import io.novawerk.psygym.ui.components.InviteCodeKeyboard
-import io.novawerk.psygym.ui.components.LanguageToggle
 import io.novawerk.psygym.ui.components.PrimaryButton
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 
-// docs/product/onboarding.md: three pages, page dots, 中/EN top right, one main button
-// at the bottom. O1 and O3 can be skipped; O2 can't. No system permissions.
+// docs/product/onboarding.md: two pages, page dots, one main button at the bottom.
+// O1 can be skipped; O2 can't. No language question: it follows the system (P1 changes it).
+// No system permissions.
 
-/** Top row shared by O1–O3: page dots, Skip (when allowed), language toggle (when given). */
+/** Top row shared by O1–O2: page dots, Skip (when allowed). */
 @Composable
-private fun OnboardingTopBar(page: Int, onSkip: (() -> Unit)?, onLanguage: ((AppLanguage) -> Unit)?) {
+private fun OnboardingTopBar(page: Int, onSkip: (() -> Unit)?) {
     Row(
-        Modifier.fillMaxWidth().statusBarsPadding().padding(start = 20.dp, end = 8.dp, top = 8.dp),
+        // Same height as when it held the 中/EN toggle, so the pages don't move up.
+        Modifier.fillMaxWidth().statusBarsPadding().padding(start = 20.dp, end = 8.dp, top = 8.dp).heightIn(min = 48.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             // The current page is a short pill, the others dots (design O1–O3).
-            repeat(3) { i ->
+            repeat(PAGES) { i ->
                 Box(
                     Modifier.size(width = if (i == page) 20.dp else 6.dp, height = 6.dp).background(
                         if (i == page) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
@@ -116,20 +104,20 @@ private fun OnboardingTopBar(page: Int, onSkip: (() -> Unit)?, onLanguage: ((App
                 Text(stringResource(Res.string.onb_skip), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        if (onLanguage != null) LanguageToggle(onChange = onLanguage)
     }
 }
+
+private const val PAGES = 2
 
 @Composable
 private fun OnboardingPage(
     page: Int,
     onSkip: (() -> Unit)?,
-    onLanguage: ((AppLanguage) -> Unit)?,
     bottom: @Composable ColumnScope.() -> Unit,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Scaffold(
-        topBar = { OnboardingTopBar(page, onSkip, onLanguage) },
+        topBar = { OnboardingTopBar(page, onSkip) },
         bottomBar = { BottomActions(content = bottom) },
     ) { padding ->
         Column(
@@ -145,12 +133,11 @@ private fun OnboardingPage(
 
 /** O1 · Welcome. */
 @Composable
-fun WelcomeScreen(onContinue: () -> Unit, onSkip: () -> Unit, onLanguage: (AppLanguage) -> Unit) {
+fun WelcomeScreen(onContinue: () -> Unit, onSkip: () -> Unit) {
     // Skip sits under Continue as a text button, not up top (design O1).
     OnboardingPage(
         page = 0,
         onSkip = null,
-        onLanguage = onLanguage,
         bottom = {
             PrimaryButton(stringResource(Res.string.onb_continue), onContinue)
             TextButton(onClick = onSkip) {
@@ -233,13 +220,11 @@ fun ConsentScreen(
     onAccept: () -> Unit,
     onPrivacy: () -> Unit,
     onHelp: () -> Unit,
-    onLanguage: (AppLanguage) -> Unit,
 ) {
     var checked by rememberSaveable { mutableStateOf(false) }
     OnboardingPage(
         page = 1,
         onSkip = null,
-        onLanguage = onLanguage,
         bottom = {
             // Links, then the tick box, then the button (design O2).
             Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
@@ -282,52 +267,5 @@ private fun Point(n: Int, title: StringResource, body: StringResource) {
     GrayCard {
         Text("$n\u3000${stringResource(title)}", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
         Text(stringResource(body), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
-
-/** O3 · Almost ready: the language. Sign-in (L1) comes next (login.md §1). */
-@Composable
-fun ReadyScreen(
-    language: AppLanguage,
-    onLanguage: (AppLanguage) -> Unit,
-    onContinue: () -> Unit,
-) {
-    // The 中/EN toggle stays, as on every intro page (design). No skip: sign-in follows.
-    OnboardingPage(
-        page = 2,
-        onSkip = null,
-        onLanguage = onLanguage,
-        bottom = { PrimaryButton(stringResource(Res.string.onb_ready_continue), onContinue) },
-    ) {
-        Text(stringResource(Res.string.onb_ready_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-        Spacer(Modifier.height(24.dp))
-        GrayCard {
-            Text(stringResource(Res.string.onb_ready_language_title), style = MaterialTheme.typography.titleSmall)
-            Spacer(Modifier.height(4.dp))
-            Column(Modifier.selectableGroup()) {
-                listOf(
-                    AppLanguage.System to Res.string.settings_language_system,
-                    AppLanguage.Zh to Res.string.settings_language_zh,
-                    AppLanguage.En to Res.string.settings_language_en,
-                ).forEach { (value, label) ->
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .selectable(selected = value == language, onClick = { onLanguage(value) }, role = Role.RadioButton)
-                            .padding(vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        RadioButton(selected = value == language, onClick = null)
-                        Spacer(Modifier.width(12.dp))
-                        Text(stringResource(label), style = MaterialTheme.typography.bodyLarge)
-                    }
-                }
-            }
-            Text(
-                stringResource(Res.string.onb_ready_language_note),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
     }
 }

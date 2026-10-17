@@ -36,9 +36,6 @@
     <string name="onb_consent_check">I understand this is a practice tool, not therapy.</string>
     <string name="onb_consent_accept">Got it</string>
     <string name="onb_link_privacy">Privacy</string>
-    <string name="onb_ready_title">Almost ready</string>
-    <string name="onb_ready_language_title">Language</string>
-    <string name="onb_ready_language_note">Cases are written in Chinese for now. With the English interface, the client and the report are in English.</string>
 
     <!-- Home (H1) -->
     <string name="home_greeting">Ready for a session?</string>
@@ -205,7 +202,6 @@
         <item quantity="one">%1$d turn</item>
         <item quantity="other">%1$d turns</item>
     </plurals>
-    <string name="onb_ready_continue">Continue</string>
     <string name="login_email_title">Sign in with email</string>
     <string name="login_email_subtitle">We'll email you a 6-digit code.</string>
     <string name="login_email_hint">Email</string>
