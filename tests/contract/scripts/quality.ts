@@ -49,10 +49,8 @@ const OPENERS: Record<Locale, string[]> = {
 };
 
 
-// B6: one turn reads like speech: about 150 characters (zh) or words (en), no lists, no headings.
+// B6: one turn reads like speech: no lists, no headings. No length limit (decisions/0011).
 const LIST_OR_HEADING = /^\s*(?:[-*•]\s|\d+[.、)]\s?|#{1,6}\s)/m;
-const MAX_REPLY = 150;
-const replyLength = (s: string) => (LOCALE === "zh" ? [...s.replace(/\s/g, "")].length : s.split(/\s+/).filter(Boolean).length);
 
 // C7: the closing line, from docs/safety.md. (C1, the three sections, is in reportSectionFlags.)
 const CLOSING: Record<Locale, string> = {
@@ -152,7 +150,6 @@ for (const c of cases.filter((c) => !ONLY_CASE || c.id === ONLY_CASE)) {
       const leaked = PROMPT_TEXT && promptOverlap(reply, PROMPT_TEXT);
       if (leaked) flags.push(`B1 ${t}: client repeats its prompt — "${leaked}"`);
       if (GIVES_ADVICE.test(reply)) flags.push(`B2 ${t}: client may give advice — "${reply.match(GIVES_ADVICE)![0]}"`);
-      if (replyLength(reply) > MAX_REPLY) flags.push(`B6 ${t}: reply is ${replyLength(reply)} ${LOCALE === "zh" ? "chars" : "words"}, want ≤ ${MAX_REPLY}`);
       if (LIST_OR_HEADING.test(reply)) flags.push(`B6 ${t}: reply has a list or heading`);
       if (!reply.trim()) flags.push(`${t}: empty reply`);
       // Like the app: mid-session notes once the counselor has spoken three times.

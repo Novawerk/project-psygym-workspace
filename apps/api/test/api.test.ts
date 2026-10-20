@@ -205,7 +205,9 @@ describe("what the supervisor sees", () => {
     expect(clientCheck).toBeGreaterThan(0);
     expect(clientCheck).toBeLessThan(prompts.client.indexOf("## 守住角色"));
     expect(prompts.client).toContain("不能「受伤但留下」");
-    expect(prompts.client).toContain("第一轮只说来访理由");
+    expect(prompts.client).toContain("不用藏着");
+    expect(prompts.client).not.toContain("第一轮只说来访理由");
+    expect(prompts.client).not.toContain("不超过 150 字");
     expect(prompts.client).not.toContain("（叹气）」）。");
     expect(prompts.supervisor).toContain("报告里不要出现任何编号");
     expect(prompts.supervisor).toContain("不提病例设定");
