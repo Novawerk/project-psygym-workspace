@@ -31,3 +31,12 @@ picked after the bake-off in [`product/realtime-voice.md`](../product/realtime-v
   safety cases in `safety.md` on each candidate; they are pass/fail.
 - **Hosting may change.** If the server has to stay connected for the whole session, Vercel
   functions don't fit.
+
+## Not chosen
+
+- **An ElevenLabs agent with our backend as its custom LLM.** Built first (commit `52c9272` on
+  branch `handoff/new-customer-needs`, with its own draft of this record). It keeps one prompt and
+  one set of safety rules, but ElevenLabs only transcribes and synthesises: the model never hears
+  the counselor's tone. ElevenLabs is a US company and we haven't checked that it works reliably
+  from mainland China. The user set it aside on 2026-10-25 in favour of a speech-to-speech model;
+  the branch stays unmerged in case the bake-off fails.
