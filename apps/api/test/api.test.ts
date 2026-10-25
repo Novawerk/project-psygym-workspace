@@ -208,6 +208,9 @@ describe("what the supervisor sees", () => {
     expect(prompts.client).toContain("不用藏着");
     expect(prompts.client).not.toContain("第一轮只说来访理由");
     expect(prompts.client).not.toContain("不超过 150 字");
+    expect(prompts.client).toContain("你说得多，咨询师说得少");
+    expect(prompts.client).not.toContain("只在最深一层出现");
+    expect(prompts.client).toContain("任何情况下都不描述细节");
     expect(prompts.client).not.toContain("（叹气）」）。");
     expect(prompts.supervisor).toContain("报告里不要出现任何编号");
     expect(prompts.supervisor).toContain("不提病例设定");

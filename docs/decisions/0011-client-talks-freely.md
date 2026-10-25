@@ -13,7 +13,8 @@ The AI client no longer holds information back, and its replies have no length l
   including what the case lists under 「建立信任后才说」. It can talk at length, the way a real
   client does.
 - **Unchanged:** trauma (`safety.md` and the 「创伤经历」 section of the prompt). The client still
-  doesn't bring it up first and never describes details. No lists, headings or Markdown.
+  doesn't bring it up first and never describes details. (Changed by
+  [0012](./0012-client-speaks-like-practice-dialogues.md): trauma is no longer held back either.) No lists, headings or Markdown.
 - Case files in `content/` are not edited. The prompt overrides their 「建立信任后才说」 timing.
 
 ## Why
