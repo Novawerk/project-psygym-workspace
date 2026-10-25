@@ -133,6 +133,37 @@ Same invite code check; same rate limit, its own bucket. Same delivery as `/feed
 either way, best effort, dropped when Slack isn't set up. Errors: `400 invalid_request`,
 `401 invite_required`, `404 case_not_found`, `429 rate_limited`.
 
+### `POST /voice/session` → `200`
+
+Voice sessions through an ElevenLabs agent ([`decisions/0013`](./decisions/0013-voice-elevenlabs.md)).
+Off unless the server has `ELEVENLABS_API_KEY`, `ELEVENLABS_AGENT_ID` and `VOICE_LLM_SECRET`:
+then `404 not_found`.
+
+Body: `{ caseId: string, locale: Locale }`. Answer:
+
+```ts
+{
+  conversationToken: string;                 // for the ElevenLabs SDK; short-lived, one call
+  dynamicVariables: { psygym: string };      // pass when starting the call
+  extraBody: { caseId: string; locale: Locale };  // pass as custom-LLM extra body, if the SDK can
+}
+```
+
+The app starts the call with the SDK, keeps the transcript the SDK reports, and sends it to
+`/supervision` at the end as usual. The client hanging up in character (`end_call`) is the voice
+`session_end`. Same gate and rate limit as `/chat`. Errors: `400 invalid_request`,
+`401 invite_required`, `404 case_not_found`, `429 rate_limited`, `503 model_unavailable`
+(ElevenLabs didn't give a token).
+
+### `POST /voice/llm/chat/completions` (ElevenLabs only, not the app)
+
+The agent's custom LLM: OpenAI Chat Completions in, OpenAI streaming chunks out, ending in
+`data: [DONE]`. `Authorization: Bearer <VOICE_LLM_SECRET>`, no invite code. The case and language
+come from `elevenlabs_extra_body` or the `case=<id> locale=<zh|en>` marker in the system message.
+The reply is the AI client's, as in `/chat`; a session end is an `end_call` tool call after the
+closing line. A model failure is spoken as a short line asking the trainee to repeat. Also at
+`/voice/llm/v1/chat/completions`.
+
 ## Sign-in
 
 > **Built, off by default.** The server keeps working exactly as described above until
@@ -289,6 +320,9 @@ In a stream, `error` with `model_unavailable` also covers a model that returned 
 The app shows a friendly message for each code, in the current language.
 
 ## Changes
+
+- **voice (this PR)** — `POST /voice/session` and `POST /voice/llm/chat/completions`, behind three
+  environment variables (off by default: no change). Backend first; the app follows in its own PR.
 
 - **admin phase 1 (this PR)** — no change for the app. The admin page has its own contract,
   [`admin-api.md`](./admin-api.md) (ADR 0009). `GET /admin/stats` (Bearer) stays as it is. With

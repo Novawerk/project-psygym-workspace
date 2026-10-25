@@ -88,6 +88,14 @@ const EnvSchema = z.object({
   /** "on": an end_session call ends the session only if an independent check agrees (src/end-judge.ts). Default off. */
   END_SESSION_JUDGE: z.enum(["off", "on"]).default("off"),
 
+  // ── Voice sessions (docs/decisions/0013-voice-elevenlabs.md) ── off unless all three are set
+  /** ElevenLabs API key: the server mints conversation tokens with it. Never sent to the app. */
+  ELEVENLABS_API_KEY: optionalString,
+  /** The ElevenLabs agent (private; its LLM is our POST /voice/llm/chat/completions). */
+  ELEVENLABS_AGENT_ID: optionalString,
+  /** The Bearer secret ElevenLabs sends to /voice/llm (its custom-LLM API key). At least 32 characters. */
+  VOICE_LLM_SECRET: optionalString,
+
   // ── Report feedback ──
   /** Slack incoming webhook for POST /feedback. Unset: feedback is dropped (204). */
   FEEDBACK_SLACK_WEBHOOK_URL: optionalString.pipe(z.url({ protocol: /^https$/ }).optional()),
@@ -139,11 +147,21 @@ export interface AppConfig {
   endSessionJudge: boolean;
   /** The admin routes; null when ADMIN_MODE is off or what it needs is missing. */
   admin: AdminConfig | null;
+  /** Voice sessions; null unless ELEVENLABS_API_KEY, ELEVENLABS_AGENT_ID and VOICE_LLM_SECRET are all set. */
+  voice: VoiceConfig | null;
   /** CONTENT_SOURCE=db with a DATABASE_URL; null: the bundled content/. */
   contentDb: { databaseUrl: string } | null;
   /** Where publish notices go. Null: log only. */
   contentWebhookUrl: string | null;
 }
+
+export interface VoiceConfig {
+  apiKey: string;
+  agentId: string;
+  llmSecret: string;
+}
+
+export const VOICE_SECRET_MIN = 32;
 
 export interface AdminConfig {
   databaseUrl: string;
@@ -277,6 +295,14 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
       admin = { databaseUrl: e.DATABASE_URL, googleClientId: e.ADMIN_GOOGLE_CLIENT_ID, origin: new URL(e.ADMIN_ORIGIN).origin };
     }
   }
+  let voice: VoiceConfig | null = null;
+  const voiceVars = [e.ELEVENLABS_API_KEY, e.ELEVENLABS_AGENT_ID, e.VOICE_LLM_SECRET];
+  if (voiceVars.every(Boolean)) {
+    if (e.VOICE_LLM_SECRET!.length < VOICE_SECRET_MIN) errors.push(`VOICE_LLM_SECRET is shorter than ${VOICE_SECRET_MIN} characters; voice stays off`);
+    else voice = { apiKey: e.ELEVENLABS_API_KEY!, agentId: e.ELEVENLABS_AGENT_ID!, llmSecret: e.VOICE_LLM_SECRET! };
+  } else if (voiceVars.some(Boolean)) {
+    errors.push("ELEVENLABS_API_KEY, ELEVENLABS_AGENT_ID and VOICE_LLM_SECRET are needed together; voice stays off");
+  }
   if (e.CONTENT_SOURCE === "db" && !e.DATABASE_URL) errors.push("CONTENT_SOURCE is db but DATABASE_URL is missing; using the bundled content");
   return {
     llm: { client: roleLlm("client", e, invalid), supervisor: roleLlm("supervisor", e, invalid) },
@@ -289,6 +315,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     endSessionJudge: e.END_SESSION_JUDGE === "on",
     auth,
     admin,
+    voice,
     contentDb: e.CONTENT_SOURCE === "db" && e.DATABASE_URL ? { databaseUrl: e.DATABASE_URL } : null,
     contentWebhookUrl: e.CONTENT_SLACK_WEBHOOK_URL ?? null,
   };
