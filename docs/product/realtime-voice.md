@@ -27,6 +27,17 @@
 
 两家的文档都很长，上面没查到的地方要在比试时确认。
 
+**豆包文档里查到的限制（2026-10-25 读的接入文档）：**
+
+- 版本用 `dialog.model` 选：`1.2.1.1` 是 O2.0，`2.2.0.0` 是 SC2.0。旧的 O、SC 版已经不再更新。
+- **人设很短。** O2.0 的 `system_role` 加 `speaking_style` 合起来最多 4000 字；上下文最多 12K。我们现在的 `apps/api/prompts/client.md` 约 1.5 万字，加上病例约 2.8 万字。用豆包就得写一版压缩的提示词，安全规则能不能在压缩后守住，是比试的重点。SC2.0 的 `character_manifest` 没写长度上限。
+- SC2.0 官方写的是「输出文本可包含角色相关的动作与表情描述」，和我们「不写括号旁白」的规则要对一下：转写里如果带这些，督导引用原话时要处理掉。
+- `strict_audit` 默认 `true`（严格审核）。自杀、创伤这些话题会不会被它的审核拦掉，比试第 4、5 个场景要看。
+- 判断用户说完：`asr.extra.end_smooth_window_ms`，默认 1500 毫秒，可以设 500 毫秒到 50 秒。
+- 支持文字输入（仍要发静音音频）。安全类场景可以用文字自动跑。
+- `enable_user_query_exit` 能识别用户想结束，但那是用户（咨询师）想走，不是来访者要结束，不能替代 `end_session`。
+- 接入：WebSocket `wss://openspeech.bytedance.com/api/v3/realtime/dialogue`，自定义二进制协议。请求头要 `X-Api-App-ID`、`X-Api-Access-Key`（控制台获取），`X-Api-Resource-Id` 固定为 `volc.speech.dialog`，`X-Api-App-Key` 是文档给的固定值。
+
 ## 2. 我们这边的硬要求
 
 比试按这几条打分。前三条不过，效果再好也不能用。
