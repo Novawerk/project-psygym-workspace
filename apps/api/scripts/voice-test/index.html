@@ -81,7 +81,10 @@
   const latencies = [];
   let conversation = null;
   let muted = false;
-  let lastUserAt = 0;
+  // The trainee's transcript arrives about when the client starts speaking, so the delay is timed
+  // from the last moment ElevenLabs' voice detection heard the trainee instead.
+  let lastSpeechAt = 0;
+  let speaking = false;
   let startedAt = 0;
 
   try { $("invite").value = localStorage.getItem("psygym-voice-invite") ?? ""; } catch {}
@@ -150,14 +153,15 @@
         dynamicVariables: session.dynamicVariables,
         customLlmExtraBody: session.extraBody,
         onConnect: () => { sys("已连接。请先开口。"); setMode("listening"); },
-        onMessage: ({ message, source }) => {
-          if (source === "user") { lastUserAt = performance.now(); add("counselor", message); }
-          else add("client", message);
+        onMessage: ({ message, source }) => add(source === "user" ? "counselor" : "client", message),
+        onVadScore: ({ vadScore }) => {
+          if (!speaking && vadScore > 0.5) lastSpeechAt = performance.now();
         },
         onModeChange: ({ mode }) => {
-          if (mode === "speaking" && lastUserAt) {
-            latencies.push((performance.now() - lastUserAt) / 1000);
-            lastUserAt = 0;
+          speaking = mode === "speaking";
+          if (speaking && lastSpeechAt) {
+            latencies.push((performance.now() - lastSpeechAt) / 1000);
+            lastSpeechAt = 0;
             showStats();
           }
           setMode(mode);

@@ -32,10 +32,15 @@ phone ──audio──▶ ElevenLabs agent ──OpenAI chat request──▶ o
 
 ## Agent settings (in the ElevenLabs dashboard)
 
-- LLM: Custom LLM. Server URL `https://<api host>/voice/llm` (or `…/voice/llm/v1`), API key
+- LLM: Custom LLM. Server URL `https://<api host>/voice/llm`: ElevenLabs adds
+  `/chat/completions` itself (checked 2026-10-26; a full path ends up doubled and fails). API key
   secret = `VOICE_LLM_SECRET`.
 - System prompt: only `{{psygym}}`. First message: empty (the trainee speaks first).
 - System tools: `end_call` on; nothing else.
+- Turn: eagerness `patient`, turn timeout 6 s, no soft-timeout fillers, never end the call on
+  silence. After 6 s of the trainee's silence ElevenLabs sends `...` as their turn; we pass it on as
+  「（咨询师没有说话，在等你继续）」 and the client goes on by itself, the way the client in the
+  practice dialogues (0012) keeps talking while the counselor stays quiet.
 - Privacy: retention 0 days, audio saving off. Zero Retention Mode if the plan allows it
   (enterprise).
 - Authentication on (private agent).

@@ -6,7 +6,7 @@ import { loadConfig } from "../src/config.js";
 import { loadCases, loadPrompts } from "../src/content.js";
 import { MOCK_END_TRIGGER } from "../src/llm/mock.js";
 import type { ModelProvider, ModelRequest } from "../src/llm/types.js";
-import { VOICE_ERROR_LINE, voiceTurn } from "../src/voice.js";
+import { SILENCE, VOICE_ERROR_LINE, voiceTurn } from "../src/voice.js";
 
 const cases = loadCases();
 const prompts = loadPrompts();
@@ -68,6 +68,20 @@ describe("voiceTurn", () => {
       ],
     });
     expect(t).toEqual({ caseId: "a-1", locale: "en", messages: [{ role: "counselor", text: "Hi. How are you?" }, { role: "client", text: "Fine." }], canEndCall: false });
+  });
+
+  it("the trainee's silence (ElevenLabs sends '...') reaches the client as the counselor waiting", () => {
+    const t = voiceTurn({
+      messages: [
+        { role: "system", content: "case=a-1 locale=zh" },
+        { role: "user", content: "随便说说就好。" },
+        { role: "assistant", content: "最近挺累的。" },
+        { role: "user", content: "..." },
+      ],
+    });
+    expect(t?.messages.at(-1)).toEqual({ role: "counselor", text: SILENCE.zh });
+    expect(voiceTurn({ messages: [{ role: "system", content: "case=a locale=en" }, { role: "user", content: " … " }] })?.messages).toEqual([{ role: "counselor", text: SILENCE.en }]);
+    expect(voiceTurn({ messages: [{ role: "system", content: "case=a locale=zh" }, { role: "user", content: "嗯……" }] })?.messages).toEqual([{ role: "counselor", text: "嗯……" }]);
   });
 
   it("extra_body wins over the marker; neither: null", () => {
