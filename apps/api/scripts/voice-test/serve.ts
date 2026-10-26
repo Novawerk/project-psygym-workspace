@@ -3,7 +3,8 @@
 //
 //   pnpm --filter api dev                      # the API on :8787
 //   tsx scripts/voice-test/serve.ts            # this on :8790
-//   ngrok http 8790                            # then point the agent's custom LLM at <tunnel>/voice/llm/chat/completions
+//   ngrok http 8790                            # then point the agent's custom LLM at <tunnel>/voice/llm
+//                                              # (ElevenLabs adds /chat/completions itself)
 import { readFileSync } from "node:fs";
 import { createServer, request } from "node:http";
 
