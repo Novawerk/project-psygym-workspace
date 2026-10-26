@@ -154,7 +154,7 @@ describe("POST /voice/session", () => {
     const calls: { url: string; init: RequestInit }[] = [];
     const fakeFetch = (async (url: string, init: RequestInit) => {
       calls.push({ url, init });
-      return new Response(JSON.stringify({ token: "tok_1" }), { status: 200 });
+      return new Response(JSON.stringify({ token: "tok_1", conversation_id: "conv_1" }), { status: 200 });
     }) as unknown as typeof fetch;
     const { app } = makeApp(VOICE_ENV, { fetch: fakeFetch });
     const res = await app.request("/voice/session", {
@@ -169,7 +169,7 @@ describe("POST /voice/session", () => {
       extraBody: { caseId: CASE_ID, locale: "zh" },
     });
     expect(calls[0]!.url).toBe("https://api.elevenlabs.io/v1/convai/conversation/token?agent_id=agent_1");
-    expect((calls[0]!.init.headers as Record<string, string>)["xi-api-key"]).toBe("xi-key");
+    expect(new Headers(calls[0]!.init.headers).get("xi-api-key")).toBe("xi-key");
   });
 
   it("is behind the invite gate, 404 when off, 503 when ElevenLabs fails", async () => {

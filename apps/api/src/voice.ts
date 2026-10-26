@@ -2,6 +2,7 @@
 // ElevenLabs does the listening and the speaking; the words still come from us. Its agent's
 // "custom LLM" is POST /voice/llm/chat/completions: OpenAI Chat Completions in, SSE out.
 // Stateless like /chat: ElevenLabs sends the whole conversation each turn and nothing is stored.
+import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
 import { z } from "zod";
 import { LocaleSchema, MAX_MESSAGE_CHARS, MAX_MESSAGES, type Locale, type Message } from "./schema.js";
 
@@ -106,10 +107,11 @@ export async function conversationToken(
   agentId: string,
   timeoutMs = 5000,
 ): Promise<string> {
-  const url = `https://api.elevenlabs.io/v1/convai/conversation/token?agent_id=${encodeURIComponent(agentId)}`;
-  const res = await fetchFn(url, { method: "GET", headers: { "xi-api-key": apiKey }, signal: AbortSignal.timeout(timeoutMs) });
-  if (!res.ok) throw new Error(`elevenlabs token: HTTP ${res.status}`);
-  const token = ((await res.json()) as { token?: unknown }).token;
+  const client = new ElevenLabsClient({ apiKey, fetch: fetchFn as typeof fetch, maxRetries: 0 });
+  const { token } = await client.conversationalAi.conversations.getWebrtcToken(
+    { agentId },
+    { timeoutInSeconds: timeoutMs / 1000, maxRetries: 0 },
+  );
   if (typeof token !== "string" || !token) throw new Error("elevenlabs token: no token in the answer");
   return token;
 }
