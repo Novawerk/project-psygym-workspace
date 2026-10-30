@@ -2,5 +2,5 @@
 CFBundleDisplayName = "PSYGYM";
 
 /* Hold to talk (docs/product/voice-input.md §5). */
-NSMicrophoneUsageDescription = "To hear you while you hold to talk. Your voice is turned into text on this phone and never uploaded.";
+NSMicrophoneUsageDescription = "Hold to talk: your voice is turned into text on this phone. Voice session: your voice goes to ElevenLabs, only after you agree.";
 NSSpeechRecognitionUsageDescription = "To turn what you say into text on this phone, offline.";

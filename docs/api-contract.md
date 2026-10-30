@@ -133,6 +133,11 @@ Same invite code check; same rate limit, its own bucket. Same delivery as `/feed
 either way, best effort, dropped when Slack isn't set up. Errors: `400 invalid_request`,
 `401 invite_required`, `404 case_not_found`, `429 rate_limited`.
 
+### `GET /voice/status` → `200 {"available":true}`
+
+Whether the app offers a voice session. Same gate as `/chat`. `404 not_found` when voice is off: the
+app treats that, and any other failure, as "don't show it". Called when the case brief opens.
+
 ### `POST /voice/session` → `200`
 
 Voice sessions through an ElevenLabs agent ([`decisions/0013`](./decisions/0013-voice-elevenlabs.md)).
@@ -149,9 +154,11 @@ Body: `{ caseId: string, locale: Locale }`. Answer:
 }
 ```
 
-The app starts the call with the SDK, keeps the transcript the SDK reports, and sends it to
-`/supervision` at the end as usual. The client hanging up in character (`end_call`) is the voice
-`session_end`. Same gate and rate limit as `/chat`. Errors: `400 invalid_request`,
+The app starts the call with the SDK, passing `dynamicVariables`, `extraBody` as the custom-LLM
+extra body, and the agent language override (`zh` or `en`). It keeps the transcript the SDK reports
+(dropping the `...` ElevenLabs sends for silence, merging runs, cutting to `Message` limits), and
+sends it to `/supervision` at the end as usual. The client hanging up in character (`end_call`) is
+the voice `session_end`. Same gate and rate limit as `/chat`. Errors: `400 invalid_request`,
 `401 invite_required`, `404 case_not_found`, `429 rate_limited`, `503 model_unavailable`
 (ElevenLabs didn't give a token).
 
@@ -159,7 +166,9 @@ The app starts the call with the SDK, keeps the transcript the SDK reports, and 
 
 The agent's custom LLM: OpenAI Chat Completions in, OpenAI streaming chunks out, ending in
 `data: [DONE]`. `Authorization: Bearer <VOICE_LLM_SECRET>`, no invite code. The case and language
-come from `elevenlabs_extra_body` or the `case=<id> locale=<zh|en>` marker in the system message.
+come from `elevenlabs_extra_body` (what ElevenLabs sends, checked on the real service 2026-10-30)
+or the `case=<id> locale=<zh|en>` marker in the system message. A request ElevenLabs drops mid-way
+isn't counted.
 The reply is the AI client's, as in `/chat`; a session end is an `end_call` tool call after the
 closing line. A model failure is spoken as a short line asking the trainee to repeat. Also at
 `/voice/llm/v1/chat/completions`.
@@ -321,8 +330,9 @@ The app shows a friendly message for each code, in the current language.
 
 ## Changes
 
-- **voice (this PR)** — `POST /voice/session` and `POST /voice/llm/chat/completions`, behind three
-  environment variables (off by default: no change). Backend first; the app follows in its own PR.
+- **voice (this PR)** — `GET /voice/status`, `POST /voice/session` and
+  `POST /voice/llm/chat/completions`, behind three environment variables (off by default: no
+  change), with the app side in the same PR.
 
 - **admin phase 1 (this PR)** — no change for the app. The admin page has its own contract,
   [`admin-api.md`](./admin-api.md) (ADR 0009). `GET /admin/stats` (Bearer) stays as it is. With

@@ -1,6 +1,6 @@
 # 0013 — Voice sessions through an ElevenLabs agent
 
-Date: 2026-10-25. Status: **accepted** (the user, 2026-10-25). Backend done; the app side is next.
+Date: 2026-10-25, updated 2026-10-30. Status: **accepted** (the user, 2026-10-25, confirmed 2026-10-30). Built on both sides, off by default.
 
 ## Decision
 
@@ -23,26 +23,32 @@ phone ──audio──▶ ElevenLabs agent ──OpenAI chat request──▶ o
   `session_ended_by_client`).
 - **No key on the phone.** The agent is private. The app asks `POST /voice/session` (behind the
   usual gate) for a short-lived conversation token, and gets back what to pass when it starts the
-  call: `dynamicVariables.psygym` and `extraBody` (case and language).
+  call: `dynamicVariables.psygym` and `extraBody` (case and language). `GET /voice/status` tells
+  the app whether to show the entry at all.
 - **ElevenLabs authenticates to us** with `VOICE_LLM_SECRET` (the agent's custom-LLM API key).
 - **Off by default.** Without `ELEVENLABS_API_KEY`, `ELEVENLABS_AGENT_ID` and `VOICE_LLM_SECRET`,
-  both routes answer 404.
-- **The supervisor report** stays text: the app keeps the transcript ElevenLabs sends it
-  (`onMessage`) and calls `/supervision` as today.
+  the routes answer 404 and the app shows nothing. Hold to talk doesn't change.
+- **The supervisor report** stays text: the app keeps the transcript the SDK reports and calls
+  `/supervision` as today.
+- **One interface in the app** (`VoiceCall`): `io.elevenlabs:elevenlabs-android` on Android, the
+  ElevenLabs Swift SDK on iOS. Screens and flow: [`product/realtime-voice.md`](../product/realtime-voice.md).
 
 ## Agent settings (in the ElevenLabs dashboard)
 
 - LLM: Custom LLM. Server URL `https://<api host>/voice/llm`: ElevenLabs adds
   `/chat/completions` itself (checked 2026-10-26; a full path ends up doubled and fails). API key
   secret = `VOICE_LLM_SECRET`.
-- System prompt: only `{{psygym}}`. First message: empty (the trainee speaks first).
+- System prompt: only `{{psygym}}`. First message: empty (the trainee speaks first). Language
+  override allowed (the app asks for `zh` or `en`); custom-LLM extra body allowed.
 - System tools: `end_call` on; nothing else.
 - Turn: eagerness `patient`, turn timeout 6 s, no soft-timeout fillers, never end the call on
-  silence. After 6 s of the trainee's silence ElevenLabs sends `...` as their turn; we pass it on as
-  「（咨询师没有说话，在等你继续）」 and the client goes on by itself, the way the client in the
-  practice dialogues (0012) keeps talking while the counselor stays quiet.
-- Privacy: retention 0 days, audio saving off. Zero Retention Mode if the plan allows it
-  (enterprise).
+  silence, **speculative turn off**. After 6 s of the trainee's silence ElevenLabs sends `...` as
+  their turn; we pass it on as 「（咨询师没有说话，在等你继续）」 and the client goes on by itself,
+  the way the client in the practice dialogues (0012) keeps talking while the counselor stays quiet.
+- Privacy: `record_voice` off, `retention_days` 0, **`delete_transcript_and_pii` on** (off, 0 days
+  still keeps the transcript: see below), `delete_audio` on.
+- Limits: `max_duration_seconds` 1200. Agent limits today: 2 at once, 30 calls a day; raise them
+  before real users (the plan allows 10 at once).
 - Authentication on (private agent).
 
 ## Why
@@ -60,13 +66,100 @@ phone ──audio──▶ ElevenLabs agent ──OpenAI chat request──▶ o
   policy, the store privacy labels and review notes, and the in-app notice before a voice session.
 - Without Zero Retention Mode, ElevenLabs keeps logs we don't control even at 0-day retention.
   Check the plan and the data processing terms before real users.
-- Latency adds up: speech to text, our backend, the model vendor, text to speech. Measure it in
-  the spike before deciding on the UI.
-- Cost per minute: ElevenLabs bills voice minutes on top of our model tokens.
-- Long sessions: we keep the last 80 messages (`MAX_MESSAGES`), like `/chat`.
-- Not verified against the live service yet (no key in the dev environment): the exact request
-  ElevenLabs sends (`elevenlabs_extra_body` or only the system prompt), the server URL it calls,
-  and the Kotlin/Swift SDK option names for dynamic variables. The code accepts both ways of
-  passing the case.
-- Next: the app side (Kotlin Multiplatform: `io.elevenlabs:elevenlabs-android` on Android, the
-  ElevenLabs Swift SDK on iOS, behind one interface).
+- Long sessions: the client side keeps the last 80 messages (`MAX_MESSAGES`), like `/chat`. A call
+  stops at 20 minutes.
+
+## Checked on the real service (2026-10-30)
+
+Calls were run from Germany against a real agent, with the API on a laptop behind a tunnel: spoken
+audio over the agent's WebSocket (`apps/api/scripts/voice-test/call.mjs`) and, for the app, the
+Android SDK over WebRTC.
+
+**What ElevenLabs sends.** `POST <server url>/chat/completions` with `elevenlabs_extra_body`
+(`caseId`, `locale`), a `system` message, alternating `user` and `assistant`, and `tools: [end_call]`.
+Both ways of passing the case work; `extra_body` is what arrives. Chinese and English both work.
+
+**Latency.** From the end of the trainee's speech to the first audio of the reply: **1.5–3.0 s,
+usually about 2 s** (10 Chinese turns; one English first turn took 4.1 s). Our part, the model's whole reply,
+is 1.1–2.2 s of that (DeepSeek, measured at our server, including one prompt of about 6,800 tokens).
+So the model is the biggest piece. It feels like a person thinking, not like a phone line. Note
+that the WebSocket test skips the WebRTC leg a phone uses, and the API behind a tunnel adds a
+little.
+
+**Speculative turn.** On, ElevenLabs asks for a reply before the trainee has finished: 2–3 model
+calls per turn, double token cost, and inflated counts. It saved no measurable time (1.5–2.3 s with
+it, 1.5–3.0 s without, on few turns). We turned it off. Dropped requests still happen now and then;
+they aren't counted any more.
+
+**Ending.** The harm rule works over voice: first remark, the client stays and is hurt; second
+remark, one closing line, then `end_call`, and the call closes. A spoken line can't be held back, so
+with `END_SESSION_JUDGE=on` the check runs before the line goes out; that adds to the wait and
+wasn't tested here (it was off).
+
+**Mishearing.** Scribe turned one synthetic 「你这点事算什么」 into 「你这见识算什么」. The report
+quotes what ElevenLabs heard. Worth watching in real use.
+
+## Retention and plan (2026-10-30)
+
+- **Plan: Creator.** 275 minutes a month included, then $0.08 a minute (1 minute came to about 440
+  credits on a 131,000-credit month). Our model tokens are on top. 100 trainees at 15 minutes a
+  week is about 6,500 minutes a month, about $500. A 20-minute cap and the concurrency limits apply.
+- **Zero Retention Mode is enterprise only** (select customers), so it isn't available to us. Its
+  docs don't say how it works with a custom LLM.
+- **`retention_days: 0` alone was not enough.** The spike agent had it, and transcripts of the
+  2026-10-26 calls are still there four days later: `delete_transcript_and_pii` was off. Audio and
+  logs had gone about 75 minutes after each call. We turned it on: new calls show a deletion time at
+  call end. **Whether the transcript has really gone** is checked in the PR. The eight 2026-10-26
+  test calls (scripted lines, nothing real) stay until someone deletes them; `apply_to_existing_conversations`
+  is off.
+- **Audio is never stored** (`has_audio: false` on every call, `record_voice` off).
+- What remains outside our control: ElevenLabs' docs say debugging and moderation logs may still
+  hold data after deletion, and backups keep deleted items for up to 30 days. Its privacy policy
+  says data goes to the US. As a processor for a business customer its contract applies, not that
+  policy, so **we need its DPA** before real users, and must confirm that our data doesn't train its
+  models.
+
+## Mainland China (2026-10-30)
+
+**Not blocked, and not proven good.** ElevenLabs' list of restricted countries doesn't name China.
+Measured with public probes (Globalping) in mainland data centres, on Alibaba, Tencent, China
+Telecom, Unicom and Mobile networks, at about 00:30 Beijing time:
+
+| Check | Result |
+|---|---|
+| HTTPS to `api.elevenlabs.io` | 8 of 8 nodes answered, 0.3–5.0 s |
+| HTTPS to `livekit.rtc.elevenlabs.io` (where the phone connects) | 8 of 8 answered, 0.9–2.4 s |
+| DNS for that host | 6 of 6 got the right address |
+| Round trip to that host | 57–299 ms (ICMP), 93–653 ms (TCP) |
+| Packet loss (ICMP) | 0 on 5 nodes, 12–31% on 5 |
+| Control: `www.google.com` | 0 of 6 connected, poisoned DNS, as expected |
+| `psygym-api.novawerk.io` | 8 of 8 answered |
+
+What that doesn't tell us: these are data-centre nodes, not home broadband or a phone network; the
+audio itself runs over WebRTC (UDP), which we couldn't test from there; and evening peak will likely be
+worse than 00:30. Packet loss of 12–31% would be audible. **Nobody has made a call from a phone in
+mainland China yet.** That is the check that decides this; it takes a team member there five minutes
+with a debug build. If it's bad, the fallback is typing and hold to talk, which don't depend on
+ElevenLabs. The app says so when a call won't connect.
+
+Separately from connectivity, sending a mainland user's voice to a US company is a cross-border
+transfer of personal information, and ElevenLabs is not a filed service in China
+([`release/china-mainland.md`](../release/china-mainland.md)).
+
+## Before this is switched on
+
+Setting the three variables in production makes the entry appear for everyone, on existing builds
+too. So, in order:
+
+1. Choose the plan, sign the DPA, confirm no training on our data.
+2. Merge and publish the privacy policy, labels, Data safety form and review notes (`docs/release/`).
+3. Create a production agent with the settings above, pointing at `https://psygym-api.novawerk.io/voice/llm`.
+   The agent used so far is a test agent on a laptop tunnel.
+4. Make a call from a phone in mainland China.
+5. Set the variables.
+
+## Not verified
+
+See the PR for what ran on a phone. Interruptions were only seen in the WebSocket test. Voice quality,
+how natural the client sounds, and whether the safety rules hold up over speech beyond the checks
+above: these need people listening, and the psychologists' judgement.

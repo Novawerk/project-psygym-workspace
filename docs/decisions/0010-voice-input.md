@@ -1,7 +1,8 @@
 # 0010 — Hold-to-talk, recognised on the phone
 
 Date: 2026-10-17. Status: **accepted** (the user, 2026-10-17). The product spec, the measurements
-and the screen states are in [`product/voice-input.md`](../product/voice-input.md).
+and the screen states are in [`product/voice-input.md`](../product/voice-input.md). Hold to talk stays
+as written here; the separate voice session (ADR 0013) does send audio out, after its own consent.
 
 ## Decision
 

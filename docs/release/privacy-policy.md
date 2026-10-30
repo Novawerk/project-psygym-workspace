@@ -19,6 +19,8 @@
 | 数据 | 去哪 | 存多久 |
 |------|------|--------|
 | **练习对话**：你和 AI 来访者的每一句 | 每一轮，App 把整段对话发到我们的服务器，服务器转给第三方 AI 模型服务生成回复。 | 我们的服务器不保存，日志里也不记录对话内容。AI 模型服务按它自己的政策处理（见下方「第三方」）。 |
+| **语音会谈的声音**（只在你选了语音会谈并同意后） | 通话时实时发给 ElevenLabs（美国公司）转成文字，来访者的声音也由它合成。声音不经过我们的服务器。 | 我们不接触、不保存声音。我们设置 ElevenLabs 不录音（`record_voice` 关）。 |
+| **语音会谈的转写** | ElevenLabs 把你说的话转成文字，经我们的服务器交给 AI 模型服务写回复；转写也实时发回 App，用来显示和生成督导报告。 | 我们的服务器不保存。我们设置 ElevenLabs 在通话结束后删除转写，一般在一小时内完成；删除后，它的调试和审核日志里可能还留有相关数据，备份最长保留 30 天。我们的套餐没有零保留模式。 |
 | **督导报告** | 由 AI 模型服务根据对话生成，经我们的服务器发回 App。 | 同上。 |
 | **练习记录**：每场的病例编号、开始和结束时间、对话、报告和技能标签 | 只存在你的手机上，App 自己的存储空间里。不上传，不进 iCloud 或 Google 云备份，也不跟着换机迁移。 | 存到你删除为止。可以在「我的」里关掉保存、全部删除，也可以单场删除。卸载 App 就全部删除。记录**没有加密**，保存在 App 的私有空间里。 |
 | **报告评价**：👍 / 👎，加你写的一句话（最多 500 字），以及病例编号、界面语言 | 只有你主动点了才发。经我们的服务器转到我们内部的 Slack 频道（第三方服务）。不带对话。 | 留在 Slack 频道里，用来改进 App。你可以发邮件让我们删除。 |
@@ -41,13 +43,18 @@
 
 ### 请不要输入真实来访者的信息
 
-这是练习工具。请不要在对话里写真实来访者的姓名、经历或任何能认出一个人的细节。万一写了，那段对话会经过我们的服务器和 AI 模型服务；如果你开着本机保存，它也会留在你手机上，直到你删除。
+这是练习工具。请不要在对话里写或说真实来访者的姓名、经历或任何能认出一个人的细节。万一写了，那段对话会经过我们的服务器和 AI 模型服务（语音会谈还会经过 ElevenLabs）；如果你开着本机保存，它也会留在你手机上，直到你删除。
+
+### 语音会谈
+
+语音会谈是可选功能，和打字、按住说话分开。第一次使用前 App 会单独说明，你同意后才开始。按住说话的声音只在手机上处理，语音会谈的声音会离开手机。你的声音是真实的个人信息，即使来访者是虚构的。不想发送声音，就不要用语音会谈；打字和按住说话不受影响。
 
 ### 第三方
 
 | 服务 | 做什么 | 在哪 |
 |------|--------|------|
 | AI 模型服务（目前是 DeepSeek，以 App 隐私说明页显示的为准） | 生成来访者回复和督导报告 | 待定：按服务商写明所在地区 |
+| ElevenLabs（Eleven Labs Inc.，纽约） | 语音会谈：把声音转成文字，合成来访者的声音 | 美国。对欧盟用户属于数据出境。ElevenLabs 的隐私政策写明数据转到美国存储；欧盟、英国和瑞士用户的相关主体是 ElevenLabs Poland sp. z o.o. |
 | Vercel | 托管我们的服务器 | 欧盟（法兰克福） |
 | Neon | 数据库，存账号（邮箱、注册时间、批次、会话哈希）和统计 | 欧盟（法兰克福） |
 | Resend | 发送验证码邮件（收件邮箱、邮件内容） | Resend 是美国公司；我们用它在欧盟区发送。作为美国公司，数据可能被传到美国或受美国法律管辖，属于数据出境，依据它的标准合同条款。它的发送日志按它的政策保留，保留期**待核对**。 |
@@ -61,7 +68,7 @@
 
 你也可以随时在 App 里删除本机的练习记录。我们的服务器本来就不保存对话，所以没有可以导出或删除的对话。想要一份我们存的账号信息，写信到 info@novawerk.io。报告评价和举报不带账号和邮箱，我们认不出哪些是你的，所以没法按账号删除；如果你记得大概的时间和病例，写信告诉我们，我们尽量找。
 
-如果你在欧盟，你有 GDPR 规定的访问、更正、删除、限制处理、反对处理和向监管机构投诉的权利。处理依据：账号、练习对话和督导报告，是为了提供你要求的服务；活跃人数的假名统计，基于我们改进服务的正当利益；报告评价和举报，基于你的同意（你主动点了才发）。如果你在中国大陆，你有《个人信息保护法》规定的权利。
+如果你在欧盟，你有 GDPR 规定的访问、更正、删除、限制处理、反对处理和向监管机构投诉的权利。处理依据：账号、练习对话和督导报告，是为了提供你要求的服务；活跃人数的假名统计，基于我们改进服务的正当利益；报告评价和举报，基于你的同意（你主动点了才发）；语音会谈的声音，基于你的同意（开始前单独同意）。如果你在中国大陆，你有《个人信息保护法》规定的权利。
 
 ### 年龄
 
@@ -86,6 +93,8 @@ Operator: to be decided (see [README](./README.md), "Publisher"). Contact: info@
 | Data | Where it goes | How long |
 |------|---------------|----------|
 | **Practice conversation**: every message between you and the AI client | Each turn, the app sends the conversation so far to our server, which passes it to a third-party AI model service to write the reply. | Our server doesn't store it or log its text. The AI model service handles it under its own policy (see "Third parties"). |
+| **Voice in a voice session** (only if you choose a voice session and agree) | Sent live to ElevenLabs (a US company) during the call to be turned into text; ElevenLabs also makes the client's voice. Your voice doesn't pass through our server. | We never receive or store your voice. We've set ElevenLabs not to record calls (`record_voice` off). |
+| **Voice-session transcript** | ElevenLabs turns what you say into text, which goes through our server to the AI model service to write the reply; the transcript also comes back to the app live, to show it and to write the report. | Our server doesn't store it. We've set ElevenLabs to delete the transcript after the call, normally within an hour; after deletion its debugging and moderation logs may still hold related data, and backups last up to 30 days. Our plan has no zero-retention mode. |
 | **Supervision report** | Written by the AI model service from the conversation, sent back to the app through our server. | Same as above. |
 | **Practice history**: case id, start and end time, messages, report and skill tags for each session | Only on your phone, in the app's own storage. Not uploaded, not in iCloud or Google cloud backups, not moved to a new phone. | Until you delete it. Turn saving off or delete everything under Me; delete a single session from your history. Uninstalling the app deletes everything. Records are **not encrypted**; they sit in the app's private storage. |
 | **Report rating**: 👍 / 👎, the line you write (up to 500 characters), the case id and interface language | Only when you tap. Sent through our server to our internal Slack channel (a third-party service). The conversation is never included. | Kept in the Slack channel to improve the app. Email us to have it deleted. |
@@ -108,13 +117,18 @@ Operator: to be decided (see [README](./README.md), "Publisher"). Contact: info@
 
 ### Please don't enter real client information
 
-This is a practice tool. Don't type real clients' names, histories or anything that could identify someone. If you do, that conversation passes through our server and the AI model service, and, if saving is on, stays on your phone until you delete it.
+This is a practice tool. Don't type or say real clients' names, histories or anything that could identify someone. If you do, that conversation passes through our server and the AI model service (in a voice session, ElevenLabs too), and, if saving is on, stays on your phone until you delete it.
+
+### Voice sessions
+
+A voice session is optional and separate from typing and hold to talk. The app explains it before your first one, and it starts only after you agree. In hold to talk your voice stays on your phone; in a voice session it leaves your phone. Your voice is real personal data even though the client is fictional. If you don't want to send it, don't use voice sessions; typing and hold to talk are unaffected.
 
 ### Third parties
 
 | Service | What for | Where |
 |---------|----------|-------|
 | AI model service (currently DeepSeek; the in-app Privacy page shows the current one) | Writes client replies and supervision reports | To be decided: state the provider's region |
+| ElevenLabs (Eleven Labs Inc., New York) | Voice sessions: turns voice into text, makes the client's voice | United States. For EU users this is a transfer outside the EU. ElevenLabs' privacy policy says data is transferred to the US for storage; for the EU, UK and Switzerland the entity is ElevenLabs Poland sp. z o.o. |
 | Vercel | Hosts our server | EU (Frankfurt) |
 | Neon | Database for accounts (email, sign-up date, batch, session hashes) and counts | EU (Frankfurt) |
 | Resend | Sends sign-in code emails (recipient address, email text) | Resend is a US company; we send through its EU region. As a US company, data may go to the US or fall under US law, which is a transfer outside the EU, based on its standard contractual clauses. Its sending logs are kept under its policy; the retention period is **to be checked**. |
@@ -128,7 +142,7 @@ We only send them what the feature needs.
 
 You can also delete practice history in the app at any time. Our server doesn't keep conversations, so there are none to export or delete. For a copy of the account data we hold, email info@novawerk.io. Ratings and reports don't carry your account or email, so we can't delete them by account; if you remember the rough time and case, write to us and we'll try to find them.
 
-In the EU you have the GDPR rights of access, rectification, erasure, restriction, objection and to complain to a supervisory authority. Legal basis: your account, conversations and reports, to provide the service you ask for; pseudonymous active-user counts, our legitimate interest in improving the service; report ratings and reports, your consent (sent only when you tap). In mainland China you have the rights under the Personal Information Protection Law.
+In the EU you have the GDPR rights of access, rectification, erasure, restriction, objection and to complain to a supervisory authority. Legal basis: your account, conversations and reports, to provide the service you ask for; pseudonymous active-user counts, our legitimate interest in improving the service; report ratings and reports, your consent (sent only when you tap); your voice in a voice session, your consent (asked separately before you start). In mainland China you have the rights under the Personal Information Protection Law.
 
 ### Age
 
@@ -147,6 +161,8 @@ When this policy changes in substance, we update the date and ask you to confirm
 - **AI 模型服务会不会保留对话、会不会拿来训练**：按生产环境实际用的服务商的 API 条款写清楚。
 - **代码和这份政策是否一致**：登录版按 [login.md](../product/login.md) 和 [ADR 0008](../decisions/0008-sign-in.md) 写。发正式版前用当时的代码再核一遍，特别是：邀请码不入库只记批次、会话只存哈希、验证码用 HMAC、假名明细的删除时间。
 - **Resend 的发送日志保留期**：按 Resend 的政策核对后写上。
+- **ElevenLabs（语音会谈打开前必须解决）：** 签它的数据处理协议（DPA），确认它作为处理者时不拿我们的数据训练模型，确认跨境传输的依据。现在是 Creator 套餐，没有零保留模式；上面写的保留情况是 2026-10-30 实测的（见 [ADR 0013](../decisions/0013-voice-elevenlabs.md)）。声音算不算生物识别数据，要有人按 GDPR 第 9 条判断。
+- **这份政策先于语音功能合并时：** 语音会谈的几行写的是「选了才有」，功能关着时不影响别的用户，但生效日期要跟实际打开语音的时间对上。
 - **匿名统计和时长**（[admin.md](../product/admin.md)）：上线时核对代码只存汇总、`durationSec` 只是一个数字。
 - **邀请码搬进数据库以后**（后台 Epic 2）：数据库会存邀请码的哈希和批次名称。到时「邀请码批次」那一行补一句「数据库存邀请码的哈希，用来作废和管理」。英文一起改。
 - **隐私政策的正式地址**：`psygym.novawerk.io/privacy`（官网直接读这个文件，见 [landing.md](../product/landing.md)）。

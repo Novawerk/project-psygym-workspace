@@ -13,6 +13,7 @@
 - **练习记录只存在用户自己的手机上。** 默认开，可以关、可以删，不上传、不进云备份（见 [`decisions/0005-local-practice-history.md`](./decisions/0005-local-practice-history.md)）。第一次保存前告诉用户。用户主动给的报告评价（👍 / 👎 和最多 500 字的一句话）会转到我们内部的 Slack 频道（第三方服务），不进数据库，带上病例编号和界面语言，不带对话（见 [`api-contract.md`](./api-contract.md) 的 `POST /feedback`）。
 - **举报时只发被举报的那一条。** 用户主动举报一条 AI 回复（或督导报告里的一段）时，我们收到那一段的原文（最多 2000 字）、举报原因、用户写的一句话、病例编号和界面语言，转到我们内部的私有 Slack 频道，不进数据库，不发整场对话（见 [`api-contract.md`](./api-contract.md) 的 `POST /report`）。除了下一条的模型服务，这是唯一会转出对话内容的地方。发送前弹层原样显示这段文字，并写明「这段文字会发给我们」。由我们指定的两位成员处理，一周内看（见 [`product/open-decisions.md`](./product/open-decisions.md) D8）。记录未加密保存在本机（是否加密待定）。
 - **对话会经过第三方模型服务。** 服务端把对话转给 AI 模型服务（demo 默认 DeepSeek）生成回复。我们在声明里说清楚这一点。
+- **语音会谈的声音会发给 ElevenLabs。** 语音会谈（默认关，见 [`decisions/0013`](./decisions/0013-voice-elevenlabs.md)）里，用户的声音实时发给美国公司 ElevenLabs 转成文字，来访者的声音也由它合成。这和按住说话不一样：按住说话的声音不出手机（[`decisions/0010`](./decisions/0010-voice-input.md)）。话仍然由我们的后端用同一份提示词和安全规则生成。我们设置 ElevenLabs 不录音，通话结束后删除转写；我们的套餐没有零保留模式，它的运行日志和备份里可能还会留一段时间（备份最长 30 天）。开始前有单独的说明和同意（第 5 节），不同意不影响打字和按住说话。用户的声音是真实的，所以说明里写明不要说到真实来访者。
 - **说在前面。** 第一次打开 App 时读完并勾选同意；首页和每次练习前的病例简介页都有短的提示（第 5 节）。
 - **角色扮演不是欺骗。** AI 来访者在角色里不承认自己是 AI，这是练习的设定。用户在开始前已经从声明里知道对面是 AI。
 - **不冒充专业结论。** AI 督导给的是练习反馈，不是资质评估，也不是临床建议。
@@ -125,6 +126,30 @@ AI 来访者在任何情况下都不：给出伤害自己或他人的方法；�
 > 这场会谈可能涉及抑郁、焦虑和消极念头。来访者是虚构的。对话会交给第三方 AI 模型处理，我们的服务器不保存。
 >
 > This session may touch on depression, anxiety and dark thoughts. The client is fictional. A third-party AI model processes the conversation; our servers don't store it.
+
+**第一次语音会谈前（单独的说明，需要点「同意并开始」）**
+
+版本号存本机（`VOICE_CONSENT_VERSION`），这段文字有实质改动时升版本号，用户下次开始语音会谈前重新同意。病例简介页的语音按钮下面每次都有一行短提示。
+
+> 语音会谈会把你的声音发给另一家公司
+>
+> 你的声音会实时发给美国公司 ElevenLabs 转成文字，来访者的声音也由它合成。这和按住说话不一样：按住说话的声音不出手机。
+>
+> 转成的文字经过我们的服务器，交给 AI 模型服务写来访者的回复。我们不存你的声音，也不存对话。
+>
+> 我们已设置 ElevenLabs 不录音，通话结束后删除转写。它的运行日志和备份里可能还会留一段时间（备份最长 30 天）。
+>
+> 不要说到真实来访者。来访者是虚构的，你的声音是真的。可以不同意：打字和按住说话照常能用。
+>
+> A voice session sends your voice to another company
+>
+> Your voice goes live to ElevenLabs, a US company, to be turned into text. ElevenLabs also makes the client's voice. This is different from hold to talk, where your voice stays on your phone.
+>
+> The text passes through our server to the AI model service that writes the client's replies. We don't store your voice or the conversation.
+>
+> We've told ElevenLabs not to record the call and to delete the transcript after it ends. Its working logs and backups may still hold them for a while (backups up to 30 days).
+>
+> Never mention a real client. Your voice is real even though the client isn't. You can say no: typing and hold to talk work as before.
 
 **督导报告末尾（一行）**
 

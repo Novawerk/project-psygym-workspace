@@ -9,4 +9,8 @@ import java.io.File
  */
 internal object VoiceTestAudio {
     fun file(filesDir: File): File? = File(filesDir, "voice-test.wav").takeIf { it.isFile }
+
+    /** With `files/voice-call-test.txt`, a voice session sends these lines as the trainee's turns. */
+    fun callLines(filesDir: File): List<String> =
+        File(filesDir, "voice-call-test.txt").takeIf { it.isFile }?.readLines()?.filter { it.isNotBlank() }.orEmpty()
 }

@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		A1E11AB5C0DE4C01A7F00001 /* ElevenLabs in Frameworks */ = {isa = PBXBuildFile; productRef = A1E11AB5C0DE4C01A7F00003 /* ElevenLabs */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		6A8964866344B40AFF568FAB /* PSYGYM.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "PSYGYM.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -42,6 +46,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A1E11AB5C0DE4C01A7F00001 /* ElevenLabs in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -85,6 +90,9 @@
 				596E29B39399910A6DC46371 /* iosApp */,
 			);
 			name = iosApp;
+			packageProductDependencies = (
+				A1E11AB5C0DE4C01A7F00003 /* ElevenLabs */,
+			);
 			productName = iosApp;
 			productReference = 6A8964866344B40AFF568FAB /* PSYGYM.app */;
 			productType = "com.apple.product-type.application";
@@ -114,6 +122,9 @@
 			);
 			mainGroup = 884FAFFD9E705B0395E48D9C;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				A1E11AB5C0DE4C01A7F00002 /* XCRemoteSwiftPackageReference "elevenlabs-swift-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 55D5208220B8E06A339B3779 /* Products */;
 			projectDirPath = "";
@@ -385,6 +396,25 @@
 		};
 /* End XCConfigurationList section */
 
+
+/* Begin XCRemoteSwiftPackageReference section */
+		A1E11AB5C0DE4C01A7F00002 /* XCRemoteSwiftPackageReference "elevenlabs-swift-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/elevenlabs/elevenlabs-swift-sdk.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.4.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A1E11AB5C0DE4C01A7F00003 /* ElevenLabs */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A1E11AB5C0DE4C01A7F00002 /* XCRemoteSwiftPackageReference "elevenlabs-swift-sdk" */;
+			productName = ElevenLabs;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 0A2BCF6CC0F4EE367BF2C510 /* Project object */;
 }

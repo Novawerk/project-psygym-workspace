@@ -18,6 +18,10 @@ class SwitchingPsygymApi(
 
     override fun supervision(request: TurnRequest): Flow<String> = flow { emitAll(pick().supervision(request)) }
 
+    override suspend fun voiceAvailable() = pick().voiceAvailable()
+
+    override suspend fun voiceSession(caseId: String, locale: ApiLocale) = pick().voiceSession(caseId, locale)
+
     override suspend fun startSignIn(email: String, locale: ApiLocale) = pick().startSignIn(email, locale)
 
     override suspend fun verify(email: String, code: String, inviteCode: String?) = pick().verify(email, code, inviteCode)

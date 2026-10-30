@@ -20,6 +20,10 @@ class SessionGuard(private val inner: Backend, private val sessions: SessionStor
 
     override fun supervision(request: TurnRequest) = inner.supervision(request).guarded()
 
+    override suspend fun voiceAvailable() = inner.voiceAvailable()
+
+    override suspend fun voiceSession(caseId: String, locale: ApiLocale) = guard { inner.voiceSession(caseId, locale) }
+
     override suspend fun startSignIn(email: String, locale: ApiLocale) = inner.startSignIn(email, locale)
 
     override suspend fun verify(email: String, code: String, inviteCode: String?) = inner.verify(email, code, inviteCode)

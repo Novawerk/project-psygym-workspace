@@ -50,6 +50,8 @@ private val components = listOf(
     Component("ONNX Runtime", "MIT · © Microsoft Corporation", "github.com/microsoft/onnxruntime", "onnxruntime-mit.txt", androidVoice = true),
     Component("ONNX Runtime · third-party notices", "", "github.com/microsoft/onnxruntime", "onnxruntime-third-party-notices.txt", androidVoice = true),
     Component("X-ASR zh-en (speech model)", "Apache License 2.0", "github.com/Gilgamesh-J/X-ASR", "apache-2.0.txt", androidVoice = true),
+    Component("ElevenLabs Android and Swift SDKs", "MIT · © ElevenLabs", "github.com/elevenlabs", "elevenlabs-mit.txt"),
+    Component("LiveKit client SDKs, WebRTC", "Apache License 2.0", "github.com/livekit", "apache-2.0.txt"),
     Component("Kotlin, kotlinx.coroutines, kotlinx.serialization, kotlinx-datetime", "Apache License 2.0", "github.com/JetBrains", "apache-2.0.txt"),
     Component("Compose Multiplatform, AndroidX", "Apache License 2.0", "github.com/JetBrains/compose-multiplatform", "apache-2.0.txt"),
     Component("Ktor", "Apache License 2.0", "github.com/ktorio/ktor", "apache-2.0.txt"),

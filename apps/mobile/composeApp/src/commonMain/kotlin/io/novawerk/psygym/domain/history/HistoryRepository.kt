@@ -31,6 +31,8 @@ data class SavedSession(
     val reportComplete: Boolean = false,
     /** The account it belongs to ([io.novawerk.psygym.domain.auth.accountKey]), never an email. Null: saved before sign-in. */
     val owner: String? = null,
+    /** A voice session: the words are automatic transcription. */
+    val voice: Boolean = false,
 ) {
     val turns: Int get() = messages.count { it.role == io.novawerk.psygym.domain.model.Role.Counselor }
     val durationMillis: Long get() = (endedAtMillis - startedAtMillis).coerceAtLeast(0)

@@ -75,6 +75,7 @@ kotlin {
             implementation(libs.androidx.activity.compose)
             implementation(libs.ktor.client.okhttp)
             implementation(libs.sherpa.onnx)
+            implementation(libs.elevenlabs.android)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)

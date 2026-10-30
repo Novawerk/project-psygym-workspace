@@ -28,6 +28,27 @@ class KtorPsygymApiTest {
         respond(body, status, headersOf(HttpHeaders.ContentType, "application/json"))
     }
 
+    private fun voice(path: String, body: String, status: HttpStatusCode = HttpStatusCode.OK) = MockEngine { req ->
+        assertEquals(path, req.url.encodedPath)
+        respond(body, status, headersOf(HttpHeaders.ContentType, "application/json"))
+    }
+
+    @Test
+    fun voiceIsOffWhenTheServerSaysNotFoundOrFails() = runTest {
+        assertEquals(true, api(voice("/voice/status", """{"available":true}""")).voiceAvailable())
+        assertEquals(false, api(voice("/voice/status", """{"error":{"code":"not_found"}}""", HttpStatusCode.NotFound)).voiceAvailable())
+        assertEquals(false, api(MockEngine { error("offline") }).voiceAvailable())
+    }
+
+    @Test
+    fun parsesTheVoiceTicket() = runTest {
+        val body = """{"conversationToken":"t","dynamicVariables":{"psygym":"case=a locale=zh"},"extraBody":{"caseId":"a","locale":"zh"}}"""
+        val ticket = api(voice("/voice/session", body)).voiceSession("a", ApiLocale.Zh)
+        assertEquals("t", ticket.conversationToken)
+        assertEquals("case=a locale=zh", ticket.dynamicVariables["psygym"])
+        assertEquals("a", ticket.extraBody["caseId"])
+    }
+
     @Test
     fun parsesCases() = runTest {
         val body = """{"cases":[{"id":"a","school":"cbt","title":{"zh":"甲","en":"A"},"summary":{"zh":"s","en":"s"}}]}"""

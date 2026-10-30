@@ -25,11 +25,14 @@ dependencyResolutionManagement {
             }
         }
         mavenCentral()
-        // sherpa-onnx (on-device speech, ADR 0010) is published only here. Nothing else may
-        // come from JitPack.
+        // sherpa-onnx (on-device speech, ADR 0010) and LiveKit's audioswitch (voice sessions,
+        // ADR 0013) are published only here. Nothing else may come from JitPack.
         exclusiveContent {
             forRepository { maven("https://jitpack.io") }
-            filter { includeGroup("com.github.k2-fsa.sherpa-onnx") }
+            filter {
+                includeGroup("com.github.k2-fsa.sherpa-onnx")
+                includeGroup("com.github.davidliu")
+            }
         }
     }
 }

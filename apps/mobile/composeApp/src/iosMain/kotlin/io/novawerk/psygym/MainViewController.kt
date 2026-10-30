@@ -2,6 +2,8 @@ package io.novawerk.psygym
 
 import io.novawerk.psygym.data.auth.KeychainSecureStore
 import io.novawerk.psygym.data.voice.AppleSpeechBridge
+import io.novawerk.psygym.data.voice.AppleVoiceCall
+import io.novawerk.psygym.data.voice.AppleVoiceCallBridge
 import io.novawerk.psygym.data.voice.AppleVoiceInput
 import platform.UIKit.UIViewController
 import androidx.compose.ui.window.ComposeUIViewController
@@ -22,6 +24,7 @@ private const val DATA_STORE_FILE_NAME = "psygym.preferences_pb"
 
 // Set by Swift before the first frame: Apple's speech APIs live in iosApp (SpeechBridge.swift).
 private var speechBridge: AppleSpeechBridge? = null
+private var voiceCallBridge: AppleVoiceCallBridge? = null
 
 // One component per process: DataStore must be a singleton.
 private val component: AppComponent by lazy {
@@ -32,11 +35,13 @@ private val component: AppComponent by lazy {
         ScreenshotModeHolder(null),
         KeychainSecureStore(),
         AppleVoiceInput(requireNotNull(speechBridge)),
+        AppleVoiceCall(requireNotNull(voiceCallBridge)),
     )
 }
 
-fun MainViewController(speech: AppleSpeechBridge): UIViewController {
+fun MainViewController(speech: AppleSpeechBridge, voiceCall: AppleVoiceCallBridge): UIViewController {
     speechBridge = speech
+    voiceCallBridge = voiceCall
     return ComposeUIViewController { App(component) }
 }
 
