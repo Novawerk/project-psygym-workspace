@@ -6,15 +6,15 @@ import UIKit
 
 /// Voice sessions on iOS (ADR 0013): the ElevenLabs Swift SDK. Unlike hold to talk (SpeechBridge),
 /// the audio leaves the phone. All callbacks run on the main thread.
-@MainActor
 final class VoiceCallBridge: NSObject, AppleVoiceCallBridge {
-    private var conversation: Conversation?
-    private var watch: AnyCancellable?
+    // Both touched only on the main actor.
+    @MainActor private var conversation: Conversation?
+    @MainActor private var watch: AnyCancellable?
 
     /// Bumped by every start and hang-up. A late callback from an older call does nothing.
-    private var call = 0
+    @MainActor private var call = 0
 
-    nonisolated func micPermission() -> Int32 {
+    func micStatus() -> Int32 {
         if #available(iOS 17.0, *) {
             switch AVAudioApplication.shared.recordPermission {
             case .granted: return Self.granted
@@ -29,7 +29,7 @@ final class VoiceCallBridge: NSObject, AppleVoiceCallBridge {
         }
     }
 
-    nonisolated func requestMic(done: @escaping (KotlinBoolean) -> Void) {
+    func askMic(done: @escaping (KotlinBoolean) -> Void) {
         let finish = { (ok: Bool) in DispatchQueue.main.async { done(KotlinBoolean(bool: ok)) } }
         if #available(iOS 17.0, *) {
             AVAudioApplication.requestRecordPermission(completionHandler: finish)
@@ -38,13 +38,13 @@ final class VoiceCallBridge: NSObject, AppleVoiceCallBridge {
         }
     }
 
-    nonisolated func openSettings() {
+    func showSettings() {
         DispatchQueue.main.async {
             if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
         }
     }
 
-    nonisolated func start(
+    func start(
         token: String,
         dynamicVariables: [String: String],
         extraBody: [String: String],
@@ -108,15 +108,15 @@ final class VoiceCallBridge: NSObject, AppleVoiceCallBridge {
         }
     }
 
-    nonisolated func setMuted(muted: Bool) {
+    func setMuted(muted: Bool) {
         Task { @MainActor in try? await self.conversation?.setMuted(muted) }
     }
 
-    nonisolated func hangUp() {
+    func hangUp() {
         Task { @MainActor in self.endCurrent() }
     }
 
-    private func endCurrent() {
+    @MainActor private func endCurrent() {
         guard let current = conversation else {
             call += 1 // a call still connecting is dropped when it arrives
             return

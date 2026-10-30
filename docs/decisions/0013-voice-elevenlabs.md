@@ -31,7 +31,9 @@ phone ──audio──▶ ElevenLabs agent ──OpenAI chat request──▶ o
 - **The supervisor report** stays text: the app keeps the transcript the SDK reports and calls
   `/supervision` as today.
 - **One interface in the app** (`VoiceCall`): `io.elevenlabs:elevenlabs-android` on Android, the
-  ElevenLabs Swift SDK on iOS. Screens and flow: [`product/realtime-voice.md`](../product/realtime-voice.md).
+  ElevenLabs Swift SDK on iOS. Screens and flow: [`product/voice-session-design.md`](../product/voice-session-design.md).
+- **A call that drops goes on by typing**, not by calling again: a new ElevenLabs call has no
+  memory, while `/chat` takes the whole transcript each turn.
 
 ## Agent settings (in the ElevenLabs dashboard)
 
@@ -108,10 +110,10 @@ quotes what ElevenLabs heard. Worth watching in real use.
   docs don't say how it works with a custom LLM.
 - **`retention_days: 0` alone was not enough.** The spike agent had it, and transcripts of the
   2026-10-26 calls are still there four days later: `delete_transcript_and_pii` was off. Audio and
-  logs had gone about 75 minutes after each call. We turned it on: new calls show a deletion time at
-  call end. **Whether the transcript has really gone** is checked in the PR. The eight 2026-10-26
-  test calls (scripted lines, nothing real) stay until someone deletes them; `apply_to_existing_conversations`
-  is off.
+  logs had gone about 75 minutes after each call. We turned it on and checked: the transcripts of the
+  2026-10-30 calls were gone 12–55 minutes after each call, deleted in a batch, with their logs. The
+  eight 2026-10-26 test calls (scripted lines, nothing real) stay until someone deletes them;
+  `apply_to_existing_conversations` is off.
 - **Audio is never stored** (`has_audio: false` on every call, `record_voice` off).
 - What remains outside our control: ElevenLabs' docs say debugging and moderation logs may still
   hold data after deletion, and backups keep deleted items for up to 30 days. Its privacy policy
@@ -158,8 +160,26 @@ too. So, in order:
 4. Make a call from a phone in mainland China.
 5. Set the variables.
 
+## What ran on a device (2026-10-30)
+
+On an Android emulator with the debug build: the real backend, the real ElevenLabs agent, the
+Android SDK over WebRTC. Entry, consent and withdrawal; connect; transcript; muting; the client
+going on alone after the trainee's silence; the client hanging up in character; "Need help?" ending
+the call; going on by typing, where the client still knew what had been said; the report with its
+voice tag, and the session saved on the phone.
+
+**No sound went in or out.** The emulator has no usable microphone here (opening host audio hangs it),
+so the trainee's turns were sent as text through the SDK (`VoiceTestAudio`). Speech to text was
+tested separately over the WebSocket with spoken audio.
+
 ## Not verified
 
-See the PR for what ran on a phone. Interruptions were only seen in the WebSocket test. Voice quality,
-how natural the client sounds, and whether the safety rules hold up over speech beyond the checks
-above: these need people listening, and the psychologists' judgement.
+- A real phone: microphone, echo cancellation with the speaker on, Bluetooth, how the reply sounds.
+- Interrupting by voice in the app. Seen over the WebSocket only.
+- iOS at run time: the app and the Swift bridge build for the simulator, but no call has been made
+  on an iPhone or a simulator. The build needs `ONLY_ACTIVE_ARCH=YES` on Apple silicon, as before.
+- A call from mainland China (above).
+- `END_SESSION_JUDGE=on` over voice.
+- Whether the client's voice and manner feel right, and whether the safety rules hold up over
+  speech beyond the checks above: this needs people listening, and the psychologists' judgement.
+- A release build: minification is off in release, so the SDK needs no keep rules today.

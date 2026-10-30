@@ -21,7 +21,7 @@
 
 | 事实 | 依据 |
 |------|------|
-| App 只连我们自己的服务器（release：`https://psygym-api.novawerk.io`），只走 HTTPS | `AppConfig.kt`；release 的 `network_security_config.xml` 禁止明文 |
+| App 只连我们自己的服务器（release：`https://psygym-api.novawerk.io`），只走 HTTPS。例外：语音会谈时连 ElevenLabs | `AppConfig.kt`；release 的 `network_security_config.xml` 禁止明文 |
 | `/chat`、`/supervision` 的请求体是整段对话；`/supervision` 还带 `durationSec`（一场多长，整数秒） | `KtorPsygymApi.kt`、`Models.kt`、#62 |
 | 不发设备信息，也不加自定义 User-Agent | 同上 |
 | 没有分析、崩溃统计、广告或第三方登录 SDK；没有 Firebase、Crashlytics、Sentry。统计在我们自己的服务器上做 | `libs.versions.toml`、`build.gradle.kts`；iOS 没有 Pods，SPM 只有 ElevenLabs Swift SDK（带 LiveKit）。**发版前要核对这个 SDK 自带的 privacy manifest 合并进来的声明** |
@@ -86,7 +86,7 @@ NSPrivacyAccessedAPITypes:
 
 **账号删除（审核指南 5.1.1(v)）：** 能在 App 里注册账号，就必须能在 App 里发起删除。我们在「我的 → 删除账号」。
 
-**审核指南 5.1.2(i)：** 把个人数据发给第三方 AI 之前，要明确告诉用户并取得同意。第一次打开时的 O2「先说清楚」页满足这一条，不要删。语音会谈的声音发给 ElevenLabs，O2 没有覆盖，靠语音会谈前单独的同意页（`VoiceConsentSheet`）满足。
+**审核指南 5.1.2(i)：** 把个人数据发给第三方 AI 之前，要明确告诉用户并取得同意。第一次打开时的 O2「先说清楚」页满足这一条，不要删。语音会谈的声音发给 ElevenLabs，O2 没有覆盖，靠语音会谈前单独的同意页（`VoiceConsentScreen`）满足。
 
 ## Google Play · Data safety（登录版）
 

@@ -14,7 +14,7 @@
 | 未成年人使用 | 两边的分级 | 分级定 18+，目标受众选 18+ | |
 | 功能太少，或者审核员进不去 | Apple 2.1、4.2；Play App access | **登录版**：一个固定的审核员邮箱加固定验证码（[login.md](../product/login.md) 第 4 节），不发邮件、不受尝试次数限制、不用邀请码。**登录前的 build**：用审核员专用邀请码 | 每次提交审核前换一个新码，填进后台；审核期间不清空 `REVIEW_LOGIN_EMAIL`、`REVIEW_LOGIN_CODE`，不停服务 |
 | 有账号却删不掉 | Apple 5.1.1(v)；Play 账号删除要求 | App 内「我的 → 删除账号」；网页 `https://psygym.novawerk.io/delete-account` 说明不用 App 时怎么申请 | 网页在 Google 送审前上线；提交前在真机上试一遍删除 |
-| 麦克风权限说不清楚 | Apple 5.1.1(i)、2.5.2；Play 权限和设备滥用政策 | 只在按住说话时用；声音在手机上转文字，不上传；iOS 只用端侧识别；安卓的语音模型是数据文件，不是代码 | 每次送审前确认给审核员的说明里有「Microphone」一段 |
+| 麦克风权限说不清楚 | Apple 5.1.1(i)、2.5.2；Play 权限和设备滥用政策 | 按住说话时用，声音在手机上转文字，不上传；语音会谈时声音发给 ElevenLabs，用户单独同意后才开始（默认关）；iOS 只用端侧识别；安卓的语音模型是数据文件，不是代码 | 每次送审前确认给审核员的说明里有「Microphone」一段 |
 | 语音会谈把声音发给第三方 | Apple 5.1.1、5.1.2(i)、2.5.14；Play User Data 政策 | 功能默认关，服务器没配 ElevenLabs 就看不到入口。打开后，开始前有单独的说明和同意，写明声音发给美国公司 ElevenLabs。麦克风权限说明也改了 | **打开前：** 隐私标签、数据安全表、隐私政策都按 [privacy-labels.md](./privacy-labels.md) 改好；给审核员的说明加下面的「Voice session」一段 |
 | 隐私标签和实际不符 | Apple 5.1.1、5.1.2；Play User Data 政策 | [privacy-labels.md](./privacy-labels.md) 按代码写 | 每次发版前核一遍 |
 

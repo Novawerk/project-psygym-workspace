@@ -14,11 +14,11 @@ import kotlin.coroutines.resume
  */
 interface AppleVoiceCallBridge {
     /** [AppleSpeechBridge.PERMISSION_GRANTED], `_NOT_ASKED` or `_DENIED`, for the microphone alone. */
-    fun micPermission(): Int
+    fun micStatus(): Int
 
-    fun requestMic(done: (Boolean) -> Unit)
+    fun askMic(done: (Boolean) -> Unit)
 
-    fun openSettings()
+    fun showSettings()
 
     /** [onEnded]: [END_HUNG_UP], [END_CLIENT_LEFT] or [END_DROPPED]. */
     fun start(
@@ -47,17 +47,17 @@ interface AppleVoiceCallBridge {
 
 /** Voice sessions on iOS (ADR 0013). */
 class AppleVoiceCall(private val bridge: AppleVoiceCallBridge) : VoiceCall {
-    override fun micPermission(): MicPermission = when (bridge.micPermission()) {
+    override fun micPermission(): MicPermission = when (bridge.micStatus()) {
         AppleSpeechBridge.PERMISSION_GRANTED -> MicPermission.Granted
         AppleSpeechBridge.PERMISSION_DENIED -> MicPermission.Denied
         else -> MicPermission.NotAsked
     }
 
     override suspend fun requestMic(): Boolean = suspendCancellableCoroutine { cont ->
-        bridge.requestMic { granted -> if (cont.isActive) cont.resume(granted) }
+        bridge.askMic { granted -> if (cont.isActive) cont.resume(granted) }
     }
 
-    override fun openSettings() = bridge.openSettings()
+    override fun openSettings() = bridge.showSettings()
 
     override fun start(setup: VoiceCallSetup, listener: VoiceCallListener) {
         bridge.start(

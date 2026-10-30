@@ -220,6 +220,10 @@ key 沿用 App 现有命名（`home_*`、`cases_*`、`practice_*`、`supervision
 | privacy_q_real | 我能输入真实来访者的信息吗？ | Can I enter real client information? |
 | privacy_a_real | 不能。请只把它当练习。 | No. Please use it for practice only. |
 
+### 语音会谈
+
+文案在 [voice-session-design.md](./voice-session-design.md) 第 5 节，`strings.xml` 的 `voice_consent_*`、`voice_*`、`privacy_*_voice_session`、`privacy_*_voice_store`。
+
 ### 按住说话（voice-input.md）
 
 规格表里没有的几条（`voice_preparing`、`voice_failed`、几个 `*_title`、`voice_model_body_system`、`voice_ok`）和开源许可页、隐私说明里的一问是实现时补的，请产品确认。
