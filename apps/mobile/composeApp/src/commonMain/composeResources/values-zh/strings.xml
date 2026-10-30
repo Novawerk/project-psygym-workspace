@@ -316,17 +316,17 @@
     <string name="voice_consent_1_title">声音发给 ElevenLabs。</string>
     <string name="voice_consent_1_body">它把你的声音转成文字，再把来访者的话读出来。转出的文字经我们的服务器，交给位于中国的第三方 AI 服务 %1$s 生成回复。</string>
     <string name="voice_consent_2_label">发到哪</string>
-    <string name="voice_consent_2_title">声音发到美国。</string>
-    <string name="voice_consent_2_body">声音直接从手机发出，不经过我们的服务器。ElevenLabs 是美国公司，你的声音会离开欧盟。</string>
+    <string name="voice_consent_2_title">声音发到美国，文字发到中国。</string>
+    <string name="voice_consent_2_body">声音直接从手机发到美国，不经过我们的服务器。文字从 ElevenLabs 经我们在法兰克福的服务器，发到 DeepSeek。这两段都会离开欧盟。</string>
     <string name="voice_consent_3_label">存多久</string>
     <string name="voice_consent_3_title">我们不存声音。</string>
-    <string name="voice_consent_3_body">我们的服务器和这台手机都不存录音。我们设置了 ElevenLabs 不录音，通话结束后删除文字。它的调试日志里可能还留有相关内容，备份最长留 30 天。文字和报告按你的设置存在这台手机上。</string>
+    <string name="voice_consent_3_body">我们的服务器和这台手机都不存录音。我们设置了 ElevenLabs 不录音。通话结束后它删除文字，实测一小时内删完。它的调试和审核日志里可能还留有内容，留多久我们还不清楚。备份最长留 30 天。DeepSeek 留多久我们管不了，见隐私说明。文字和报告按你的设置存在这台手机上。</string>
     <string name="voice_consent_4_label">怎么撤回</string>
     <string name="voice_consent_4_title">你可以随时撤回。</string>
-    <string name="voice_consent_4_body">在「我的」里撤回，以后不再发送。打字和按住说话不受影响。已发出的数据按上面说的处理；想核实，写信到 info@novawerk.io。</string>
+    <string name="voice_consent_4_body">在「我的」里撤回，以后不再发送。打字和按住说话不受影响。已发出的文字按上面说的删除，日志和备份我们删不到。有问题写信到 info@novawerk.io。</string>
     <string name="voice_consent_5_title">只说虚构的内容。</string>
     <string name="voice_consent_5_body">不要说真实来访者的信息。这是练习工具，不是治疗。</string>
-    <string name="voice_consent_check">我同意把我的声音发给 ElevenLabs 处理。</string>
+    <string name="voice_consent_check">我同意把我的声音发给美国的 ElevenLabs，把转出的文字发给位于中国的 DeepSeek。</string>
     <string name="voice_consent_accept">同意并开始</string>
     <string name="voice_use_text">改用打字</string>
     <string name="voice_connecting">正在接通…</string>
@@ -353,11 +353,11 @@
     <string name="settings_voice_where">声音去哪、存多久</string>
     <string name="settings_voice_withdraw">撤回语音会谈的同意</string>
     <string name="voice_withdraw_title">撤回语音会谈的同意？</string>
-    <string name="voice_withdraw_body">以后不再把你的声音发给 ElevenLabs。打字和按住说话不受影响。已发出的数据按隐私说明处理；想核实，写信到 info@novawerk.io。</string>
+    <string name="voice_withdraw_body">以后不再把你的声音发给 ElevenLabs。打字和按住说话不受影响。已发出的文字按隐私说明删除，日志和备份我们删不到。有问题写信到 info@novawerk.io。</string>
     <string name="voice_withdraw_confirm">撤回同意</string>
     <string name="voice_withdraw_keep">保留</string>
     <string name="privacy_q_voice_session">语音会谈的声音去了哪里？</string>
     <string name="privacy_a_voice_session">发给 ElevenLabs，实时转成文字；来访者的话也由它读出来。声音发到美国，不经过我们的服务器。转出的文字和打字一样，经我们的服务器交给位于中国的 %1$s。</string>
     <string name="privacy_q_voice_store">语音会谈的声音存吗？</string>
-    <string name="privacy_a_voice_store">我们不存，手机上也不存。我们设置了 ElevenLabs 不录音，通话结束后删除文字。它的调试日志里可能还留有相关内容，备份最长留 30 天。</string>
+    <string name="privacy_a_voice_store">我们不存，手机上也不存。我们设置了 ElevenLabs 不录音。通话结束后它删除文字，实测一小时内删完。它的调试和审核日志里可能还留有内容，留多久我们还不清楚。备份最长留 30 天。</string>
 </resources>

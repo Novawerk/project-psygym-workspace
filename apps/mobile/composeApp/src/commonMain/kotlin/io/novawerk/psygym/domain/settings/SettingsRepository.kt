@@ -33,7 +33,7 @@ const val DISCLAIMER_VERSION = "2026-10-v2"
  * Bump when what the voice-session notice says changes in substance: everyone agrees again
  * before their next voice session (docs/safety.md §1).
  */
-const val VOICE_CONSENT_VERSION = "2026-10-v1"
+const val VOICE_CONSENT_VERSION = "2026-10-v2"
 
 /** Small, local-only settings. Conversations live in [io.novawerk.psygym.domain.history.HistoryRepository], never here. */
 class SettingsRepository(private val dataStore: DataStore<Preferences>) {

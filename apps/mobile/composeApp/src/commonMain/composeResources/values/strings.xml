@@ -328,17 +328,17 @@
     <string name="voice_consent_1_title">Your voice goes to ElevenLabs.</string>
     <string name="voice_consent_1_body">It turns your voice into text and reads out the client’s words. The text goes through our server to %1$s, a third-party AI service in China, which writes the reply.</string>
     <string name="voice_consent_2_label">Where it goes</string>
-    <string name="voice_consent_2_title">Your voice goes to the United States.</string>
-    <string name="voice_consent_2_body">It goes straight from your phone and doesn’t pass through our servers. ElevenLabs is a US company, so your voice leaves the EU.</string>
+    <string name="voice_consent_2_title">Your voice goes to the US. The text goes to China.</string>
+    <string name="voice_consent_2_body">Your voice goes straight from your phone to the US and skips our servers. The text goes from ElevenLabs through our server in Frankfurt to DeepSeek. Both steps leave the EU.</string>
     <string name="voice_consent_3_label">How long it’s kept</string>
     <string name="voice_consent_3_title">We don’t store your voice.</string>
-    <string name="voice_consent_3_body">Neither our servers nor this phone keep a recording. We’ve told ElevenLabs not to record and to delete the text after the call. Its debugging logs may still hold related data, and its backups last up to 30 days. The text and report are saved on this phone, following your setting.</string>
+    <string name="voice_consent_3_body">Neither our servers nor this phone keep a recording. We’ve told ElevenLabs not to record. It deletes the text after the call; in our tests that took under an hour. Its debugging and moderation logs may still hold content, and we don’t yet know for how long. Its backups last up to 30 days. We don’t control how long DeepSeek keeps data; see the Privacy page. The text and report are saved on this phone, following your setting.</string>
     <string name="voice_consent_4_label">How to withdraw</string>
     <string name="voice_consent_4_title">You can withdraw at any time.</string>
-    <string name="voice_consent_4_body">Withdraw under Me and we stop sending it. Typing and hold to talk keep working. Data already sent goes as described above. To check on it, write to info@novawerk.io.</string>
+    <string name="voice_consent_4_body">Withdraw under Me and we stop sending it. Typing and hold to talk keep working. Text already sent is deleted as described above. We can’t reach logs or backups. Questions: info@novawerk.io.</string>
     <string name="voice_consent_5_title">Keep it fictional.</string>
     <string name="voice_consent_5_body">Don’t mention real clients. This is a practice tool, not therapy.</string>
-    <string name="voice_consent_check">I agree to send my voice to ElevenLabs for processing.</string>
+    <string name="voice_consent_check">I agree to send my voice to ElevenLabs in the US, and the text to DeepSeek in China.</string>
     <string name="voice_consent_accept">Agree and start</string>
     <string name="voice_use_text">Type instead</string>
     <string name="voice_connecting">Connecting…</string>
@@ -365,11 +365,11 @@
     <string name="settings_voice_where">Where your voice goes and how long it’s kept</string>
     <string name="settings_voice_withdraw">Withdraw consent for voice sessions</string>
     <string name="voice_withdraw_title">Withdraw consent for voice sessions?</string>
-    <string name="voice_withdraw_body">We stop sending your voice to ElevenLabs. Typing and hold to talk keep working. Data already sent goes as the Privacy page says. To check on it, write to info@novawerk.io.</string>
+    <string name="voice_withdraw_body">We stop sending your voice to ElevenLabs. Typing and hold to talk keep working. Text already sent is deleted as the Privacy page says. We can’t reach logs or backups. Questions: info@novawerk.io.</string>
     <string name="voice_withdraw_confirm">Withdraw consent</string>
     <string name="voice_withdraw_keep">Keep it</string>
     <string name="privacy_q_voice_session">Where does my voice go in a voice session?</string>
     <string name="privacy_a_voice_session">To ElevenLabs, which turns it into text as you speak and reads out the client’s words. It goes to the United States and doesn’t pass through our servers. The text then goes through our server to %1$s in China, like typed text.</string>
     <string name="privacy_q_voice_store">Is my voice stored?</string>
-    <string name="privacy_a_voice_store">We don’t store it, and neither does your phone. We’ve told ElevenLabs not to record and to delete the text after the call. Its debugging logs may still hold related data, and its backups last up to 30 days.</string>
+    <string name="privacy_a_voice_store">We don’t store it, and neither does your phone. We’ve told ElevenLabs not to record. It deletes the text after the call; in our tests that took under an hour. Its debugging and moderation logs may still hold content, and we don’t yet know for how long. Its backups last up to 30 days.</string>
 </resources>

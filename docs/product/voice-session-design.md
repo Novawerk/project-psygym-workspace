@@ -1,6 +1,6 @@
 # 语音会谈设计（给开发的规格）
 
-**状态：** 设计稿 2026-10-30，待用户确认。**先做欧洲版本**（用户 2026-10-30）。已按这份规格做进 App，【待确认】已经用实测事实填上，见 [ADR 0013](../decisions/0013-voice-elevenlabs.md)。和规格不同的地方见第 10 节。
+**状态：** 设计稿 2026-10-30，待用户确认。**先做欧洲版本**（用户 2026-10-30）。已按这份规格做进 App，文案里的【待确认】已经用实测事实填上，见 [ADR 0013](../decisions/0013-voice-elevenlabs.md)。**传输依据和合同主体还没有**，上线前要补（Q13、Q14）。和规格不同的地方见第 10 节。
 
 **一句话：** 咨询师选「语音」，同意一次，然后像打电话一样和 AI 来访者说话，可以打断，随时看转写和督导提示，结束后照旧出督导报告。
 
@@ -64,6 +64,7 @@ C2 选「语音」→ 开始语音会谈
 - 底部固定：勾选框、主按钮、次按钮「改用打字」、两个 `UnderlinedLink`（隐私说明、需要帮助？）。
 - **勾选框默认不勾选**，每次进这一页都重置。没勾选时主按钮不可点。不用「继续即同意」这类默认同意。
 - 同意后本机存 `voiceConsentVersion` 和同意时间。发给谁、发到哪、存多久有任何变化时升版本，用户下次选语音时重新确认。
+- 勾选文案点名两家公司和两个地点，和 O2 的 `onb_consent_ai_check` 一样具体。V1 只新增 ElevenLabs 这一项同意；发给 DeepSeek 的同意在 O2。
 - 「改用打字」：回到 C2，模式切回打字，不再追问。拒绝不影响其他功能。
 - 第一次语音会谈才出现，引导页不加这一页。
 
@@ -181,28 +182,30 @@ R1 不变，`/supervision` 不变。只加两处：
 | brief_mode_text | 打字 | Type |
 | brief_mode_voice | 语音 | Voice |
 | brief_start_voice | 开始语音会谈 | Start voice session |
-| brief_content_note_voice | 这场会谈可能涉及抑郁、焦虑和消极念头。来访者是虚构的。你的声音会发给 ElevenLabs，转出的文字交给第三方 AI 模型处理。我们的服务器不保存。 | This session may touch on depression, anxiety and dark thoughts. The client is fictional. Your voice goes to ElevenLabs, and a third-party AI model processes the text. Our servers don't store it. |
-| brief_voice_note | 你的声音会发给 ElevenLabs，转出的文字交给第三方 AI 模型处理。我们的服务器不保存。 | Your voice goes to ElevenLabs, and a third-party AI model processes the text. Our servers don't store it. |
+| brief_content_note_voice | 这场会谈可能涉及抑郁、焦虑和消极念头。来访者是虚构的。你的声音会发给美国的 ElevenLabs，转出的文字发给位于中国的 DeepSeek 生成回复，我们的服务器不保存。 | This session may touch on depression, anxiety and dark thoughts. The client is fictional. Your voice goes to ElevenLabs in the US, and the text goes to DeepSeek in China to write the replies; our servers don't store it. |
+| brief_voice_note | 你的声音会发给美国的 ElevenLabs，转出的文字发给位于中国的 DeepSeek 生成回复，我们的服务器不保存。 | Your voice goes to ElevenLabs in the US, and the text goes to DeepSeek in China to write the replies; our servers don't store it. |
 | voice_consent_title | 语音会谈前，先说清楚 | Before your first voice session |
 | voice_consent_1_label | 发给谁 | Who receives it |
 | voice_consent_1_title | 声音发给 ElevenLabs。 | Your voice goes to ElevenLabs. |
-| voice_consent_1_body | 它把你的声音转成文字，再把来访者的话读出来。转出的文字经我们的服务器，交给 AI 模型服务【待确认：服务商】生成回复。 | It turns your voice into text and reads out the client's words. The text goes through our server to an AI model service [TBC: provider] that writes the reply. |
+| voice_consent_1_body | 它把你的声音转成文字，再把来访者的话读出来。转出的文字经我们的服务器，交给位于中国的第三方 AI 服务 DeepSeek 生成回复。 | It turns your voice into text and reads out the client's words. The text goes through our server to DeepSeek, a third-party AI service in China, which writes the reply. |
 | voice_consent_2_label | 发到哪 | Where it goes |
-| voice_consent_2_title | 声音发到【待确认：区域】。 | Your voice goes to [TBC: region]. |
-| voice_consent_2_body | 声音直接从手机发出，不经过我们的服务器。【待确认：出欧盟时的传输依据】 | It goes straight from your phone and doesn't pass through our servers. [TBC: transfer basis if it leaves the EU] |
+| voice_consent_2_title | 声音发到美国，文字发到中国。 | Your voice goes to the US. The text goes to China. |
+| voice_consent_2_body | 声音直接从手机发到美国，不经过我们的服务器。文字从 ElevenLabs 经我们在法兰克福的服务器，发到 DeepSeek。这两段都会离开欧盟。 | Your voice goes straight from your phone to the US and skips our servers. The text goes from ElevenLabs through our server in Frankfurt to DeepSeek. Both steps leave the EU. |
 | voice_consent_3_label | 存多久 | How long it's kept |
 | voice_consent_3_title | 我们不存声音。 | We don't store your voice. |
-| voice_consent_3_body | 我们的服务器和这台手机都不存录音。ElevenLabs：【待确认：录音、文字、日志各存多久】。文字和报告按你的设置存在这台手机上。 | Neither our servers nor this phone keep a recording. ElevenLabs: [TBC: how long audio, text and logs are kept]. The text and report are saved on this phone, following your setting. |
+| voice_consent_3_body | 我们的服务器和这台手机都不存录音。我们设置了 ElevenLabs 不录音。通话结束后它删除文字，实测一小时内删完。它的调试和审核日志里可能还留有内容，留多久我们还不清楚。备份最长留 30 天。DeepSeek 留多久我们管不了，见隐私说明。文字和报告按你的设置存在这台手机上。 | Neither our servers nor this phone keep a recording. We've told ElevenLabs not to record. It deletes the text after the call; in our tests that took under an hour. Its debugging and moderation logs may still hold content, and we don't yet know for how long. Its backups last up to 30 days. We don't control how long DeepSeek keeps data; see the Privacy page. The text and report are saved on this phone, following your setting. |
 | voice_consent_4_label | 怎么撤回 | How to withdraw |
 | voice_consent_4_title | 你可以随时撤回。 | You can withdraw at any time. |
-| voice_consent_4_body | 在「我的」里撤回，以后不再发送。打字和按住说话不受影响。已发出的数据：【待确认：能不能删、怎么删】 | Withdraw under Me and we stop sending it. Typing and hold to talk keep working. Data already sent: [TBC: whether and how it can be deleted] |
+| voice_consent_4_body | 在「我的」里撤回，以后不再发送。打字和按住说话不受影响。已发出的文字按上面说的删除，日志和备份我们删不到。有问题写信到 info@novawerk.io。 | Withdraw under Me and we stop sending it. Typing and hold to talk keep working. Text already sent is deleted as described above. We can't reach logs or backups. Questions: info@novawerk.io. |
 | voice_consent_5_title | 只说虚构的内容。 | Keep it fictional. |
 | voice_consent_5_body | 不要说真实来访者的信息。这是练习工具，不是治疗。 | Don't mention real clients. This is a practice tool, not therapy. |
-| voice_consent_check | 我同意把我的声音发给 ElevenLabs 处理。 | I agree to send my voice to ElevenLabs for processing. |
+| voice_consent_check | 我同意把我的声音发给美国的 ElevenLabs，把转出的文字发给位于中国的 DeepSeek。 | I agree to send my voice to ElevenLabs in the US, and the text to DeepSeek in China. |
 | voice_consent_accept | 同意并开始 | Agree and start |
 | voice_use_text | 改用打字 | Type instead |
 
-**【待确认】不能猜。** 事实由 `voice-elevenlabs` 给。之前稿子里的「设成不存录音、保存 0 天」是 ADR 0013 的安排，没有验证过，所以这版拿掉了。
+**事实来源：** 2026-10-30 实测，见 [ADR 0013](../decisions/0013-voice-elevenlabs.md)。agent 配置：不录音、保留 0 天、删除转写和 PII。转写实测 12–55 分钟后删除，只有几次，所以文案写「实测」，不写成承诺。日志留多久没有查到，就写「我们还不清楚」。
+
+**没写在 V1 上的：** 传输依据和合同主体。DPA 没签，这两项写不出来，不能猜（Q13）。
 
 ### V2–V6
 
@@ -241,13 +244,13 @@ R1 不变，`/supervision` 不变。只加两处：
 | settings_voice_where | 声音去哪、存多久 | Where your voice goes and how long it's kept |
 | settings_voice_withdraw | 撤回语音会谈的同意 | Withdraw consent for voice sessions |
 | voice_withdraw_title | 撤回语音会谈的同意？ | Withdraw consent for voice sessions? |
-| voice_withdraw_body | 以后不再把你的声音发给 ElevenLabs。打字和按住说话不受影响。已发出的数据：【待确认：能不能删、怎么删】 | We stop sending your voice to ElevenLabs. Typing and hold to talk keep working. Data already sent: [TBC: whether and how it can be deleted] |
+| voice_withdraw_body | 以后不再把你的声音发给 ElevenLabs。打字和按住说话不受影响。已发出的文字按隐私说明删除，日志和备份我们删不到。有问题写信到 info@novawerk.io。 | We stop sending your voice to ElevenLabs. Typing and hold to talk keep working. Text already sent is deleted as the Privacy page says. We can't reach logs or backups. Questions: info@novawerk.io. |
 | voice_withdraw_confirm | 撤回同意 | Withdraw consent |
 | voice_withdraw_keep | 保留 | Keep it |
 | privacy_q_voice_session | 语音会谈的声音去了哪里？ | Where does my voice go in a voice session? |
-| privacy_a_voice_session | 发给 ElevenLabs，实时转成文字；来访者的话也由它读出来。声音发到【待确认：区域】，不经过我们的服务器。转出的文字和打字一样，经我们的服务器交给 AI 模型服务。 | To ElevenLabs, which turns it into text as you speak and reads out the client's words. It goes to [TBC: region] and doesn't pass through our servers. The text then goes through our server to the AI model service, like typed text. |
+| privacy_a_voice_session | 发给 ElevenLabs，实时转成文字；来访者的话也由它读出来。声音发到美国，不经过我们的服务器。转出的文字和打字一样，经我们的服务器交给位于中国的 DeepSeek。 | To ElevenLabs, which turns it into text as you speak and reads out the client's words. It goes to the United States and doesn't pass through our servers. The text then goes through our server to DeepSeek in China, like typed text. |
 | privacy_q_voice_store | 语音会谈的声音存吗？ | Is my voice stored? |
-| privacy_a_voice_store | 我们不存，手机上也不存。ElevenLabs：【待确认：录音、文字、日志各存多久】 | We don't store it, and neither does your phone. ElevenLabs: [TBC: how long audio, text and logs are kept] |
+| privacy_a_voice_store | 我们不存，手机上也不存。我们设置了 ElevenLabs 不录音。通话结束后它删除文字，实测一小时内删完。它的调试和审核日志里可能还留有内容，留多久我们还不清楚。备份最长留 30 天。 | We don't store it, and neither does your phone. We've told ElevenLabs not to record. It deletes the text after the call; in our tests that took under an hour. Its debugging and moderation logs may still hold content, and we don't yet know for how long. Its backups last up to 30 days. |
 
 ---
 
@@ -293,7 +296,8 @@ R1 不变，`/supervision` 不变。只加两处：
 | Q8 | 分钟数上限（ElevenLabs 按分钟计费） | 用户 | 现在只有 80 条的上限，没有分钟上限 |
 | Q9 | 通话断了能不能带上文重新接通 | 第二版 | 第一版只转打字。需要 `/voice/session` 接收已有对话 |
 | Q10 | 声音算不算特殊类别数据（GDPR 第 9 条），跨境依据写什么，同意记录只存手机够不够证明（第 7(1) 条），运营者主体是谁（隐私政策还写着待定） | 用户，需要专业意见 | V1 按单独同意设计，没有经过法律审阅 |
-| Q13 | V1 的【待确认】：区域（美国）、保存时长、模型服务商已填。**传输依据和合同主体要等 ElevenLabs 的 DPA**，现在 V1 只写了「会离开欧盟」，没写依据。撤回后已发数据：转写通话后删除，备份最长 30 天，要核实写信给我们 | 用户 | DPA 签完补上，升 `VOICE_CONSENT_VERSION` |
+| Q13 | V1 的【待确认】：区域（美国）、保存时长、模型服务商已填。**传输依据和合同主体要等 ElevenLabs 的 DPA**。合同主体未确认：隐私政策写 Eleven Labs Inc. 和 ElevenLabs Poland sp. z o.o.；我们是自助用户，没有签过单独的文件。撤回后：转写本来就删，日志和备份我们删不到，能否按请求删未确认 | 用户 | DPA 签完补上，升 `VOICE_CONSENT_VERSION` |
+| Q14 | 欧盟用户的语音转写发到中国的 DeepSeek，这是第二条跨境。欧盟数据驻留只有 ElevenLabs 企业版有，所以第一条也离不开美国。要不要换模型 | 用户 | V1 如实写明。建议欧洲版上线前换成能签 DPA、数据留在欧盟的模型服务 |
 | Q11 | 打开「需要帮助」就挂断，算不算太重 | 用户、聆镜 | 按 V-7。G8「返回后会谈还在」改为文字还在，能打字继续 |
 | Q12 | 督导提示词要不要知道转写可能有错，避免为转写错误批评咨询师 | voice-elevenlabs、聆镜 | 先不改，只在报告上提示 |
 
@@ -301,7 +305,7 @@ R1 不变，`/supervision` 不变。只加两处：
 
 ## 9. 验收
 
-- 第一次选语音会看到 V1；勾选框默认空着；不勾选点不了；同意后下次不再出现；撤回后再次出现；发给谁、发到哪、存多久变了会再次出现。
+- 第一次选语音会看到 V1；V1 没有【待确认】；勾选框默认空着；不勾选点不了；同意后下次不再出现；撤回后再次出现；发给谁、发到哪、存多久变了会再次出现。
 - 拒绝（改用打字）后，其他功能都正常。文案加长 1.5 倍、字号 200% 时 V1 能看完。
 - 语音不可用时，C2 和现在一样。
 - 拒绝麦克风权限后，一步能转到打字，同一病例能练。

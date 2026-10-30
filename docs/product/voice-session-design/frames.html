@@ -152,7 +152,7 @@ const brief=(voice)=>`${statusBar(false)}
   <div style="display:flex;gap:14px;align-items:center"><div class="avatar">林</div><div><div style="font-size:20px;font-weight:600;margin-bottom:6px">小林 · 低落的大学生</div><div class="tags"><span class="tag">初次会谈</span><span class="tag">抑郁</span><span class="tag">入门</span><span class="tag">CBT</span></div></div></div>
   <div class="card"><label>来访者</label><div>小林，20 岁，大二学生。情绪低落了几个月，室友建议找人聊聊。</div></div>
   <div class="card"><label>会谈设置</label><div>初次会谈 · 建议 15–30 轮 · 约 15 分钟 · 你随时可以结束。</div></div>
-  <div class="note">${ic('shield0','s')}<span>这场会谈可能涉及抑郁、焦虑和消极念头。来访者是虚构的。${voice?'你的声音会发给 ElevenLabs，转出的文字交给第三方 AI 模型处理。我们的服务器不保存。':'对话会交给第三方 AI 模型处理，我们的服务器不保存。'}</span></div>
+  <div class="note">${ic('shield0','s')}<span>这场会谈可能涉及抑郁、焦虑和消极念头。来访者是虚构的。${voice?'你的声音会发给美国的 ElevenLabs，转出的文字发给位于中国的 DeepSeek 生成回复，我们的服务器不保存。':'对话会发给位于中国的 DeepSeek 生成回复，我们的服务器不保存。'}</span></div>
 </div></div>
 <div class="bottom">
   <div class="lbl" style="margin:0">会谈方式</div>
@@ -165,14 +165,14 @@ const consent=`${statusBar(false)}
 <div class="top"><div class="ib">${ic('back')}</div></div>
 <div class="body"><div class="pad" style="padding-top:0;gap:8px">
   <div style="font-size:22px;font-weight:600;margin-bottom:4px">语音会谈前，先说清楚</div>
-  <div class="gray"><em>发给谁</em><b>声音发给 ElevenLabs。</b><span>它把你的声音转成文字，再把来访者的话读出来。转出的文字经我们的服务器，交给 AI 模型服务 <span class="tbc">【待确认：服务商】</span> 生成回复。</span></div>
-  <div class="gray"><em>发到哪</em><b>声音发到 <span class="tbc">【待确认：区域】</span>。</b><span>声音直接从手机发出，不经过我们的服务器。<span class="tbc">【待确认：出欧盟时的传输依据】</span></span></div>
-  <div class="gray"><em>存多久</em><b>我们不存声音。</b><span>我们的服务器和这台手机都不存录音。ElevenLabs：<span class="tbc">【待确认：录音、文字、日志各存多久】</span>。文字和报告按你的设置存在这台手机上。</span></div>
-  <div class="gray"><em>怎么撤回</em><b>你可以随时撤回。</b><span>在「我的」里撤回，以后不再发送。打字和按住说话不受影响。已发出的数据：<span class="tbc">【待确认：能不能删、怎么删】</span></span></div>
+  <div class="gray"><em>发给谁</em><b>声音发给 ElevenLabs。</b><span>它把你的声音转成文字，再把来访者的话读出来。转出的文字经我们的服务器，交给位于中国的第三方 AI 服务 DeepSeek 生成回复。</span></div>
+  <div class="gray"><em>发到哪</em><b>声音发到美国，文字发到中国。</b><span>声音直接从手机发到美国，不经过我们的服务器。文字从 ElevenLabs 经我们在法兰克福的服务器，发到 DeepSeek。这两段都会离开欧盟。</span></div>
+  <div class="gray"><em>存多久</em><b>我们不存声音。</b><span>我们的服务器和这台手机都不存录音。我们设置了 ElevenLabs 不录音。通话结束后它删除文字，实测一小时内删完。它的调试和审核日志里可能还留有内容，留多久我们还不清楚。备份最长留 30 天。DeepSeek 留多久我们管不了，见隐私说明。文字和报告按你的设置存在这台手机上。</span></div>
+  <div class="gray"><em>怎么撤回</em><b>你可以随时撤回。</b><span>在「我的」里撤回，以后不再发送。打字和按住说话不受影响。已发出的文字按上面说的删除，日志和备份我们删不到。有问题写信到 info@novawerk.io。</span></div>
   <div class="gray"><b>只说虚构的内容。</b><span>不要说真实来访者的信息。这是练习工具，不是治疗。</span></div>
 </div></div>
 <div class="bottom" style="padding-top:10px;border-top:1px solid var(--line)">
-  <div class="check"><span class="box empty"></span><span>我同意把我的声音发给 ElevenLabs 处理。</span></div>
+  <div class="check"><span class="box empty"></span><span>我同意把我的声音发给美国的 ElevenLabs，把转出的文字发给位于中国的 DeepSeek。</span></div>
   <div class="btn off">同意并开始</div>
   <div class="btn s">改用打字</div>
   <div class="link" style="display:flex;justify-content:center;gap:18px;padding-top:2px"><u>隐私说明</u><u>需要帮助？</u></div>
@@ -182,7 +182,7 @@ const withdraw=`${statusBar(false)}<div class="top"><div class="title" style="pa
 <div class="body"><div class="pad" style="padding-top:0;gap:0"><div class="lbl" style="margin:8px 0 4px">语音会谈</div>
 <div class="row">声音去哪、存多久</div><div class="row">撤回语音会谈的同意</div></div></div>
 <div class="scrim"></div><div class="sheet"><div class="grab"></div>
-<h4>撤回语音会谈的同意？</h4><p>以后不再把你的声音发给 ElevenLabs。打字和按住说话不受影响。已发出的数据：<span class="tbc">【待确认：能不能删、怎么删】</span></p>
+<h4>撤回语音会谈的同意？</h4><p>以后不再把你的声音发给 ElevenLabs。打字和按住说话不受影响。已发出的文字按隐私说明删除，日志和备份我们删不到。有问题写信到 info@novawerk.io。</p>
 <div style="height:6px"></div><div class="btn p">撤回同意</div><div class="btn s">保留</div></div>`;
 
 const connecting=`${statusBar(false)}${bar('正在接通')}
