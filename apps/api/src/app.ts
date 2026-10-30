@@ -32,7 +32,7 @@ import { readBody } from "./read-body.js";
 import { ReportBody, reportSlackMessage } from "./report.js";
 import { ChatBody, SupervisionBody, type ErrorCode, type Locale, type Message, type StreamEvent } from "./schema.js";
 import { FAREWELL, clientRequest, endsSession, liveSupervisorRequest, supervisorRequest } from "./session.js";
-import { VOICE_ERROR_LINE, VOICE_NOTE, VoiceLlmBody, VoiceSessionBody, chunk, conversationToken, endCallDelta, voiceTurn } from "./voice.js";
+import { VOICE_ERROR_LINE, VOICE_NOTE, VoiceLlmBody, VoiceSessionBody, chunk, conversationToken, endCallDelta, lengthNote, turnLength, voiceTurn } from "./voice.js";
 
 /** Keeps proxies from closing the stream while the model thinks. */
 export const PING_MS = 15_000;
@@ -54,6 +54,8 @@ export interface AppDeps {
   providerFor?: (role: Role) => ModelProvider;
   logger?: Logger;
   now?: () => number;
+  /** 0..1. Tests fix how long a voice turn runs. Default: Math.random. */
+  random?: () => number;
   /** Tests inject a fake Slack here. Default: global fetch. */
   fetch?: FetchLike;
   /** How long we wait for Slack. Default 5 s. */
@@ -257,9 +259,13 @@ export function createApp(deps: AppDeps) {
     // The agent may ask for a reply before anyone spoke; the client then waits to be greeted.
     const messages: Message[] = turn.messages.length ? turn.messages : [{ role: "counselor", text: locale === "zh" ? "（会谈开始）" : "(The session begins.)" }];
     const base = clientRequest({ ...prompts, rubrics: snap.rubrics }, theCase, locale, messages);
-    const request = { ...base, system: `${base.system}\n\n${VOICE_NOTE[locale]}` };
     const at = { caseId: theCase.id, locale };
     const counselorLines = messages.filter((m) => m.role === "counselor").length;
+    const target = turnLength(counselorLines, (deps.random ?? Math.random)());
+    const note = lengthNote(locale, target, (deps.random ?? Math.random)());
+    // At the very end: in the system prompt the model ignores it and copies its own last reply.
+    const asked = base.messages.map((m, i) => (i === base.messages.length - 1 && m.role === "user" ? { ...m, text: `${m.text}\n\n${note}` } : m));
+    const request = { ...base, system: `${base.system}\n\n${VOICE_NOTE[locale]}`, messages: asked };
     const log = { route: "/voice/llm", caseId: theCase.id, locale, messages: messages.length, provider: provider.name, model: provider.model };
 
     c.header("Cache-Control", "no-cache, no-transform");

@@ -6,7 +6,7 @@ import { loadConfig } from "../src/config.js";
 import { loadCases, loadPrompts } from "../src/content.js";
 import { MOCK_END_TRIGGER } from "../src/llm/mock.js";
 import type { ModelProvider, ModelRequest } from "../src/llm/types.js";
-import { SILENCE, VOICE_ERROR_LINE, voiceTurn } from "../src/voice.js";
+import { SILENCE, TURN_LENGTHS, VOICE_ERROR_LINE, lengthNote, turnLength, voiceTurn } from "../src/voice.js";
 
 const cases = loadCases();
 const prompts = loadPrompts();
@@ -90,6 +90,42 @@ describe("voiceTurn", () => {
   });
 });
 
+describe("how long a voice turn runs", () => {
+  it("draws from the real distribution; the first lines stay short", () => {
+    expect(turnLength(5, 0)).toBe(TURN_LENGTHS[0]);
+    expect(turnLength(5, 0.999)).toBe(TURN_LENGTHS.at(-1));
+    expect(turnLength(1, 0.999)).toBe(150);
+  });
+
+  it("a short turn says stop, a long one says keep going", () => {
+    expect(lengthNote("zh", 17)).toContain("最多 17 字");
+    expect(lengthNote("zh", 712)).toContain("必须说够");
+    expect(lengthNote("en", 712)).toContain("356 words");
+    expect(lengthNote("zh", 712)).toContain("绝不说过程和细节");
+    expect(lengthNote("zh", 712, 0.05)).toContain("反问");
+    expect(lengthNote("zh", 712, 0.5)).not.toContain("反问");
+  });
+
+  it("reaches the model with the voice note", async () => {
+    let asked: ModelRequest | undefined;
+    const provider = {
+      name: "mock",
+      model: "x",
+      buildRequest: () => ({}),
+      stream: async (req: ModelRequest, h: { onText?: (t: string) => void }) => {
+        asked = req;
+        h.onText?.("嗯");
+        return { message: { text: "嗯", toolCalls: [] }, usage: { inputTokens: 0, outputTokens: 0 } };
+      },
+    } as unknown as ModelProvider;
+    const app = createApp({ config: loadConfig(VOICE_ENV), cases, prompts, logger: { info: () => {}, error: () => {} }, providerFor: () => provider, random: () => 0.9 });
+    const lines = [{ role: "user", content: "a" }, { role: "assistant", content: "b" }, { role: "user", content: "c" }, { role: "assistant", content: "d" }, { role: "user", content: "e" }];
+    await (await llm(app, llmBody(lines))).text();
+    expect(asked!.system).toContain("语音会谈");
+    expect(JSON.stringify(asked!.messages.at(-1))).toContain(`${TURN_LENGTHS[18]} 字`);
+  });
+});
+
 describe("POST /voice/llm/chat/completions", () => {
   it("is 404 when voice is off, also with half the variables set (config error)", async () => {
     const off = makeApp({ LLM_PROVIDER: "mock" });
@@ -128,7 +164,8 @@ describe("POST /voice/llm/chat/completions", () => {
     expect(seen!.system).toContain(cases.get(CASE_ID)!.brief.slice(0, 40));
     expect(seen!.system).toContain("语音会谈");
     expect(seen!.system).not.toContain("ElevenLabs prompt");
-    expect(seen!.messages).toEqual([{ role: "user", text: "你好，今天想聊什么？" }]);
+    expect(seen!.messages).toHaveLength(1);
+    expect(JSON.stringify(seen!.messages[0])).toContain("你好，今天想聊什么？");
     // No conversation text in the logs.
     expect(JSON.stringify(lines)).not.toContain("睡不好");
     expect(JSON.stringify(lines)).not.toContain("今天想聊");

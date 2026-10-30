@@ -188,7 +188,7 @@ class VoiceViewModel(
         }
     }
 
-    override fun onClientCorrected(text: String) = update(VoiceTranscript.correct(messages, text))
+    override fun onClientCorrected(original: String, said: String) = update(VoiceTranscript.correct(messages, original, said))
 
     override fun onEnded(end: VoiceCallEnd) {
         timeout?.cancel()

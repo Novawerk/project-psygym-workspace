@@ -37,9 +37,19 @@ class VoiceTranscriptTest {
     @Test
     fun anInterruptedReplyKeepsWhatWasSaid() {
         val before = listOf(Message(counselor, "嗯"), Message(client, "我最近，就是，一直睡不好，然后"))
-        assertEquals(Message(client, "我最近，就是"), VoiceTranscript.correct(before, "我最近，就是").last())
+        assertEquals(Message(client, "我最近，就是"), VoiceTranscript.correct(before, "我最近，就是，一直睡不好，然后", "我最近，就是").last())
         // Cut off before a word came out: the reply is gone.
-        assertEquals(before.take(1), VoiceTranscript.correct(before, " "))
-        assertEquals(before.take(1), VoiceTranscript.correct(before.take(1), "x"))
+        assertEquals(before.take(1), VoiceTranscript.correct(before, "我最近，就是，一直睡不好，然后", " "))
+        assertEquals(before.take(1), VoiceTranscript.correct(before.take(1), "x", "y"))
+    }
+
+    @Test
+    fun cuttingOffALongReplyOnlyTouchesTheLastPiece() {
+        val first = VoiceTranscript.add(emptyList(), client, "第一段说完了。")
+        val both = VoiceTranscript.add(first, client, "第二段说到一半，后面没说。")
+        val cut = VoiceTranscript.correct(both, "第二段说到一半，后面没说。", "第二段说到一半")
+        assertEquals("第一段说完了。第二段说到一半", cut.single().text)
+        // A piece we never saw changes nothing.
+        assertEquals(both, VoiceTranscript.correct(both, "别的", "x"))
     }
 }

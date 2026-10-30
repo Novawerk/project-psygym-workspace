@@ -30,7 +30,7 @@ interface AppleVoiceCallBridge {
         onClientSpeaking: (Boolean) -> Unit,
         onCounselor: (String) -> Unit,
         onClient: (String) -> Unit,
-        onClientCorrected: (String) -> Unit,
+        onClientCorrected: (String, String) -> Unit,
         onEnded: (Int) -> Unit,
     )
 

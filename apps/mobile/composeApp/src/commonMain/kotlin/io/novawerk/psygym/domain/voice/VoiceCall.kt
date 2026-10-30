@@ -30,8 +30,8 @@ interface VoiceCallListener {
 
     fun onClient(text: String)
 
-    /** The trainee cut the client off: [text] is what was really said of the last reply. */
-    fun onClientCorrected(text: String)
+    /** The trainee cut the client off: of the piece [original], only [said] was really spoken. */
+    fun onClientCorrected(original: String, said: String)
 
     fun onEnded(end: VoiceCallEnd)
 }
@@ -68,13 +68,19 @@ object VoiceTranscript {
         return merged.takeLast(ContractLimits.MAX_MESSAGES)
     }
 
-    /** Replaces the client's last reply with what was said before the interruption. */
-    fun correct(messages: List<Message>, said: String): List<Message> {
-        val text = said.trim()
+    /**
+     * The client was cut off. ElevenLabs sends a long reply in pieces, which [add] joins, and the
+     * correction is about the last piece only: everything before it was said in full.
+     */
+    fun correct(messages: List<Message>, original: String, said: String): List<Message> {
         val at = messages.indexOfLast { it.role == Role.Client }
         if (at < 0) return messages
+        val whole = messages[at].text
+        val cut = whole.lastIndexOf(original.trim())
+        if (original.isBlank() || cut < 0) return messages
+        val text = (whole.substring(0, cut) + said.trim()).trim()
         return if (text.isEmpty()) messages.filterIndexed { i, _ -> i != at }
-        else messages.mapIndexed { i, m -> if (i == at) m.copy(text = text.clip()) else m }
+        else messages.mapIndexed { i, m -> if (i == at) m.copy(text = text) else m }
     }
 
     private fun join(a: String, b: String): String =

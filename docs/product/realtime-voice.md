@@ -39,7 +39,17 @@ ElevenLabs 负责听和说，来访者说什么由我们的后端决定。
 - 带上文重新接通。ElevenLabs 的新通话没有上文，所以断线转打字。
 - 通话最长 20 分钟（agent 的设置），到时间自动结束。
 
-## 3a. 在模拟器上测
+## 3a. 来访者说话要像真实对谈
+
+这是最重要的验收标准，做法和数字见 ADR 0013。量的办法：
+
+```bash
+node scripts/voice-test/quality.mjs .env 8787 cbt-depression-anxiety-01 8 out.json
+```
+
+咨询师的话全是编的。真实对谈不进仓库、日志、ElevenLabs 或模型服务。最终标准是对着原文盲读，能不能分出来。
+
+## 3b. 在模拟器上测
 
 模拟器没有麦克风，开了宿主音频还会在通话开始时卡死（macOS CoreAudio）。这样测：
 

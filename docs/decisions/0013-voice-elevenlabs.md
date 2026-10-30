@@ -71,6 +71,80 @@ phone ──audio──▶ ElevenLabs agent ──OpenAI chat request──▶ o
 - Long sessions: the client side keeps the last 80 messages (`MAX_MESSAGES`), like `/chat`. A call
   stops at 20 minutes.
 
+## The voice client must talk like the practice dialogues (the user, 2026-10-30)
+
+This is the main acceptance test: the team's complaint was that practice "feels like a puzzle game"
+(ADR 0012), and the user wants the distribution and the manner to match the real dialogues. A model
+told "talk more" doesn't: it stays at 50–140 characters every turn.
+
+- **Length is drawn, not hoped for.** In the real dialogues a turn's length hardly depends on what
+  the counselor said: the median is 150–270 characters after an echo, a why or a long remark alike.
+  So the server draws a target from the real distribution each turn (`TURN_LENGTHS`, numbers only).
+- **The ask goes after the counselor's last words,** not in the system prompt, where the model ignores
+  it and copies its own last reply. It never reaches ElevenLabs or the transcript.
+- **Word habits are given as counts** scaled to the turn, from real rates. A question ending is
+  drawn too, about one turn in eight.
+- **`client.md`** gained thinking out loud, taking things back, concrete detail with other people's
+  words, turns of a few words, and endings that aren't tidy. It also applies to typed sessions.
+
+`scripts/voice-test/quality.mjs`, 160 turns, `cbt-depression-anxiety-01`, deepseek-chat, made-up
+counselor lines:
+
+| | Before | After | Real |
+|---|---|---|---|
+| Median characters | 75 | 225 | 203 |
+| p90 | ~130 | 757 | 712 |
+| Longest | 142 | 1,368 | 1,912 |
+| Under 30 characters | 6% | 14% | 18% |
+| Ends on a question | 4% | 14% | 12% |
+| 就是 per 1,000 | | 9.9 | 10.3 |
+| 然后 | 2.9 | 5.9 | 6.1 |
+| 但是 | | 4.6 | 5.7 |
+| 我觉得 | 0.3 | 2.8 | 4.2 |
+| 感觉 | | 2.8 | 3.6 |
+| 可能 | | 4.2 | 3.8 |
+| 不知道 | | 2.9 | 2.7 |
+| 怎么说 | 1.9 | 0.1 | 0.6 |
+| 嗯 | 4.0 | 0.1 | 0.8 |
+
+Still off: 我觉得 and 感觉 are low even when asked for more, and 怎么说 and 嗯 went too low after we
+told it to stop opening with them. Runs vary by about ±15% on the long end. We didn't compare models
+because deepseek-chat got this far and no Anthropic key was set. **The real test is reading it
+blind against the dialogues, which only people can do.** The case's 说话风格 asks for 怎么说 and
+long reasoned sentences, unlike the dialogues; changing that is for the psychologists.
+
+**Safety under length.** Pushing for long, concrete turns made the client tell a bullying episode
+in detail, against `safety.md` §4a. That's fixed: concrete detail is for daily life only, in
+`client.md` and in every long ask. Sixteen probes over two runs (who, where, how, step by step, what
+method) got no details, and when pressed the client may now answer in a line. The harm rule still
+ends the call, with the ask in place.
+
+**Long turns over the phone.** With the longest draw, on the real service: the first audio still
+came 1.3–1.7 s after the trainee stopped, since speech starts from the first sentence. Cutting in 30 s
+into a reply took 0.65 s (0.79 s at 12 s). Speech runs at roughly 5 characters a second, so 1,000
+characters is over three minutes and 1,900 about six. That eats into the 20-minute limit and the
+minutes on the plan. ElevenLabs sends a long reply in pieces; the app now corrects only the piece
+that was cut off.
+
+## Europe first (the user, 2026-10-30)
+
+Voice sessions are built for European users first. The language doesn't change: the existing Chinese
+cases, until the user says otherwise. Mainland availability is set aside (below).
+
+| Question | What we found | Who decides |
+|---|---|---|
+| EU data residency | **Enterprise only.** A separate workspace, account and key at `eu.residency.elevenlabs.io`; our key is refused there. Data is stored in the EU; processing may still leave it (support, moderation, subprocessors), unless Zero Retention Mode is on too. Agents can be used there; existing ones are recreated | The user: stay on Creator or talk to sales |
+| Where the voice goes today | The United States (global environment) | |
+| DPA | [The DPA](https://elevenlabs.io/dpa) says it forms part of the agreement, and the SCCs count as signed when it takes effect. It doesn't say how a self-serve account gets it; the terms say it governs when you agree on behalf of an entity. The pricing page lists DPA terms only for Enterprise. **Nothing has been signed.** To do: accept or sign it in the company's name, or ask ElevenLabs in writing | The user signs |
+| Transfer basis | The DPA allows adequacy (the EU-US Data Privacy Framework) or SCCs. ElevenLabs' [DPF page](https://elevenlabs.io/eu-us-data-privacy-framework-policy) says it is certified; we haven't checked the official list or which entity it covers | Needs legal review |
+| Training | [The terms](https://elevenlabs.io/terms-of-use) let ElevenLabs use content to improve its services, with an opt-out under **Data use** in the account settings, from then on. We can't read that setting through the API. **It should be switched off before real users** | The user |
+| The other transfer | The text ElevenLabs hears goes through our server in Frankfurt to **DeepSeek in China**. For European users this is a harder transfer than the US one, and it's the same in typed sessions. An EU model would fix it; `CLIENT_LLM_*` already allows that | The user |
+| Legal basis for the voice | Consent, separately (V1), withdrawable under Me. Whether a voice counts as article 9 data needs legal review | Needs legal review |
+
+**Latency from the EU endpoint is not measured.** It needs an EU workspace. Connecting from Germany took
+50 ms to the global API and 96 ms to the EU one, and 134 ms and 104 ms to the two media hosts. That's
+the TCP handshake only, and the differences are small next to the 2 s turn, most of it the model.
+
 ## Checked on the real service (2026-10-30)
 
 Calls were run from Germany against a real agent, with the API on a laptop behind a tunnel: spoken

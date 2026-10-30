@@ -53,7 +53,7 @@ final class VoiceCallBridge: NSObject, AppleVoiceCallBridge {
         onClientSpeaking: @escaping (KotlinBoolean) -> Void,
         onCounselor: @escaping (String) -> Void,
         onClient: @escaping (String) -> Void,
-        onClientCorrected: @escaping (String) -> Void,
+        onClientCorrected: @escaping (String, String) -> Void,
         onEnded: @escaping (KotlinInt) -> Void
     ) {
         // The SDK's callbacks are @Sendable; Kotlin's lambdas aren't marked so, but we only ever
@@ -87,7 +87,7 @@ final class VoiceCallBridge: NSObject, AppleVoiceCallBridge {
                     onMain { $0.ended(KotlinInt(int: end)) }
                 },
                 onAgentResponse: { text, _ in onMain { $0.client(text) } },
-                onAgentResponseCorrection: { _, corrected, _ in onMain { $0.corrected(corrected) } },
+                onAgentResponseCorrection: { original, corrected, _ in onMain { $0.corrected(original, corrected) } },
                 onUserTranscript: { text, _ in onMain { $0.counselor(text) } },
                 onAgentToolResponse: { event in if event.toolName == "end_call" { clientLeft.value = true } }
             )
@@ -137,7 +137,7 @@ private struct Handlers: @unchecked Sendable {
     let speaking: (KotlinBoolean) -> Void
     let counselor: (String) -> Void
     let client: (String) -> Void
-    let corrected: (String) -> Void
+    let corrected: (String, String) -> Void
     let ended: (KotlinInt) -> Void
 }
 

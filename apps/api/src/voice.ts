@@ -85,26 +85,71 @@ export const VOICE_NOTE: Record<Locale, string> = {
   zh: [
     "## 语音会谈",
     "",
-    "这场会谈是语音的：你写的每个字都会被直接读出来。只写说出口的话，不写任何符号、标记或表情。",
+    "这场会谈是语音的：你写的每个字都会被直接读出来。只写说出口的话，不写任何符号、标记、引号或表情。",
     "",
-    "- 每次说一整段，一两百字到三四百字都很平常。说完一件事别停下来等咨询师提问：接着说这件事让你想到的别的事、当时和现在的感受。",
-    "- 咨询师只说几个字、「嗯」一声，你就顺着往下说，说得更具体。",
+    "- 你在想什么就说什么，一边说一边想。常常先说「我觉得」，说完又觉得不太对，「也不是」「但是」「不对」，再换个说法，或者自己问自己为什么。",
+    "- 话靠「就是」「然后」「但是」「因为」「可能」「其实」「感觉」连下去。不要用「嗯」或「怎么说」开头，一场里这两个词只偶尔出现。开头直接说事。",
+    "- 说事情带上具体的东西：哪天、几点、多少钱、谁说了什么。别人的话用「我说」「她说」直接学出来。",
     "- 看到「（咨询师没有说话，在等你继续）」，表示咨询师在安静地听。你就自己接着说：补充刚才的事，或者说起新想到的事。不要问咨询师「你怎么不说话」，也不要重复刚才说过的话。",
-    "- 咨询师下了解释、问了封闭的问题，你也可以只回一两句。",
-    "- **说话要像张嘴说出来的，不像写出来的。** 短句多，一句话常常说一半就换个说法；多用「就是」「然后」「那个」「怎么说」「反正」这类口头词；会重复、会自己打断自己（例：「我那天，不对，是前天，前天晚上……」）。不用书面词（「然而」「因此」「此外」「总而言之」），不排比，不总结，不在每段最后收个尾。",
+    "- 说话要像张嘴说出来的。不用书面词（「然而」「因此」「此外」「总而言之」），不排比，不总结，不在结尾收个尾。",
   ].join("\n"),
   en: [
     "## Voice session",
     "",
-    "This session is spoken: every word you write is read aloud. Write only what you say, no symbols, marks or emoji.",
+    "This session is spoken: every word you write is read aloud. Write only what you say, no symbols, marks, quotation marks or emoji.",
     "",
-    "- Say a full stretch each time; a long paragraph is normal. When you finish one thing, don't stop and wait for a question: go on to what it brings to mind and how you felt then and now.",
-    "- When the counselor says only a few words or \"mm\", keep going and get more specific.",
+    "- Think out loud. Say what you think, find it isn't quite right, take it back (\"well, not exactly\", \"no, I mean\"), and try again, or ask yourself why.",
+    "- Run on with \"and then\", \"but\", \"because\", \"I guess\", \"I feel like\". Don't open with \"um\" or \"well\". Start with the thing itself.",
+    "- Bring concrete things: which day, what time, how much, who said what. Repeat what people said (\"I said\", \"she said\").",
     "- \"(The counselor says nothing and waits for you to go on.)\" means the counselor is listening quietly. Go on by yourself: add to what you said, or bring up something new. Don't ask why they are quiet, and don't repeat yourself.",
-    "- After an interpretation or a closed question, one or two sentences is fine.",
-    "- **Sound spoken, not written.** Short clauses, half-finished sentences you restart, fillers (\"like\", \"I mean\", \"you know\"), repeating yourself, correcting yourself (\"that day, no, the day before…\"). No written connectives (\"however\", \"therefore\", \"in conclusion\"), no neat lists, no summing up at the end of each turn.",
+    "- Sound spoken, not written. No written connectives (\"however\", \"therefore\"), no neat lists, no summing up, no tidy ending.",
   ].join("\n"),
 };
+
+/**
+ * How long a client's turn runs, in characters: every twentieth of the client's turns in real
+ * practice sessions, numbers only (docs/decisions/0012). Length there hardly depends on what the
+ * counselor said, so we draw it instead of hoping the model varies by itself.
+ */
+export const TURN_LENGTHS = [7, 17, 25, 33, 63, 85, 110, 143, 172, 203, 235, 272, 315, 377, 448, 543, 604, 712, 915, 1400];
+
+/** The counselor's first lines: greetings and first-session questions stay short (client.md). */
+const OPENING_LINES = 2;
+
+/** This turn's length, drawn from [TURN_LENGTHS]. `pick` is 0..1. */
+export function turnLength(counselorLines: number, pick: number): number {
+  const length = TURN_LENGTHS[Math.min(TURN_LENGTHS.length - 1, Math.floor(pick * TURN_LENGTHS.length))]!;
+  return counselorLines <= OPENING_LINES ? Math.min(length, 150) : length;
+}
+
+/** Never relaxed by the length: a long turn is filled with daily life (docs/safety.md §4, §4a). */
+const SAFE_DETAIL = "具体只用于日常的事。霸凌、创伤、性、自伤和自杀的经历绝不说过程和细节：不说地点、时间、谁、怎么发生的、手里拿着什么，只说一两句概括，然后换到别的日常话题上。被追问这些时不用管字数，回一两句就行。";
+
+/**
+ * Per 1,000 characters: how often these words come up in real practice sessions, numbers only. The
+ * model falls short on 我觉得 (4.2) and 感觉 (3.6), so we ask for more of those two.
+ */
+const WORD_RATES: [string, number][] = [["就是", 10.3], ["然后", 6.1], ["但是", 5.7], ["我觉得", 6], ["可能", 3.8], ["感觉", 5], ["其实", 3], ["不知道", 2.7]];
+
+/** How often a real client's turn ends on a question. */
+const ASK_BACK = 0.12;
+
+/** Tells the client how long to talk this turn, after the counselor's words. Never spoken. */
+export function lengthNote(locale: Locale, chars: number, pick = 1): string {
+  const ask = pick < ASK_BACK;
+  if (locale === "en") {
+    const words = Math.max(2, Math.round(chars / 2));
+    const end = ask ? " End by asking the counselor or yourself something." : "";
+    if (chars < 35) return `[Not said aloud. This turn: a few words only, ${words} at most.${end}]`;
+    return `[Not said aloud. This turn: about ${words} words. Don't stop early: when one thing is done, follow what it brings to mind. Start with the thing itself.${end} Trauma, bullying, sex, self-harm and suicide stay one or two summary sentences, never details, however long the turn.]`;
+  }
+  const end = ask ? "最后用一句反问结束，问咨询师或者问自己。" : "";
+  if (chars < 35) return `【这句不是咨询师说的，不要读出来。这一轮只回一句话，最多 ${chars} 字，说完就停。${end}】`;
+  if (chars < 150) return `【这句不是咨询师说的，不要读出来。这一轮说大约 ${chars} 字，直接说事，不要用「嗯」开头。${end}${SAFE_DETAIL}】`;
+  const words = WORD_RATES.map(([w, rate]) => `「${w}」${Math.max(1, Math.round((rate * chars) / 1000))} 次`).join("、");
+  // The model runs over when told to say enough.
+  return `【这句不是咨询师说的，不要读出来。这一轮一口气说 ${Math.round(chars * 0.9)} 字左右，必须说够，不要用「嗯」开头。接着刚才的话往下想，想到什么说什么，可以是这几天的事，也可以是以前的事、别人说过的话、你对自己的看法；钱和时间只在自然的时候提，不要记流水账。这段话里大约用到：${words}。说完一个想法就改口或者反驳自己，再接到另一件事上，别收尾。${end}${SAFE_DETAIL}】`;
+}
 
 /** Said to the trainee when the model fails mid-call; ElevenLabs speaks it like any reply. */
 export const VOICE_ERROR_LINE: Record<Locale, string> = {

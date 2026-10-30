@@ -45,6 +45,7 @@ class ElevenLabsVoiceCall(context: Context, private val mic: VoiceInput) : Voice
             scope.launch { if (mine == call) listener.block() }
         }
         var clientLeft = false
+        @Suppress("DEPRECATION")
         val config = ConversationConfig(
             conversationToken = setup.conversationToken,
             dynamicVariables = setup.dynamicVariables,
@@ -54,7 +55,8 @@ class ElevenLabsVoiceCall(context: Context, private val mic: VoiceInput) : Voice
             onModeChange = { mode -> deliver { onClientSpeaking(mode == ConversationMode.SPEAKING) } },
             onUserTranscriptEvent = { text, _ -> deliver { onCounselor(text) } },
             onAgentResponseEvent = { text, _ -> deliver { onClient(text) } },
-            onAgentResponseCorrectionEvent = { text, _ -> deliver { onClientCorrected(text) } },
+            // The deprecated callback: the event form leaves out the original, which we need.
+            onAgentResponseCorrection = { original, said -> deliver { onClientCorrected(original, said) } },
             onAgentToolResponse = { tool, _, _, _ -> if (tool == END_CALL) clientLeft = true },
             onDisconnect = { details ->
                 val end = when {

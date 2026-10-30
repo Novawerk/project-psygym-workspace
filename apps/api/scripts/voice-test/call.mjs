@@ -11,7 +11,7 @@ const { signed_url } = await r.json();
 const ws = new WebSocket(signed_url);
 const now = () => performance.now();
 const t0 = now();
-let spokeEnd = 0, firstAudio = 0, turn = 0, ended = false, audioBytes = 0;
+let spokeEnd = 0, firstAudio = 0, turn = 0, ended = false, audioBytes = 0, lastAudioAt = 0, cutIn = 0;
 const log = (...a) => console.log(((now() - t0) / 1000).toFixed(2).padStart(7), ...a);
 ws.onopen = () => ws.send(JSON.stringify({
   type: "conversation_initiation_client_data",
@@ -24,12 +24,14 @@ ws.onmessage = (e) => {
   if (m.type === "ping") ws.send(JSON.stringify({ type: "pong", event_id: m.ping_event.event_id }));
   else if (m.type === "audio") {
     audioBytes += m.audio_event.audio_base_64.length * 0.75;
+    lastAudioAt = now();
     if (spokeEnd && !firstAudio) { firstAudio = now(); log(`turn ${turn}: first audio ${((firstAudio - spokeEnd) / 1000).toFixed(2)}s after the speaker stopped`); }
   } else if (m.type === "user_transcript") log("heard:", m.user_transcription_event.user_transcript);
   else if (m.type === "agent_response") log(`client (${m.agent_response_event.agent_response.length} chars):`, m.agent_response_event.agent_response.slice(0, 60));
   else if (m.type === "conversation_initiation_metadata") log("metadata", JSON.stringify(m.conversation_initiation_metadata_event));
   else if (m.type === "agent_tool_response") log("tool", JSON.stringify(m.agent_tool_response));
-  else if (m.type === "interruption" || m.type === "agent_response_correction") log(m.type);
+  else if (m.type === "interruption") log(`interruption${cutIn ? `, ${((now() - cutIn) / 1000).toFixed(2)}s after cutting in` : ""}`);
+  else if (m.type === "agent_response_correction") log(`correction: kept ${m.agent_response_correction_event.corrected_agent_response.length} of ${m.agent_response_correction_event.original_agent_response.length} chars`);
   else if (!["vad_score", "internal_tentative_agent_response", "agent_chat_response_part", "agent_response_metadata"].includes(m.type)) log("event", m.type);
 };
 ws.onclose = (e) => { ended = true; log("closed", e.code, e.reason); };
@@ -44,8 +46,20 @@ await pad(1);
 let played = 0;
 for (const step of steps) {
   if (ended) break;
-  firstAudio = 0; spokeEnd = 0; turn++;
+  firstAudio = 0; spokeEnd = 0; lastAudioAt = 0; cutIn = 0; turn++;
   if (step.startsWith("sil:")) { spokeEnd = now(); await pad(+step.slice(4)); continue; }
+  // barge:<seconds>:<wav>: wait for the reply to start, let it run, then cut in.
+  if (step.startsWith("barge:")) {
+    const [, wait, wav] = step.split(":");
+    while (!lastAudioAt && !ended) await pad(0.2);
+    await pad(+wait);
+    cutIn = now();
+    log(`cutting in ${wait}s into the reply`);
+    const pcm = readFileSync(wav).subarray(44);
+    for (let i = 0; i < pcm.length && !ended; i += CHUNK) { send(pcm.subarray(i, i + CHUNK)); await sleep(100); }
+    await pad(6);
+    continue;
+  }
   const pcm = readFileSync(step).subarray(44);
   log(`turn ${turn}: speaking ${(pcm.length / 32000).toFixed(1)}s`);
   for (let i = 0; i < pcm.length && !ended; i += CHUNK) { send(pcm.subarray(i, i + CHUNK)); await sleep(100); }
