@@ -1,6 +1,6 @@
 # 语音会谈设计（给开发的规格）
 
-**状态：** 设计稿 2026-10-30，待用户确认。标「待核对」的文案在核对之前不能上线。
+**状态：** 设计稿 2026-10-30，待用户确认。**先做欧洲版本**（用户 2026-10-30）。文案里的【待确认】要等 `voice-elevenlabs` 查到事实才能填，填完之前不能上线。
 
 **一句话：** 咨询师选「语音」，同意一次，然后像打电话一样和 AI 来访者说话，可以打断，随时看转写和督导提示，结束后照旧出督导报告。
 
@@ -17,7 +17,8 @@
 | # | 决定 | 为什么 |
 |---|------|--------|
 | V-1 | 入口是 C2 主按钮上方的分段控件「打字 / 语音」。C1 和首页不加入口。 | 一页只有一个主按钮（principles §5）。模式记在本机。 |
-| V-2 | 同意只问一次，按版本。C2 的内容提示每次都写声音去哪。 | 单独同意满足 Apple 5.1.2(i)，又不让每场多一页。 |
+| V-2 | 同意按 GDPR 设计：单独一页，默认不勾选，写清发给谁、发到哪、存多久、怎么撤回。「改用打字」是和主按钮并列的按钮。只问一次，按版本。C2 的内容提示每次都写声音去哪。 | 同意要主动、知情、可以不同意且没有损失（GDPR 第 7 条）。也满足 Apple 5.1.2(i)。 |
+| V-11 | 「我的」里能撤回，两步完成，和同意一样容易。 | GDPR 第 7(3) 条：撤回要和同意一样容易。 |
 | V-3 | 通话页上面是来访者状态，下面是滚动转写。 | 听着说话时也能回看对方原话。备选是默认收起转写的纯通话页，更像真实会谈；等内测有反馈再说。 |
 | V-4 | 结束键**不用红色**，用主按钮色。 | screens.md：红色只用于真正的错误。 |
 | V-5 | 只有两个通话状态：来访者在说话、在听你说。**没有「来访者在想」。** | SDK 的 `onModeChange` 只有 `speaking` 和 `listening`。咨询师的转写也是一轮结束才到，所以没有实时字幕。 |
@@ -58,11 +59,12 @@ C2 选「语音」→ 开始语音会谈
 
 ### V1 · 说明和同意（新页面）
 
-- 顶栏只有返回。标题 `headlineSmall`。五张 `GrayCard`，和 O2 同一种样式，一屏放不下时滚动。
-- 底部固定：勾选框、主按钮、三个 `UnderlinedLink`（改用打字、隐私说明、需要帮助？）。
-- 没勾选时主按钮不可点。
-- 同意后本机存 `voiceConsentVersion`。第 5 节 V1 的文案有实质改动时升版本，用户下次选语音时重新确认。
-- 「改用打字」：回到 C2，模式切回打字。
+- 顶栏只有返回。标题 `headlineSmall`。五张 `GrayCard`，和 O2 同一种样式；前四张上面有小标题：发给谁、发到哪、存多久、怎么撤回。
+- **文案会变长。** 卡片高度跟内容走，不写固定高度，不截断。中间区域滚动，按现在的 1.5 倍长度和 200% 字号都要能看完。`bottom` 区上边有 1dp 分隔线，告诉用户上面还有内容。
+- 底部固定：勾选框、主按钮、次按钮「改用打字」、两个 `UnderlinedLink`（隐私说明、需要帮助？）。
+- **勾选框默认不勾选**，每次进这一页都重置。没勾选时主按钮不可点。不用「继续即同意」这类默认同意。
+- 同意后本机存 `voiceConsentVersion` 和同意时间。发给谁、发到哪、存多久有任何变化时升版本，用户下次选语音时重新确认。
+- 「改用打字」：回到 C2，模式切回打字，不再追问。拒绝不影响其他功能。
 - 第一次语音会谈才出现，引导页不加这一页。
 
 ### V2 · 正在接通
@@ -146,7 +148,7 @@ R1 不变，`/supervision` 不变。只加两处：
 
 ### 「我的」和 P3
 
-- P1「帮助」组加一行「语音会谈的声音去哪」，打开 P3 对应的问答。同意过时再加一行「撤回语音会谈的同意」：清掉本机的 `voiceConsentVersion`，下次选语音时重新出现 V1。
+- P1「帮助」组加一行「语音会谈的声音去哪」，打开 P3 对应的问答。同意过时再加一行「撤回语音会谈的同意」，点开是确认弹层（设计稿 P1），确认后清掉本机的 `voiceConsentVersion`，下次选语音时重新出现 V1。
 - P3 加两问（第 5 节）。现有的「按住说话会上传我的声音吗？」只讲按住说话，保留。
 
 ---
@@ -182,21 +184,25 @@ R1 不变，`/supervision` 不变。只加两处：
 | brief_content_note_voice | 这场会谈可能涉及抑郁、焦虑和消极念头。来访者是虚构的。你的声音会发给 ElevenLabs，转出的文字交给第三方 AI 模型处理。我们的服务器不保存。 | This session may touch on depression, anxiety and dark thoughts. The client is fictional. Your voice goes to ElevenLabs, and a third-party AI model processes the text. Our servers don't store it. |
 | brief_voice_note | 你的声音会发给 ElevenLabs，转出的文字交给第三方 AI 模型处理。我们的服务器不保存。 | Your voice goes to ElevenLabs, and a third-party AI model processes the text. Our servers don't store it. |
 | voice_consent_title | 语音会谈前，先说清楚 | Before your first voice session |
-| voice_consent_1_title | 你的声音会发给 ElevenLabs。 | Your voice goes to ElevenLabs. |
-| voice_consent_1_body | ElevenLabs 是美国公司。它实时把你的声音转成文字，再把来访者的话读出来。声音不经过我们的服务器。 | ElevenLabs is a US company. It turns your voice into text as you speak and reads out the client's words. Your voice doesn't pass through our servers. |
-| voice_consent_2_title | 文字会经过我们和 AI 模型服务。 | The text goes through us and an AI model service. |
-| voice_consent_2_body | 转出的文字发到我们的服务器，再交给第三方 AI 模型服务生成回复。我们的服务器不保存。 | The text goes to our server and on to a third-party AI model service that writes the reply. Our servers don't store it. |
-| voice_consent_3_title | 录音不留，日志可能留。 | No recordings. Logs may remain. |
-| voice_consent_3_body | 我们把 ElevenLabs 设成不存录音、保存 0 天。它仍可能按自己的政策留日志，这部分我们管不到。 | We set ElevenLabs to save no audio and keep data for 0 days. It may still keep logs under its own policy, which we don't control. |
-| voice_consent_4_title | 手机上只存文字。 | Your phone keeps text only. |
-| voice_consent_4_body | 不存录音。文字和报告按你的设置存在这台手机上。 | No recordings. The text and report are saved on this phone, following your setting. |
+| voice_consent_1_label | 发给谁 | Who receives it |
+| voice_consent_1_title | 声音发给 ElevenLabs。 | Your voice goes to ElevenLabs. |
+| voice_consent_1_body | 它把你的声音转成文字，再把来访者的话读出来。转出的文字经我们的服务器，交给 AI 模型服务【待确认：服务商】生成回复。 | It turns your voice into text and reads out the client's words. The text goes through our server to an AI model service [TBC: provider] that writes the reply. |
+| voice_consent_2_label | 发到哪 | Where it goes |
+| voice_consent_2_title | 声音发到【待确认：区域】。 | Your voice goes to [TBC: region]. |
+| voice_consent_2_body | 声音直接从手机发出，不经过我们的服务器。【待确认：出欧盟时的传输依据】 | It goes straight from your phone and doesn't pass through our servers. [TBC: transfer basis if it leaves the EU] |
+| voice_consent_3_label | 存多久 | How long it's kept |
+| voice_consent_3_title | 我们不存声音。 | We don't store your voice. |
+| voice_consent_3_body | 我们的服务器和这台手机都不存录音。ElevenLabs：【待确认：录音、文字、日志各存多久】。文字和报告按你的设置存在这台手机上。 | Neither our servers nor this phone keep a recording. ElevenLabs: [TBC: how long audio, text and logs are kept]. The text and report are saved on this phone, following your setting. |
+| voice_consent_4_label | 怎么撤回 | How to withdraw |
+| voice_consent_4_title | 你可以随时撤回。 | You can withdraw at any time. |
+| voice_consent_4_body | 在「我的」里撤回，以后不再发送。打字和按住说话不受影响。已发出的数据：【待确认：能不能删、怎么删】 | Withdraw under Me and we stop sending it. Typing and hold to talk keep working. Data already sent: [TBC: whether and how it can be deleted] |
 | voice_consent_5_title | 只说虚构的内容。 | Keep it fictional. |
 | voice_consent_5_body | 不要说真实来访者的信息。这是练习工具，不是治疗。 | Don't mention real clients. This is a practice tool, not therapy. |
 | voice_consent_check | 我同意把我的声音发给 ElevenLabs 处理。 | I agree to send my voice to ElevenLabs for processing. |
 | voice_consent_accept | 同意并开始 | Agree and start |
 | voice_use_text | 改用打字 | Type instead |
 
-**`voice_consent_3` 待核对：** 这张卡是 ADR 0013 里的安排，不是已验证的事实。上线前要确认 ElevenLabs 后台真的是保存 0 天、录音关闭，并读完它的数据处理条款。开了 Zero Retention Mode 就把这张卡改掉。
+**【待确认】不能猜。** 事实由 `voice-elevenlabs` 给。之前稿子里的「设成不存录音、保存 0 天」是 ADR 0013 的安排，没有验证过，所以这版拿掉了。
 
 ### V2–V6
 
@@ -232,14 +238,16 @@ R1 不变，`/supervision` 不变。只加两处：
 
 | key | 中文 | English |
 |-----|------|---------|
-| settings_voice_where | 语音会谈的声音去哪 | Where voice session audio goes |
+| settings_voice_where | 声音去哪、存多久 | Where your voice goes and how long it's kept |
 | settings_voice_withdraw | 撤回语音会谈的同意 | Withdraw consent for voice sessions |
+| voice_withdraw_title | 撤回语音会谈的同意？ | Withdraw consent for voice sessions? |
+| voice_withdraw_body | 以后不再把你的声音发给 ElevenLabs。打字和按住说话不受影响。已发出的数据：【待确认：能不能删、怎么删】 | We stop sending your voice to ElevenLabs. Typing and hold to talk keep working. Data already sent: [TBC: whether and how it can be deleted] |
+| voice_withdraw_confirm | 撤回同意 | Withdraw consent |
+| voice_withdraw_keep | 保留 | Keep it |
 | privacy_q_voice_session | 语音会谈的声音去了哪里？ | Where does my voice go in a voice session? |
-| privacy_a_voice_session | 发给 ElevenLabs（美国公司），实时转成文字；来访者的话也由它读出来。声音不经过我们的服务器。转出的文字和打字一样，经我们的服务器交给 AI 模型服务。 | To ElevenLabs, a US company, which turns it into text as you speak and reads out the client's words. Your voice doesn't pass through our servers. The text then goes through our server to the AI model service, like typed text. |
+| privacy_a_voice_session | 发给 ElevenLabs，实时转成文字；来访者的话也由它读出来。声音发到【待确认：区域】，不经过我们的服务器。转出的文字和打字一样，经我们的服务器交给 AI 模型服务。 | To ElevenLabs, which turns it into text as you speak and reads out the client's words. It goes to [TBC: region] and doesn't pass through our servers. The text then goes through our server to the AI model service, like typed text. |
 | privacy_q_voice_store | 语音会谈的声音存吗？ | Is my voice stored? |
-| privacy_a_voice_store | 我们不存，手机上也不存。我们把 ElevenLabs 设成不存录音、保存 0 天，它仍可能按自己的政策留日志。 | We don't store it, and neither does your phone. We set ElevenLabs to save no audio and keep data for 0 days. It may still keep logs under its own policy. |
-
-`privacy_a_voice_store` 和 `voice_consent_3` 一样待核对。
+| privacy_a_voice_store | 我们不存，手机上也不存。ElevenLabs：【待确认：录音、文字、日志各存多久】 | We don't store it, and neither does your phone. ElevenLabs: [TBC: how long audio, text and logs are kept] |
 
 ---
 
@@ -275,16 +283,17 @@ R1 不变，`/supervision` 不变。只加两处：
 
 | # | 问题 | 谁定 | 默认做法 |
 |---|------|------|----------|
-| Q1 | App 怎么知道语音可用？`/voice/session` 关着时回 404，要等点了才知道 | voice-elevenlabs | 建议 `GET /cases` 或启动配置里带一个开关。没有开关时隐藏入口 |
+| Q1 | App 怎么知道语音可用，怎么判断用户在欧洲（商店地区、系统地区还是服务端）？`/voice/session` 关着时回 404，要等点了才知道 | voice-elevenlabs | 建议 `GET /cases` 或启动配置里带一个开关。没有开关时隐藏入口 |
 | Q2 | 关麦以后，6 秒沉默规则还算不算？算的话，来访者会自己接着说 | voice-elevenlabs 真机验证 | 先接受。状态行已写明来访者听不到你 |
 | Q3 | 被打断时，来访者那段转写是全文还是实际说出的部分？ | voice-elevenlabs 真机验证 | SDK 给修正事件就用修正后的。否则保留全文，靠 `voice_report_note` 兜底 |
 | Q4 | 来访者文字比声音早到多少？ | voice-elevenlabs 真机验证 | 收到就上屏。差得太多再按语速放出 |
 | Q5 | 真实延迟多少，要不要等待时的提示 | voice-elevenlabs 真机验证 | 不加。ADR 0013 要求先测 |
 | Q6 | 音量回调 Android 和 iOS 是否都有 | voice-elevenlabs | 没有时用呼吸动画 |
-| Q7 | ElevenLabs 在中国大陆能不能连 | 真机验证 | 连不上走 V2 失败卡片，改用打字。聆镜在大陆的成员要特别测 |
+| Q7 | 欧洲版不覆盖中国大陆。聆镜在大陆的成员怎么试语音 | 用户 | 先不开放，他们用打字 |
 | Q8 | 分钟数上限（ElevenLabs 按分钟计费） | 用户 | 现在只有 80 条的上限，没有分钟上限 |
 | Q9 | 通话断了能不能带上文重新接通 | 第二版 | 第一版只转打字。需要 `/voice/session` 接收已有对话 |
-| Q10 | 声音算不算敏感个人信息，跨境依据写什么（GDPR、PIPL） | 用户，需要专业意见 | V1 是单独同意，文案够用但没有经过法律审阅 |
+| Q10 | 声音算不算特殊类别数据（GDPR 第 9 条），跨境依据写什么，同意记录只存手机够不够证明（第 7(1) 条），运营者主体是谁（隐私政策还写着待定） | 用户，需要专业意见 | V1 按单独同意设计，没有经过法律审阅 |
+| Q13 | V1 的【待确认】：区域、合同主体、传输依据、保存时长、撤回后能否删除、模型服务商 | voice-elevenlabs | 填完才能上线 |
 | Q11 | 打开「需要帮助」就挂断，算不算太重 | 用户、聆镜 | 按 V-7。G8「返回后会谈还在」改为文字还在，能打字继续 |
 | Q12 | 督导提示词要不要知道转写可能有错，避免为转写错误批评咨询师 | voice-elevenlabs、聆镜 | 先不改，只在报告上提示 |
 
@@ -292,7 +301,8 @@ R1 不变，`/supervision` 不变。只加两处：
 
 ## 9. 验收
 
-- 第一次选语音会看到 V1；不勾选点不了；同意后下次不再出现；撤回后再次出现。
+- 第一次选语音会看到 V1；勾选框默认空着；不勾选点不了；同意后下次不再出现；撤回后再次出现；发给谁、发到哪、存多久变了会再次出现。
+- 拒绝（改用打字）后，其他功能都正常。文案加长 1.5 倍、字号 200% 时 V1 能看完。
 - 语音不可用时，C2 和现在一样。
 - 拒绝麦克风权限后，一步能转到打字，同一病例能练。
 - 来访者说话时能直接开口打断，状态马上切到「在听你说」。
