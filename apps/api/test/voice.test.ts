@@ -156,10 +156,37 @@ describe("POST /voice/llm/chat/completions", () => {
     expect(r.text).toBe(VOICE_ERROR_LINE.zh);
   });
 
+  it("a request ElevenLabs drops is not counted as a turn, even when the model stream ends quietly", async () => {
+    const quiet = {
+      name: "mock",
+      model: "quiet",
+      buildRequest: () => ({}),
+      stream: (req: ModelRequest) =>
+        new Promise((resolve) => {
+          req.signal!.addEventListener("abort", () => resolve({ message: { text: "", toolCalls: [] }, usage: { inputTokens: 0, outputTokens: 0 } }));
+        }),
+    } as unknown as ModelProvider;
+    const { app, lines } = makeApp(VOICE_ENV, { providerFor: () => quiet });
+    const res = await llm(app, llmBody([{ role: "user", content: "你好" }]));
+    await new Promise((r) => setTimeout(r, 10));
+    await res.body!.cancel();
+    await new Promise((r) => setTimeout(r, 10));
+    expect(lines.map((l) => l.msg)).toContain("turn aborted");
+    expect(lines.map((l) => l.msg)).not.toContain("turn");
+  });
+
   it("no case or language: 400; unknown case: 404", async () => {
     const { app } = makeApp();
     expect((await llm(app, { messages: [{ role: "user", content: "hi" }] })).status).toBe(400);
     expect((await llm(app, { messages: [{ role: "system", content: "case=nope locale=zh" }, { role: "user", content: "hi" }] })).status).toBe(404);
+  });
+});
+
+describe("GET /voice/status", () => {
+  it("says the feature is on, 404 when off, behind the gate", async () => {
+    expect(await (await makeApp().app.request("/voice/status")).json()).toEqual({ available: true });
+    expect((await makeApp({ LLM_PROVIDER: "mock" }).app.request("/voice/status")).status).toBe(404);
+    expect((await makeApp({ ...VOICE_ENV, INVITE_CODES: "abc" }).app.request("/voice/status")).status).toBe(401);
   });
 });
 

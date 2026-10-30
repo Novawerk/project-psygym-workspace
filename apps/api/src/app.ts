@@ -295,6 +295,12 @@ export function createApp(deps: AppDeps) {
           usage = res.usage;
           sessionEnd = endsSession(res.message.toolCalls) || endTags.found;
         }
+        // ElevenLabs drops a request when the trainee turns out not to be done. The model stream
+        // can end quietly then: nothing was said, so nothing is counted.
+        if (abort.signal.aborted) {
+          logger.info({ ...log, msg: "turn aborted", ms: Date.now() - started });
+          return;
+        }
         if (sessionEnd && !said.trim()) say(FAREWELL[locale]);
         else if (!said.trim()) say(VOICE_ERROR_LINE[locale]);
         // The session ends in character: ElevenLabs speaks the closing line, then hangs up.
@@ -678,6 +684,12 @@ export function createApp(deps: AppDeps) {
   const chars = (s: string | undefined) => [...(s ?? "")].length;
 
   // POST /feedback → 204: a rating of a report. Never conversation text.
+  // GET /voice/status: whether the app shows "Voice session". Off (no voice config): 404.
+  app.get("/voice/status", (c) => {
+    if (!config.voice) return c.json({ error: { code: "not_found", message: "Not found." } }, 404);
+    return c.json({ available: true });
+  });
+
   // POST /voice/session: a conversation token for the ElevenLabs agent, and what the app passes
   // when it starts the call. Behind the gate like /chat. Off (no voice config): 404.
   app.post("/voice/session", async (c) => {
