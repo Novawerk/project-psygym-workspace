@@ -58,7 +58,8 @@ adb shell run-as io.novawerk.psygym sh -c 'cat > files/voice-call-test.txt'   # 
 2. 隐私政策、隐私标签、数据安全表、Review Notes 按 `docs/release/` 改好并提交。
 3. 建生产用的 agent，把 Custom LLM 指向生产环境的地址。
 4. 在生产环境配三个环境变量。配上的那一刻入口就会出现。
-5. 在国内的真手机上打一通电话。
+
+大陆可用性暂不考虑（用户，2026-10-30）。
 
 ## 5. 为什么不是豆包或千问
 

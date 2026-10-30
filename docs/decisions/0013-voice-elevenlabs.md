@@ -123,7 +123,10 @@ quotes what ElevenLabs heard. Worth watching in real use.
 
 ## Mainland China (2026-10-30)
 
-**Not blocked, and not proven good.** ElevenLabs' list of restricted countries doesn't name China.
+**Mainland availability is set aside for now (the user, 2026-10-30).** It doesn't block this work.
+What we had already measured, for whoever picks it up:
+
+Not blocked, and not proven good. ElevenLabs' list of restricted countries doesn't name China.
 Measured with public probes (Globalping) in mainland data centres, on Alibaba, Tencent, China
 Telecom, Unicom and Mobile networks, at about 00:30 Beijing time:
 
@@ -139,10 +142,9 @@ Telecom, Unicom and Mobile networks, at about 00:30 Beijing time:
 
 What that doesn't tell us: these are data-centre nodes, not home broadband or a phone network; the
 audio itself runs over WebRTC (UDP), which we couldn't test from there; and evening peak will likely be
-worse than 00:30. Packet loss of 12–31% would be audible. **Nobody has made a call from a phone in
-mainland China yet.** That is the check that decides this; it takes a team member there five minutes
-with a debug build. If it's bad, the fallback is typing and hold to talk, which don't depend on
-ElevenLabs. The app says so when a call won't connect.
+worse than 00:30. Packet loss of 12–31% would be audible. Nobody has made a call from a phone in
+mainland China. If it's bad there, typing and hold to talk still work, and the app offers typing
+when a call won't connect.
 
 Separately from connectivity, sending a mainland user's voice to a US company is a cross-border
 transfer of personal information, and ElevenLabs is not a filed service in China
@@ -157,8 +159,7 @@ too. So, in order:
 2. Merge and publish the privacy policy, labels, Data safety form and review notes (`docs/release/`).
 3. Create a production agent with the settings above, pointing at `https://psygym-api.novawerk.io/voice/llm`.
    The agent used so far is a test agent on a laptop tunnel.
-4. Make a call from a phone in mainland China.
-5. Set the variables.
+4. Set the variables.
 
 ## What ran on a device (2026-10-30)
 
@@ -178,7 +179,6 @@ tested separately over the WebSocket with spoken audio.
 - Interrupting by voice in the app. Seen over the WebSocket only.
 - iOS at run time: the app and the Swift bridge build for the simulator, but no call has been made
   on an iPhone or a simulator. The build needs `ONLY_ACTIVE_ARCH=YES` on Apple silicon, as before.
-- A call from mainland China (above).
 - `END_SESSION_JUDGE=on` over voice.
 - Whether the client's voice and manner feel right, and whether the safety rules hold up over
   speech beyond the checks above: this needs people listening, and the psychologists' judgement.
