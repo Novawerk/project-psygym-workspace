@@ -2,5 +2,6 @@
 CFBundleDisplayName = "聆镜";
 
 /* 按住说话（docs/product/voice-input.md 第 5 节）。 */
+NSCameraUsageDescription = "聆镜不用摄像头。语音组件里带有相机接口，苹果要求写明这句话。";
 NSMicrophoneUsageDescription = "用麦克风听你说话。按住说话时，声音只在这台手机上转成文字。语音会谈时，声音发给 ElevenLabs 处理。";
 NSSpeechRecognitionUsageDescription = "在这台手机上把你说的话转成文字，不联网。";
