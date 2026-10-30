@@ -8,7 +8,8 @@
 |------|------|------------|----------|
 | 被当成医疗或治疗 App | Apple 1.4.1；Play Health apps 政策 | 文案、截图、分类（Education）都写「训练工具，不是治疗，不给来访者用」。首次打开必须勾选同意（O2） | 商店文案和截图照 [store-listing.md](./store-listing.md)，不写「治疗、疗效、诊断」 |
 | 个人开发者提交受监管领域的 App | Apple 5.1.1(ix) | 说明我们是教育培训，不提供医疗服务 | 正式上架前定上架主体，见 [README](./README.md) |
-| 把数据发给第三方 AI 没有事先告知 | Apple 5.1.2(i) | O2 第 3 条说明并要求勾选；隐私说明页写了服务商名称 | 保持。服务商改了要同步改文案 |
+| 把数据发给第三方 AI 没有事先告知 | Apple 5.1.1(i)、5.1.2(i)，0.3.0 因此被拒 | O2 第 3 条写明发什么、发给谁（DeepSeek，中国），并单独勾选同意；隐私政策写全（运营者、数据、DeepSeek 的所在地和处理方式） | 服务商改了要同步改 O2、简介页、隐私说明页、隐私政策，并升 `DISCLAIMER_VERSION` |
+| 占位内容 | Apple 2.1(a)，0.3.0 因此被拒：病例标题里有「(Placeholder)」 | 病例在后台发布，不跟 build 走。审核员看的是线上内容 | 每次提交前看一遍线上病例列表 |
 | 危机情况下用户没地方求助 | Apple 1.4.1 的精神；Play 对心理类内容的审查 | 会谈页常驻「需要帮助？」，不需要网络 | 热线号码**还没核实**（待聆镜确认）。正式版前最好有核实过的号码，至少要有几个主要地区的 |
 | AI 输出冒犯性内容 | Apple 1.1、1.2；**Play AI-Generated Content 政策要求 App 里能举报或标记冒犯性的 AI 内容，而且不用离开 App** | 提示词有安全边界（[safety.md](../safety.md) §3、§4）；报告页的 👎 和一句话（D7）；**举报单条 AI 内容**（D8：来访者回复或报告里的一段，`POST /report`，服务端见 #47） | App 端做好后，提交前在真机上试一遍举报流程 |
 | 未成年人使用 | 两边的分级 | 分级定 18+，目标受众选 18+ | |
@@ -36,13 +37,15 @@ TestFlight 的 Beta App Review、App Store 审核、Play 的 App access 都可�
 > **What this app is.** 聆镜 PSYGYM is a training tool for counseling students and new counselors. It is not a therapy or mental-health app for patients, and it gives no diagnosis or treatment. An AI plays a fictional client with depression or anxiety; the trainee practises a counseling session; afterwards an AI supervisor gives feedback on the trainee's technique.
 >
 > **How to test.**
-> 1. On first launch, read the "Before we start" page and tick the box. (It explains that this is not therapy, the clients are fictional, and the conversation is sent to a third-party AI model.)
+> 1. On first launch, read the "Before we start" page and tick both boxes. (It explains that this is not therapy and the clients are fictional. It says what is sent to DeepSeek and asks for separate consent before anything is sent.)
 > 2. Sign in with the reviewer email in the sign-in details. Tap "Send code"; no email is sent to this address. Enter the code from the sign-in details. No invite code is needed for this account.
 > 3. Pick a case, read the brief, tap "Start session", and type a few counselor lines (for example, "What brings you here today?").
 > 4. Tap "End", then read the supervision report.
 > 5. To test account deletion: Me → Delete account. You can sign in again with the same email and code; a new account is created.
 >
 > **Safety.** Cases are low to moderate risk. The AI client may mention dark thoughts as written in the case, but never describes methods. A "Need help?" page with crisis guidance is always one tap away and works offline. If the trainee is abusive, the AI client reacts like a real person and ends the session on the second time.
+>
+> **Third-party AI.** To write replies and feedback, the conversation, the case text and the interface language go through our server to DeepSeek (Hangzhou DeepSeek Artificial Intelligence Co., Ltd., China). The email and account ID are not sent. The app names DeepSeek, says what is sent, and asks for a separate tick on the "Before we start" page before anything is sent. Without it the app can't be used.
 >
 > **Data.** Sign-in uses an email and a one-time code. Our server stores only the email, sign-up date, invite batch and sessions. It doesn't store conversations. Practice history stays on the device and can be deleted in the app. Accounts can be deleted in the app or via https://psygym.novawerk.io/delete-account. See the privacy policy.
 >
@@ -61,6 +64,7 @@ Data 一段里去掉登录和账号删除那两句。Apple 用 `review-…`、Pl
 ## 提交前检查
 
 - [ ] 文案、截图、关键词里没有「治疗、疗效、诊断、患者」，也没有 therapy app、treatment
+- [ ] 线上病例的标题、简介里没有「占位」「placeholder」，隐私政策里没有「草稿」「待定」
 - [ ] O2 同意页、首页短版声明、病例简介页的内容提示、会谈页的「需要帮助？」都在
 - [ ] 登录版：审核员邮箱和**这次新换的**验证码在后端生效，用 curl 或真机试过；后台填的是同一组值
 - [ ] 登录前的 build：审核员邀请码有效，而且不会被限流

@@ -2,8 +2,8 @@
 # App identity and version. `app-id` is the Android applicationId and the
 # Kotlin namespace; iOS reads its bundle id from iosApp/Configuration.
 app-id = "io.novawerk.psygym"
-app-versionCode = "3"
-app-versionName = "0.3.0"
+app-versionCode = "4"
+app-versionName = "0.3.1"
 
 agp = "8.12.3"
 android-compileSdk = "36"
