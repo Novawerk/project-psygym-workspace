@@ -55,6 +55,7 @@ import io.novawerk.psygym.resources.onb_consent_4_title
 import io.novawerk.psygym.resources.onb_consent_5_body
 import io.novawerk.psygym.resources.onb_consent_5_title
 import io.novawerk.psygym.resources.onb_consent_accept
+import io.novawerk.psygym.resources.onb_consent_ai_check
 import io.novawerk.psygym.resources.onb_consent_check
 import io.novawerk.psygym.resources.onb_consent_title
 import io.novawerk.psygym.resources.onb_continue
@@ -217,7 +218,7 @@ private fun Step(n: Int, title: StringResource, body: StringResource) {
     }
 }
 
-/** O2 · Before we start. Must tick and confirm; can't be skipped (G3). */
+/** O2 · Before we start. Must tick both boxes and confirm; can't be skipped (G3). */
 @Composable
 fun ConsentScreen(
     onAccept: () -> Unit,
@@ -226,6 +227,8 @@ fun ConsentScreen(
     onLanguage: (AppLanguage) -> Unit,
 ) {
     var checked by rememberSaveable { mutableStateOf(false) }
+    // Sharing with the AI service gets its own tick (Apple 5.1.2(i)), never bundled with the disclaimer.
+    var aiAgreed by rememberSaveable { mutableStateOf(false) }
     OnboardingPage(
         page = 1,
         onSkip = null,
@@ -236,18 +239,9 @@ fun ConsentScreen(
                 UnderlinedLink(stringResource(Res.string.onb_link_privacy), onPrivacy)
                 UnderlinedLink(stringResource(Res.string.help_link), onHelp)
             }
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .toggleable(value = checked, onValueChange = { checked = it }, role = Role.Checkbox)
-                    .padding(vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Checkbox(checked = checked, onCheckedChange = null)
-                Spacer(Modifier.width(12.dp))
-                Text(stringResource(Res.string.onb_consent_check), style = MaterialTheme.typography.bodyMedium)
-            }
-            PrimaryButton(stringResource(Res.string.onb_consent_accept), onAccept, enabled = checked)
+            ConsentCheck(Res.string.onb_consent_check, checked) { checked = it }
+            ConsentCheck(Res.string.onb_consent_ai_check, aiAgreed) { aiAgreed = it }
+            PrimaryButton(stringResource(Res.string.onb_consent_accept), onAccept, enabled = checked && aiAgreed)
         },
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -264,6 +258,21 @@ fun ConsentScreen(
             Point(4, Res.string.onb_consent_4_title, Res.string.onb_consent_4_body)
             Point(5, Res.string.onb_consent_5_title, Res.string.onb_consent_5_body)
         }
+    }
+}
+
+@Composable
+private fun ConsentCheck(label: StringResource, checked: Boolean, onChange: (Boolean) -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .toggleable(value = checked, onValueChange = onChange, role = Role.Checkbox)
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Checkbox(checked = checked, onCheckedChange = null)
+        Spacer(Modifier.width(12.dp))
+        Text(stringResource(label), style = MaterialTheme.typography.bodyMedium)
     }
 }
 

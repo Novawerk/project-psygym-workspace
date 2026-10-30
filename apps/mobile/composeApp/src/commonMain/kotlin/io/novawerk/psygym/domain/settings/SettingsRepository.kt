@@ -27,7 +27,7 @@ enum class StartState { Welcome, Consent, Home }
  * Bump when the O2 disclaimer changes in substance: everyone sees it again on next launch
  * (docs/product/onboarding.md, docs/safety.md §5).
  */
-const val DISCLAIMER_VERSION = "2026-10-v1"
+const val DISCLAIMER_VERSION = "2026-10-v2"
 
 /**
  * Bump when what the voice-session notice says changes in substance: everyone agrees again

@@ -35,7 +35,7 @@
 
 ## O2 · 先说清楚
 
-**布局：** 顶部一个盾牌小图标和标题。中间五条（内容可滚动），每条一个小图标 + 一句粗体 + 一句解释。底部一个勾选框和主按钮。勾选前主按钮是灰的。
+**布局：** 顶部一个盾牌小图标和标题。中间五条（内容可滚动），每条一个小图标 + 一句粗体 + 一句解释。底部两个勾选框和主按钮。两个都勾选前主按钮是灰的。发给 AI 服务单独勾选，不和免责声明绑在一起（Apple 5.1.1(i)、5.1.2(i)，2026-10-30 审核要求）。
 
 | | 中文 | English |
 |---|------|---------|
@@ -44,20 +44,21 @@
 | 1 解释 | 这是给咨询师的练习工具，不给来访者用，不能在危机中提供帮助。如果你自己正在经历困难，请点下方「需要帮助？」。 | It's a practice tool for counselors. It's not for clients, and it can't help in a crisis. If you're going through a hard time yourself, tap "Need help?" below. |
 | 2 粗体 | 来访者是虚构的。 | The clients are fictional. |
 | 2 解释 | 由 AI 扮演。对话可能涉及抑郁、焦虑和消极念头。 | An AI plays them. Sessions may touch on depression, anxiety and dark thoughts. |
-| 3 粗体 | 对话会交给 AI 模型处理。 | An AI model processes the conversation. |
-| 3 解释 | 我们把对话发给第三方 AI 模型服务生成回复。我们的服务器不保存对话。 | We send the conversation to a third-party AI model service to generate replies. Our servers don't store it. |
+| 3 粗体 | 对话会发给 DeepSeek。 | Your conversation goes to DeepSeek. |
+| 3 解释 | 为了生成来访者回复和督导反馈，我们会把你输入或说出的内容、之前的对话和界面语言，经我们的服务器发给第三方 AI 服务 DeepSeek（杭州深度求索人工智能基础技术研究有限公司，在中国）。我们不发你的邮箱和账号 ID，服务器也不保存对话。你在下方同意之后才会发送。 | To write the client's replies and your feedback, we send what you type or dictate, the conversation so far and your interface language through our server to DeepSeek, a third-party AI service run by Hangzhou DeepSeek Artificial Intelligence Co., Ltd. in China. We don't send your email or account ID, and our servers don't store the conversation. Nothing is sent unless you agree below. |
 | 4 粗体 | 不要输入真实来访者的信息。 | Don't enter real client information. |
 | 4 解释 | 姓名、经历、任何能认出一个人的细节都不要。 | No names, histories or any detail that could identify someone. |
 | 5 粗体 | 督导反馈只供练习参考。 | The feedback is for practice only. |
 | 5 解释 | 它由 AI 生成，不是资质评估，也不是临床意见。 | An AI writes it. It is not an assessment and not clinical advice. |
 | 勾选框 | 我已了解，这是练习工具，不是治疗。 | I understand this is a practice tool, not therapy. |
-| 主按钮 | 我知道了 | Got it |
+| 勾选框 2 | 我同意把练习对话发给位于中国的 DeepSeek，用来生成回复和反馈。 | I agree that my practice conversations are sent to DeepSeek in China to write replies and feedback. |
+| 主按钮 | 同意并继续 | Agree and continue |
 | 链接 | 隐私说明（打开 P3） | Privacy (opens P3) |
 | 链接 | 需要帮助？（打开 X1） | Need help? (opens X1) |
 
 **规则：**
 
-- 确认结果和声明版本号存本机（例：`disclaimerAccepted = 2026-10-v1`）。声明有实质改动时升版本号，用户下次打开重新看到 O2。
+- 确认结果和声明版本号存本机（例：`disclaimerAccepted = 2026-10-v2`）。声明有实质改动时升版本号，用户下次打开重新看到 O2。
 - 每次开始练习前，病例简介页（C2）再显示一次短版内容提示，不再要求勾选。这替代原来的练习前声明弹窗（D1，已定）。
 
 ---

@@ -27,14 +27,15 @@
     <string name="onb_consent_1_body">It’s a practice tool for counselors. It’s not for clients, and it can’t help in a crisis. If you’re going through a hard time yourself, tap “Need help?” below.</string>
     <string name="onb_consent_2_title">The clients are fictional.</string>
     <string name="onb_consent_2_body">An AI plays them. Sessions may touch on depression, anxiety and dark thoughts.</string>
-    <string name="onb_consent_3_title">An AI model processes the conversation.</string>
-    <string name="onb_consent_3_body">We send the conversation to a third-party AI model service to generate replies. Our servers don’t store it.</string>
+    <string name="onb_consent_3_title">Your conversation goes to DeepSeek.</string>
+    <string name="onb_consent_3_body">To write the client’s replies and your feedback, we send what you type or dictate, the conversation so far and your interface language through our server to DeepSeek, a third-party AI service run by Hangzhou DeepSeek Artificial Intelligence Co., Ltd. in China. We don’t send your email or account ID, and our servers don’t store the conversation. Nothing is sent unless you agree below.</string>
     <string name="onb_consent_4_title">Don’t enter real client information.</string>
     <string name="onb_consent_4_body">No names, histories or any detail that could identify someone.</string>
     <string name="onb_consent_5_title">The feedback is for practice only.</string>
     <string name="onb_consent_5_body">An AI writes it. It is not an assessment and not clinical advice.</string>
     <string name="onb_consent_check">I understand this is a practice tool, not therapy.</string>
-    <string name="onb_consent_accept">Got it</string>
+    <string name="onb_consent_ai_check">I agree that my practice conversations are sent to DeepSeek in China to write replies and feedback.</string>
+    <string name="onb_consent_accept">Agree and continue</string>
     <string name="onb_link_privacy">Privacy</string>
 
     <!-- Home (H1) -->
@@ -63,7 +64,7 @@
     <string name="brief_client">The client</string>
     <string name="brief_setup">Session</string>
     <string name="brief_setup_body">First session · 15–30 turns suggested · about 15 min · end any time.</string>
-    <string name="brief_content_note">This session may touch on depression, anxiety and dark thoughts. The client is fictional. A third-party AI model processes the conversation; our servers don’t store it.</string>
+    <string name="brief_content_note">This session may touch on depression, anxiety and dark thoughts. The client is fictional. Your conversation is sent to DeepSeek in China to write the replies; our servers don’t store it.</string>
     <string name="brief_start">Start session</string>
 
     <!-- Session (S1, S2) -->
@@ -150,11 +151,11 @@
     <string name="privacy_title">Privacy</string>
     <string name="privacy_vendor">DeepSeek</string>
     <string name="privacy_q_where">Where does the conversation go?</string>
-    <string name="privacy_a_where">Each message, with the conversation so far, goes to our server and on to a third-party AI model service that writes the reply. We currently use %1$s.</string>
+    <string name="privacy_a_where">Each message, with the conversation so far, goes to our server and on to %1$s, a third-party AI service run by Hangzhou DeepSeek Artificial Intelligence Co., Ltd. in China, which writes the reply. We don’t send your email or account ID.</string>
     <string name="privacy_q_store">Do you store it?</string>
     <string name="privacy_a_store">Our servers don’t store the conversation or log its text.</string>
     <string name="privacy_q_vendor">Does the AI model service store it?</string>
-    <string name="privacy_a_vendor">It follows its own policy.</string>
+    <string name="privacy_a_vendor">It handles the conversation under its own privacy policy, which says data is stored in China. That’s one more reason not to enter real client information.</string>
     <string name="privacy_q_device">Is it stored on my phone?</string>
     <string name="privacy_a_device">Yes. Each session and its report are saved, unencrypted, in the app’s own space on this phone. Nothing is uploaded or backed up to the cloud. Turn saving off or delete everything under Me; delete a single session from your practice history. Uninstalling the app deletes everything.</string>
     <string name="privacy_q_collect">What do you collect?</string>
@@ -320,12 +321,12 @@
     <string name="brief_mode_text">Type</string>
     <string name="brief_mode_voice">Voice</string>
     <string name="brief_start_voice">Start voice session</string>
-    <string name="brief_content_note_voice">This session may touch on depression, anxiety and dark thoughts. The client is fictional. Your voice goes to ElevenLabs, and a third-party AI model processes the text. Our servers don’t store it.</string>
-    <string name="brief_voice_note">Your voice goes to ElevenLabs, and a third-party AI model processes the text. Our servers don’t store it.</string>
+    <string name="brief_content_note_voice">This session may touch on depression, anxiety and dark thoughts. The client is fictional. Your voice goes to ElevenLabs in the US, and the text goes to DeepSeek in China to write the replies; our servers don’t store it.</string>
+    <string name="brief_voice_note">Your voice goes to ElevenLabs in the US, and the text goes to DeepSeek in China to write the replies; our servers don’t store it.</string>
     <string name="voice_consent_title">Before your first voice session</string>
     <string name="voice_consent_1_label">Who receives it</string>
     <string name="voice_consent_1_title">Your voice goes to ElevenLabs.</string>
-    <string name="voice_consent_1_body">It turns your voice into text and reads out the client’s words. The text goes through our server to an AI model service (%1$s) that writes the reply.</string>
+    <string name="voice_consent_1_body">It turns your voice into text and reads out the client’s words. The text goes through our server to %1$s, a third-party AI service in China, which writes the reply.</string>
     <string name="voice_consent_2_label">Where it goes</string>
     <string name="voice_consent_2_title">Your voice goes to the United States.</string>
     <string name="voice_consent_2_body">It goes straight from your phone and doesn’t pass through our servers. ElevenLabs is a US company, so your voice leaves the EU.</string>
@@ -368,7 +369,7 @@
     <string name="voice_withdraw_confirm">Withdraw consent</string>
     <string name="voice_withdraw_keep">Keep it</string>
     <string name="privacy_q_voice_session">Where does my voice go in a voice session?</string>
-    <string name="privacy_a_voice_session">To ElevenLabs, which turns it into text as you speak and reads out the client’s words. It goes to the United States and doesn’t pass through our servers. The text then goes through our server to the AI model service (%1$s), like typed text.</string>
+    <string name="privacy_a_voice_session">To ElevenLabs, which turns it into text as you speak and reads out the client’s words. It goes to the United States and doesn’t pass through our servers. The text then goes through our server to %1$s in China, like typed text.</string>
     <string name="privacy_q_voice_store">Is my voice stored?</string>
     <string name="privacy_a_voice_store">We don’t store it, and neither does your phone. We’ve told ElevenLabs not to record and to delete the text after the call. Its debugging logs may still hold related data, and its backups last up to 30 days.</string>
 </resources>
