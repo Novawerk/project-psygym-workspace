@@ -40,12 +40,9 @@
 
     <!-- Home (H1) -->
     <string name="home_greeting">Ready for a session?</string>
-    <string name="home_tagline">Pick a client and start a CBT session.</string>
-    <string name="home_start_card_title">Start practising</string>
-    <string name="home_start_card_meta">About 15 min · supervision feedback at the end</string>
+    <string name="home_start_card_meta">CBT session · about 15 min · supervision feedback at the end</string>
     <string name="home_start_card_button">Pick a client</string>
     <string name="home_cases_section">Cases</string>
-    <string name="home_cases_all">All</string>
     <string name="home_disclaimer">聆镜 PSYGYM is a practice tool for counselors. An AI plays the client. Every client is fictional. This is not therapy.</string>
     <string name="home_settings">Settings</string>
 

@@ -22,18 +22,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -46,14 +42,11 @@ import io.novawerk.psygym.data.api.ApiError
 import io.novawerk.psygym.domain.model.CaseSummary
 import io.novawerk.psygym.resources.Res
 import io.novawerk.psygym.resources.app_name
-import io.novawerk.psygym.resources.home_cases_all
 import io.novawerk.psygym.resources.home_cases_section
 import io.novawerk.psygym.resources.home_disclaimer
 import io.novawerk.psygym.resources.home_greeting
 import io.novawerk.psygym.resources.home_start_card_button
 import io.novawerk.psygym.resources.home_start_card_meta
-import io.novawerk.psygym.resources.home_start_card_title
-import io.novawerk.psygym.resources.home_tagline
 import io.novawerk.psygym.ui.components.LogoMark
 import io.novawerk.psygym.ui.components.BottomBar
 import io.novawerk.psygym.ui.components.CaseCard
@@ -74,7 +67,6 @@ fun HomeScreen(
     casesError: ApiError?,
     onStart: () -> Unit,
     onPickCase: (CaseSummary) -> Unit,
-    onAllCases: () -> Unit,
     onRetryCases: () -> Unit,
     onHelp: () -> Unit,
     onTab: (TopTab) -> Unit,
@@ -114,20 +106,10 @@ fun HomeScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 8.dp),
         ) {
-            Text(stringResource(Res.string.home_greeting), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.height(6.dp))
-            Text(stringResource(Res.string.home_tagline), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.height(16.dp))
             StartCard(onStart)
             Spacer(Modifier.height(20.dp))
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(Res.string.home_cases_section), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                TextButton(onClick = onAllCases) {
-                    Text(stringResource(Res.string.home_cases_all), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-            Spacer(Modifier.height(8.dp))
+            Text(stringResource(Res.string.home_cases_section), style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(12.dp))
             when {
                 casesError != null -> ErrorCard(casesError, onRetry = onRetryCases, casesList = true)
                 cases == null -> Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -142,7 +124,7 @@ fun HomeScreen(
                     if (cases.size == 1) Spacer(Modifier.weight(1f))
                 }
             }
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(20.dp))
             // "Need help?" inside the safety note, as a compact link: the page ends on a whole
             // card that fits a tall phone's screen, instead of a link half under the tab bar.
             // The whole card opens X1, so the touch target is the card (well over 48dp) while the
@@ -179,7 +161,7 @@ private fun StartCard(onStart: () -> Unit) {
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(Modifier.padding(20.dp)) {
-            Text(stringResource(Res.string.home_start_card_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(Res.string.home_greeting), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(4.dp))
             Text(
                 stringResource(Res.string.home_start_card_meta),
