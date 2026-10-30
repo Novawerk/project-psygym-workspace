@@ -32,7 +32,7 @@ import { readBody } from "./read-body.js";
 import { ReportBody, reportSlackMessage } from "./report.js";
 import { ChatBody, SupervisionBody, type ErrorCode, type Locale, type Message, type StreamEvent } from "./schema.js";
 import { FAREWELL, clientRequest, endsSession, liveSupervisorRequest, supervisorRequest } from "./session.js";
-import { VOICE_ERROR_LINE, VOICE_NOTE, VoiceLlmBody, VoiceSessionBody, chunk, conversationToken, endCallDelta, isClosingLine, lengthNote, turnLength, voiceTurn } from "./voice.js";
+import { VOICE_DECLINE_LINE, VOICE_ERROR_LINE, VOICE_NOTE, VoiceLlmBody, VoiceSessionBody, chunk, conversationToken, endCallDelta, isClosingLine, lengthNote, turnLength, voiceTurn } from "./voice.js";
 
 /** Keeps proxies from closing the stream while the model thinks. */
 export const PING_MS = 15_000;
@@ -291,6 +291,7 @@ export function createApp(deps: AppDeps) {
         let sessionEnd: boolean;
         let usage: Usage;
         let judged: Record<string, unknown> = {};
+        let stopReason: string | undefined;
         if (config.endSessionJudge) {
           const r = await judgedTurn(provider, request, locale, messages, abort.signal, say, () => said);
           ({ sessionEnd, usage, judged } = r);
@@ -299,6 +300,7 @@ export function createApp(deps: AppDeps) {
           const res = await provider.stream({ ...request, signal: abort.signal }, { onText: (text) => say(endTags.push(text)) });
           say(endTags.flush());
           usage = res.usage;
+          stopReason = res.stopReason;
           sessionEnd = endsSession(res.message.toolCalls) || endTags.found;
         }
         // ElevenLabs drops a request when the trainee turns out not to be done. The model stream
@@ -309,7 +311,7 @@ export function createApp(deps: AppDeps) {
         }
         sessionEnd ||= isClosingLine(said);
         if (sessionEnd && !said.trim()) say(FAREWELL[locale]);
-        else if (!said.trim()) say(VOICE_ERROR_LINE[locale]);
+        else if (!said.trim()) say(stopReason === "refusal" ? VOICE_DECLINE_LINE[locale] : VOICE_ERROR_LINE[locale]);
         // The session ends in character: ElevenLabs speaks the closing line, then hangs up.
         const hangUp = sessionEnd && turn.canEndCall;
         if (hangUp) write(chunk(id, created, provider.model, endCallDelta(locale)));
@@ -318,7 +320,7 @@ export function createApp(deps: AppDeps) {
         counter.count({ metric: "chat_turn", ...at });
         if (counselorLines === 1) counter.count({ metric: "session_started", ...at });
         if (sessionEnd) counter.count({ metric: "session_ended_by_client", ...at });
-        logger.info({ ...log, msg: "turn", ...(sessionEnd ? { sessionEnd: true } : {}), ...judged, inputTokens: usage.inputTokens, outputTokens: usage.outputTokens, ms: Date.now() - started });
+        logger.info({ ...log, msg: "turn", ...(sessionEnd ? { sessionEnd: true } : {}), ...judged, stopReason, inputTokens: usage.inputTokens, outputTokens: usage.outputTokens, ms: Date.now() - started });
       } catch (err) {
         if (abort.signal.aborted) {
           logger.info({ ...log, msg: "turn aborted", ms: Date.now() - started });

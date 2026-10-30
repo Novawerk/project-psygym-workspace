@@ -168,6 +168,12 @@ export const VOICE_ERROR_LINE: Record<Locale, string> = {
   en: "Sorry, I lost my train of thought. Could you say that again?",
 };
 
+/** Said when the model declines the turn: a call can't go silent, and the client just won't go there. */
+export const VOICE_DECLINE_LINE: Record<Locale, string> = {
+  zh: "这个我现在不太想说。",
+  en: "I don't really want to talk about that right now.",
+};
+
 /** OpenAI-style streaming chunks, the only shape ElevenLabs reads back. */
 export function chunk(id: string, created: number, model: string, delta: Record<string, unknown>, finish: string | null = null) {
   return JSON.stringify({ id, object: "chat.completion.chunk", created, model, choices: [{ index: 0, delta, finish_reason: finish }] });

@@ -6,7 +6,7 @@ import { loadConfig } from "../src/config.js";
 import { loadCases, loadPrompts } from "../src/content.js";
 import { MOCK_END_TRIGGER } from "../src/llm/mock.js";
 import type { ModelProvider, ModelRequest } from "../src/llm/types.js";
-import { SILENCE, TURN_LENGTHS, VOICE_ERROR_LINE, isClosingLine, lengthNote, turnLength, voiceTurn } from "../src/voice.js";
+import { SILENCE, TURN_LENGTHS, VOICE_DECLINE_LINE, VOICE_ERROR_LINE, isClosingLine, lengthNote, turnLength, voiceTurn } from "../src/voice.js";
 
 const cases = loadCases();
 const prompts = loadPrompts();
@@ -199,6 +199,15 @@ describe("POST /voice/llm/chat/completions", () => {
     const { app } = makeApp(VOICE_ENV, { providerFor: () => provider });
     const r = await chunks(await llm(app, llmBody([{ role: "user", content: "你好" }])));
     expect(r.text).toBe(VOICE_ERROR_LINE.zh);
+  });
+
+  it("a model that declines with nothing said gets an in-character line, not silence", async () => {
+    const declined = { message: { role: "assistant" as const, text: "", toolCalls: [] }, stopReason: "refusal" as const, usage: { inputTokens: 1, outputTokens: 0 } };
+    const provider = { name: "mock", model: "m", buildRequest: () => ({}), stream: async () => declined } as unknown as ModelProvider;
+    const { app } = makeApp(VOICE_ENV, { providerFor: () => provider });
+    const r = await chunks(await llm(app, llmBody([{ role: "user", content: "你想过用什么方法吗？" }])));
+    expect(r.text).toBe(VOICE_DECLINE_LINE.zh);
+    expect(r.finish).toBe("stop");
   });
 
   it("a request ElevenLabs drops is not counted as a turn, even when the model stream ends quietly", async () => {

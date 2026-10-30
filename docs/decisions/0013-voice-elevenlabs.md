@@ -136,8 +136,8 @@ cases, until the user says otherwise. Mainland availability is set aside (below)
 |---|---|---|
 | EU data residency | **Enterprise only.** A separate workspace, account and key at `eu.residency.elevenlabs.io`; our key is refused there. Data is stored in the EU; processing may still leave it (support, moderation, subprocessors), unless Zero Retention Mode is on too. Agents can be used there; existing ones are recreated | **Stay on Creator (the user, 2026-10-30).** The voice stays in the US |
 | Where the voice goes today | The United States (global environment) | |
-| DPA | [The DPA](https://elevenlabs.io/dpa) says it forms part of the agreement, and the SCCs count as signed when it takes effect. It doesn't say how a self-serve account gets it; the terms say it governs when you agree on behalf of an entity. The pricing page lists DPA terms only for Enterprise. **Nothing has been signed.** **Test first, sign later (the user, 2026-10-30).** Until it's signed, voice is for team tests with made-up material, not real users | Open: must close before real users |
-| Transfer basis | The DPA allows adequacy (the EU-US Data Privacy Framework) or SCCs. ElevenLabs' [DPF page](https://elevenlabs.io/eu-us-data-privacy-framework-policy) says it is certified; we haven't checked the official list or which entity it covers | Needs legal review |
+| DPA | [The DPA](https://elevenlabs.io/dpa) says it forms part of the agreement, and the SCCs count as signed when it takes effect. It doesn't say how a self-serve account gets it; the terms say it governs when you agree on behalf of an entity. The pricing page lists DPA terms only for Enterprise. **The user says it is signed (2026-10-30).** We haven't seen the document: contracting party and date are to be confirmed by the user, and nothing here should state them until then | Signed, per the user. Party and date open |
+| Transfer basis | The DPA allows adequacy (the EU-US Data Privacy Framework) or SCCs. The public DPA (8 April 2026) lists both and doesn't say which comes first. ElevenLabs' [DPF page](https://elevenlabs.io/eu-us-data-privacy-framework-policy) says it is certified; we haven't checked the official list or which entity it covers. The policy and consent screen stay silent on the basis until the signed copy shows it | Needs the signed DPA and legal review |
 | Training | [The terms](https://elevenlabs.io/terms-of-use) let ElevenLabs use content to improve its services, with an opt-out under **Data use** in the account settings, from then on. We can't read that setting through the API. **Off, as the user reports (2026-10-30).** Not something we can confirm through the API | Decided |
 | The other transfer | The text ElevenLabs hears goes through our server in Frankfurt to **DeepSeek in China**. For European users this is a harder transfer than the US one, and it's the same in typed sessions. An EU model would fix it; `CLIENT_LLM_*` already allows that. **Kept for now: the user, 2026-10-30, 「先保留 DeepSeek」.** V1 says so plainly | Decided |
 | Legal basis for the voice | Consent, separately (V1), withdrawable under Me. Whether a voice counts as article 9 data needs legal review | Needs legal review |
@@ -230,7 +230,9 @@ transfer of personal information, and ElevenLabs is not a filed service in China
 Setting the three variables in production makes the entry appear for everyone, on existing builds
 too. So, in order:
 
-1. Sign the DPA and fill in the transfer basis (plan: Creator; training: off, per the user).
+Off by default until all of these hold: a real phone test has passed, the DeepSeek transfer has a legal answer, and the user says to switch it on.
+
+1. Confirm the DPA's party and date, and fill in the transfer basis (plan: Creator; training: off, per the user).
 2. Merge and publish the privacy policy, labels, Data safety form and review notes (`docs/release/`).
 3. Create a production agent with the settings above, pointing at `https://psygym-api.novawerk.io/voice/llm`.
    The agent used so far is a test agent on a laptop tunnel.
@@ -248,12 +250,59 @@ voice tag, and the session saved on the phone.
 so the trainee's turns were sent as text through the SDK (`VoiceTestAudio`). Speech to text was
 tested separately over the WebSocket with spoken audio.
 
+On an iOS simulator, a debug build against the real agent: consent, connect, the client's text and
+state, the clock, muting, leaving, and the report page. This found a real bug that compiling hid: the
+Swift SDK's `startConversation` overwrites `onAgentReady` and `onDisconnect` from the config with nil
+unless they are passed to the call itself, so the clock stood still and a dropped call went unseen.
+Fixed. The simulator's turns had no spoken counselor.
+
+## Long turns and cost, measured (2026-10-30)
+
+Over a real call: 1,892 characters took about 6 min 20 s, about 5 a second, and played to the end.
+Cut in 14 s into a long reply, ElevenLabs sends back only the part spoken (67 characters, ending
+"..."), so the next reply follows on. An average turn is about 300 characters, so a 20-minute call
+holds about 18 turns, and the longest turn takes a third of it. 800 s of calls cost about 5,500
+credits: about 415 a minute, 8,300 for 20 minutes, so Creator's 131,000 is about 16 full calls.
+
+The voice model (`eleven_v3_conversational`), checked by reading its speech back through Scribe on
+made-up lines: 「哈哈」 comes out as a laugh, 「嗯」 as 嗯, 「……」 a little longer than a comma, and
+digits go wrong (2点半 reads as 二点半), so numbers stay in Chinese characters. The prompts already
+give that: no digits in 1,700 turns.
+
+## A larger sample, and other models (2026-10-30)
+
+882 turns over 32 sessions and two cases, DeepSeek. Bootstrapped by session, 95%: under 30 characters
+16–23% (real 18%), max 1,892: both fine, so the small run's gaps there were noise. Real gaps: 我觉得
+2.5 (2.3–2.6, real 4.2), 感觉 2.8 (2.6–2.9, real 3.6), 嗯 0.2, 怎么说 0.1, 反正 0.5 (real 1.5), 哈哈 0.
+其实 3.9 and 不对 0.5 run high. Sessions are far more alike than real ones: 就是 7.7–11.4, against
+1.3–20.6 across the six dialogues. Clauses run shorter at the long end (p90 14 against 17).
+
+Replacing the word counts with a way of talking drawn per session and per turn brought 嗯, 怎么说 and
+哈哈 close and halved 但是 and 然后 on Claude. It isn't in the code: tuning stopped for the release, and
+the DeepSeek run was lost to the empty balance.
+
+Claude on the same path, about 90 turns each, with that draft prompt, so read this for the models and
+not for the prompt:
+
+| | DeepSeek | Haiku 5.5 | Sonnet 5.5 |
+|---|---|---|---|
+| First word, thinking on, low effort | | 3.2 s | 1.1 s |
+| First word, thinking off (`ANTHROPIC_THINKING=off`) | 0.8 s | 0.95 s | 1.7 s |
+| Cost per turn (upper bound, no cache discount) | | $0.0016 | $0.030 |
+| Refusals, about 28 probes included | | 0 | 0 |
+| Method or trauma detail in probes | | none | none |
+
+ElevenLabs drops the request after about 3.8 s without a first word and ends the call
+(`custom_llm_error`), so Haiku with thinking on can't carry a call. A model that declines with
+nothing said now speaks an in-character line; no real refusal has been seen, so that path is tested
+with a stub only. Which model to use is the user's call.
+
 ## Not verified
 
 - A real phone: microphone, echo cancellation with the speaker on, Bluetooth, how the reply sounds.
 - Interrupting by voice in the app. Seen over the WebSocket only.
-- iOS at run time: the app and the Swift bridge build for the simulator, but no call has been made
-  on an iPhone or a simulator. The build needs `ONLY_ACTIVE_ARCH=YES` on Apple silicon, as before.
+- A call on an iPhone, and on iOS a spoken counselor turn, a client hang-up or a dropped line.
+  The build needs `ONLY_ACTIVE_ARCH=YES` on Apple silicon, as before.
 - `END_SESSION_JUDGE=on` over voice.
 - Whether the client's voice and manner feel right, and whether the safety rules hold up over
   speech beyond the checks above: this needs people listening, and the psychologists' judgement.

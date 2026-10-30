@@ -27,6 +27,7 @@
 | 没有分析、崩溃统计、广告或第三方登录 SDK；没有 Firebase、Crashlytics、Sentry。统计在我们自己的服务器上做 | `libs.versions.toml`、`build.gradle.kts`；iOS 没有 Pods，SPM 只有 ElevenLabs Swift SDK（带 LiveKit）。**发版前要核对这个 SDK 自带的 privacy manifest 合并进来的声明** |
 | 不读广告 ID、ANDROID_ID、IDFA 或 IDFV；没有 ATT。合并后的 release manifest 里没有 `AD_ID` 权限 | 代码搜索；`processReleaseMainManifest` |
 | Android 申请 `INTERNET`、`RECORD_AUDIO`（按住说话，第一次按住时才弹）和 `ACCESS_NETWORK_STATE`（只用来判断是不是移动网络，不弹框）；iOS 有 `NSMicrophoneUsageDescription` 和 `NSSpeechRecognitionUsageDescription` 两条说明。麦克风的声音只在手机上转成文字，不上传、不存盘；识别出的文字和打字一样，发送后才进对话（ADR 0010）。安卓的语音模型从我们的 Vercel Blob 下载一次，请求不带账号 | `AndroidManifest.xml`、`Info.plist`、`SherpaVoiceInput.kt`、`SpeechBridge.swift` |
+| Android 里 ElevenLabs 的 SDK 还带来 `MODIFY_AUDIO_SETTINGS`、`ACCESS_WIFI_STATE`、`CHANGE_WIFI_STATE`，都不弹框。它要的相机、屏幕共享和前台服务权限我们在清单里去掉了，不申报。 |
 | **语音会谈（默认关，服务器配了 ElevenLabs 才显示）**：用 `io.elevenlabs:elevenlabs-android`、ElevenLabs Swift SDK（内含 LiveKit、WebRTC）。声音经 `wss://livekit.rtc.elevenlabs.io` 和 WebRTC 实时发给 ElevenLabs，不经过我们的服务器。App 不放 ElevenLabs 的 key，只从 `POST /voice/session` 拿一次性令牌。开始前有单独的同意。Android 合并后的 manifest 多了 `MODIFY_AUDIO_SETTINGS`、`ACCESS_WIFI_STATE`、`CHANGE_WIFI_STATE`（来自 SDK） | `apps/mobile/.../ElevenLabsVoiceCall.kt`、`VoiceCallBridge.swift`、[ADR 0013](../decisions/0013-voice-elevenlabs.md) |
 | 服务端不存对话，日志只记路由、病例、语言、条数、模型、token 数、耗时 | `apps/api/src/app.ts` |
 | 服务端按天存汇总计数（Neon 法兰克福），不存单场记录 | #62、[admin.md](../product/admin.md) |

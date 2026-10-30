@@ -64,7 +64,7 @@ adb shell run-as io.novawerk.psygym sh -c 'cat > files/voice-call-test.txt'   # 
 
 顺序不能反。详细见 [ADR 0013](../decisions/0013-voice-elevenlabs.md) 的「打开之前」。
 
-1. 决定用哪个套餐，签 ElevenLabs 的 DPA。
+1. 确认 ElevenLabs DPA 的合同主体和日期（用户说已签好，2026-10-30），填上传输依据。
 2. 隐私政策、隐私标签、数据安全表、Review Notes 按 `docs/release/` 改好并提交。
 3. 建生产用的 agent，把 Custom LLM 指向生产环境的地址。
 4. 在生产环境配三个环境变量。配上的那一刻入口就会出现。

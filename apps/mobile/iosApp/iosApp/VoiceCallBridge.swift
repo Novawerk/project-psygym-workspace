@@ -74,25 +74,29 @@ final class VoiceCallBridge: NSObject, AppleVoiceCallBridge {
                 agentOverrides: AgentOverrides(language: Language(rawValue: language)),
                 customLlmExtraBody: extraBody,
                 dynamicVariables: dynamicVariables,
-                onAgentReady: { onMain { $0.connected() } },
-                onDisconnect: { reason in
-                    let end: Int32
-                    if clientLeft.value {
-                        end = AppleVoiceCallBridgeCompanion.shared.END_CLIENT_LEFT
-                    } else if case .user = reason {
-                        end = AppleVoiceCallBridgeCompanion.shared.END_HUNG_UP
-                    } else {
-                        end = AppleVoiceCallBridgeCompanion.shared.END_DROPPED
-                    }
-                    onMain { $0.ended(KotlinInt(int: end)) }
-                },
                 onAgentResponse: { text, _ in onMain { $0.client(text) } },
                 onAgentResponseCorrection: { original, corrected, _ in onMain { $0.corrected(original, corrected) } },
                 onUserTranscript: { text, _ in onMain { $0.counselor(text) } },
                 onAgentToolResponse: { event in if event.toolName == "end_call" { clientLeft.value = true } }
             )
             do {
-                let started = try await ElevenLabs.startConversation(conversationToken: token, config: config)
+                // These two go here: this call overwrites the ones in the config, with nil by default.
+                let started = try await ElevenLabs.startConversation(
+                    conversationToken: token,
+                    config: config,
+                    onAgentReady: { onMain { $0.connected() } },
+                    onDisconnect: { reason in
+                        let end: Int32
+                        if clientLeft.value {
+                            end = AppleVoiceCallBridgeCompanion.shared.END_CLIENT_LEFT
+                        } else if case .user = reason {
+                            end = AppleVoiceCallBridgeCompanion.shared.END_HUNG_UP
+                        } else {
+                            end = AppleVoiceCallBridgeCompanion.shared.END_DROPPED
+                        }
+                        onMain { $0.ended(KotlinInt(int: end)) }
+                    }
+                )
                 guard self.call == mine else {
                     await started.endConversation()
                     return

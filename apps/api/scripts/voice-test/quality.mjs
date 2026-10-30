@@ -63,9 +63,19 @@ async function session() {
   return turns;
 }
 
-const all = (await Promise.all(Array.from({ length: +sessions }, session))).flat();
-if (out) writeFileSync(out, JSON.stringify(all, null, 1));
-const a = all.slice().filter((t) => t.a);
+// A few at a time: more and DeepSeek answers 429, which comes back as the error line.
+const runs = [];
+const worker = async () => {
+  while (runs.length < +sessions) {
+    const slot = runs.push(null) - 1;
+    runs[slot] = await session();
+  }
+};
+await Promise.all(Array.from({ length: +(process.env.PARALLEL ?? 4) }, worker));
+if (out) writeFileSync(out, JSON.stringify(runs, null, 1));
+const all = runs.flat();
+const a = all.filter((t) => t.a && !t.a.includes("走神"));
+console.log(`${all.length - a.length} error lines left out`);
 const L = a.map((t) => [...t.a].length).sort((x, y) => x - y);
 const q = (p) => L[Math.min(L.length - 1, Math.floor(p * L.length))];
 const text = a.map((t) => t.a).join("");

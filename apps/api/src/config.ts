@@ -27,6 +27,7 @@ const EnvSchema = z.object({
   LLM_MAX_OUTPUT_TOKENS: z.coerce.number().int().positive().optional(),
   /** Anthropic only: low | medium | high | xhigh | max */
   ANTHROPIC_EFFORT: z.enum(["low", "medium", "high", "xhigh", "max"]).default("medium"),
+  ANTHROPIC_THINKING: z.enum(["adaptive", "off"]).default("adaptive"),
 
   // ── Per-role overrides ──
   CLIENT_LLM_PROVIDER: optionalProvider,
@@ -108,6 +109,8 @@ export interface LlmConfig {
   apiKey: string | undefined;
   maxOutputTokens: number;
   anthropicEffort: "low" | "medium" | "high" | "xhigh" | "max";
+  /** "off" for voice sessions: thinking delays the first word past what ElevenLabs waits for. */
+  anthropicThinking?: "adaptive" | "off";
 }
 
 /** A role either has a usable model config, or a reason why not (→ 503 model_unavailable). */
@@ -225,6 +228,7 @@ function roleLlm(role: Role, e: Env, invalid: Set<string>): RoleLlm {
       apiKey,
       maxOutputTokens: e.LLM_MAX_OUTPUT_TOKENS ?? defaults.maxOutputTokens,
       anthropicEffort: e.ANTHROPIC_EFFORT,
+      anthropicThinking: e.ANTHROPIC_THINKING,
     },
   };
 }
