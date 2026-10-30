@@ -1,6 +1,5 @@
 package io.novawerk.psygym.ui.pages.voice
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -11,7 +10,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,9 +17,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -63,7 +58,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
-import io.novawerk.psygym.domain.model.Message
 import io.novawerk.psygym.domain.voice.VoiceCallEnd
 import io.novawerk.psygym.resources.Res
 import io.novawerk.psygym.resources.back
@@ -100,8 +94,6 @@ import io.novawerk.psygym.ui.components.PrimaryButton
 import io.novawerk.psygym.ui.components.SecondaryButton
 import io.novawerk.psygym.ui.components.ShieldAlert
 import io.novawerk.psygym.ui.locale.rememberApiLocale
-import io.novawerk.psygym.ui.pages.practice.Bubble
-import io.novawerk.psygym.ui.pages.practice.ChatItem
 import io.novawerk.psygym.ui.pages.practice.EndSheet
 import io.novawerk.psygym.ui.pages.practice.LiveChip
 import io.novawerk.psygym.ui.pages.practice.LiveSheet
@@ -131,8 +123,6 @@ fun VoiceScreen(
     val locale = rememberApiLocale()
     var showEndSheet by rememberSaveable { mutableStateOf(false) }
     var showLive by rememberSaveable { mutableStateOf(false) }
-    val listState = rememberLazyListState()
-    val messages = viewModel.visibleMessages
     val over = viewModel.phase == VoicePhase.Over
     val connecting = viewModel.phase == VoicePhase.Connecting
 
@@ -141,13 +131,9 @@ fun VoiceScreen(
     }
     KeepScreenOn()
     // Leaving the app, a phone call or "Need help?": hang up. A client talking over the help page
-    // is wrong (principles §1), and a call nobody hears still costs minutes. The text stays.
+    // is wrong (principles §1), and a call nobody hears still costs minutes.
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.leave() }
     LaunchedEffect(showEndSheet) { viewModel.holdMic(showEndSheet) }
-    LaunchedEffect(messages.size, messages.lastOrNull()?.text?.length, viewModel.ended) {
-        val count = listState.layoutInfo.totalItemsCount
-        if (count > 0) listState.animateScrollToItem(count - 1)
-    }
     // While it's connecting nothing has started: back just goes back.
     BackHandler(enabled = !showEndSheet && !connecting) { showEndSheet = true }
 
@@ -226,10 +212,6 @@ fun VoiceScreen(
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            // Gone when the client has left: the moment belongs to the text (V5).
-            AnimatedVisibility(!viewModel.clientEnded && !viewModel.atLimit && !(over && viewModel.canReport)) {
-                CallStatus(viewModel, caseIndex)
-            }
             if (viewModel.live.chipVisible(viewModel.turns, liveEnabled, viewModel.clientEnded)) {
                 LiveChip(
                     notes = viewModel.live,
@@ -243,21 +225,15 @@ fun VoiceScreen(
                     modifier = Modifier.padding(start = 16.dp),
                 )
             }
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.Bottom),
-            ) {
-                items(messages) { message: Message -> Bubble(ChatItem(message)) }
-                if (viewModel.clientEnded) {
-                    item { SystemLine(stringResource(Res.string.practice_client_ended)) }
-                }
-                if (viewModel.atLimit) {
-                    item { SystemLine(stringResource(Res.string.practice_limit_reached)) }
-                }
+            // A call, not a chat: no running text. The transcript goes on to the report and to typing.
+            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                CallStatus(viewModel, caseIndex)
+            }
+            Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (viewModel.clientEnded) SystemLine(stringResource(Res.string.practice_client_ended))
+                if (viewModel.atLimit) SystemLine(stringResource(Res.string.practice_limit_reached))
                 viewModel.error?.let { error ->
-                    item { ErrorCard(error = error, onRetry = { viewModel.retry(locale) }, onOtherCase = onOtherCase) }
+                    ErrorCard(error = error, onRetry = { viewModel.retry(locale) }, onOtherCase = onOtherCase)
                 }
             }
         }

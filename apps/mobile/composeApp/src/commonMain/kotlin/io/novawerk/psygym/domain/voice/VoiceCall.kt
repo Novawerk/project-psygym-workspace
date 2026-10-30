@@ -53,73 +53,11 @@ interface VoiceCall {
     fun hangUp()
 }
 
-/**
- * How much of the client's reply to show. ElevenLabs sends the text as soon as it has it, well ahead
- * of the voice, and neither SDK says where the voice is. So we go at the speed of speech while it
- * plays, and show what's left when it stops. Only what the screen shows: the transcript stays whole.
- */
-class VoiceCaption {
-    /** Characters shown of the reply being spoken. */
-    var shown = 0
-        private set
-    private var pace = 0.0
-    private var voiceStarted = false
-    private var quietMillis = 0L
-
-    fun newReply() {
-        shown = 0
-        pace = 0.0
-        voiceStarted = false
-        quietMillis = 0
-    }
-
-    /** More of the same reply after everything was shown: the client went on after a silence. */
-    fun goOnFrom(length: Int) {
-        newReply()
-        shown = length
-        pace = length.toDouble()
-    }
-
-    /** [millis] have passed; the reply is [length] long so far. */
-    fun tick(millis: Long, speaking: Boolean, length: Int, charsPerSecond: Double) {
-        if (speaking) {
-            voiceStarted = true
-            quietMillis = 0
-            pace += charsPerSecond * millis / 1000
-            shown = maxOf(shown, minOf(length, pace.toInt()))
-        } else if (length > shown) {
-            quietMillis += millis
-            // A long reply can pause between pieces; text with no voice at all still gets shown.
-            if (quietMillis >= if (voiceStarted) VOICE_STOPPED_MILLIS else NO_VOICE_MILLIS) shown = length
-        }
-    }
-
-    /** Cut off, ended, or the trainee spoke: everything received is shown. */
-    fun finish() {
-        shown = Int.MAX_VALUE
-    }
-
-    companion object {
-        private const val VOICE_STOPPED_MILLIS = 1_000L
-        private const val NO_VOICE_MILLIS = 2_500L
-    }
-}
-
-/** The transcript of a call, in the shape `/supervision` takes. */
+/** The transcript of a call, in the shape `/supervision` takes. Never on screen during the call. */
 object VoiceTranscript {
     /** What ElevenLabs sends as the trainee's turn when they stay quiet. Not something they said. */
     private val SILENT = Regex("^[.。…·\\s]+$")
     private val HAN = Regex("[\\u3400-\\u9fff]")
-
-    /** Measured on the real voice: about 5 Chinese characters a second. */
-    fun charsPerSecond(text: String): Double = if (HAN.containsMatchIn(text)) 5.0 else 15.0
-
-    /** [messages] as the screen shows them, with only [shown] characters of a reply still being spoken. */
-    fun visible(messages: List<Message>, shown: Int): List<Message> {
-        val last = messages.lastOrNull()
-        if (last?.role != Role.Client || shown >= last.text.length) return messages
-        return if (shown <= 0) messages.dropLast(1) else messages.dropLast(1) + last.copy(text = last.text.take(shown))
-    }
 
     fun add(messages: List<Message>, role: Role, heard: String): List<Message> {
         val text = heard.trim()

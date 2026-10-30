@@ -5,7 +5,6 @@ import io.novawerk.psygym.domain.model.Message
 import io.novawerk.psygym.domain.model.Role
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 class VoiceTranscriptTest {
     private val counselor = Role.Counselor
@@ -52,55 +51,5 @@ class VoiceTranscriptTest {
         assertEquals("第一段说完了。第二段说到一半", cut.single().text)
         // A piece we never saw changes nothing.
         assertEquals(both, VoiceTranscript.correct(both, "别的", "x"))
-    }
-
-    @Test
-    fun captionFollowsTheVoiceNotTheText() {
-        val caption = VoiceCaption()
-        caption.newReply()
-        repeat(10) { caption.tick(100, speaking = true, length = 200, charsPerSecond = 5.0) }
-        assertEquals(5, caption.shown)
-        caption.tick(100, speaking = false, length = 200, charsPerSecond = 5.0)
-        assertEquals(5, caption.shown) // a pause between pieces
-        repeat(10) { caption.tick(100, speaking = false, length = 200, charsPerSecond = 5.0) }
-        assertEquals(200, caption.shown)
-    }
-
-    @Test
-    fun captionNeverGoesBackAndNeverOutrunsTheText() {
-        val caption = VoiceCaption()
-        caption.newReply()
-        repeat(100) { caption.tick(100, speaking = true, length = 20, charsPerSecond = 5.0) }
-        assertEquals(20, caption.shown)
-        repeat(10) { caption.tick(100, speaking = true, length = 40, charsPerSecond = 5.0) }
-        assertTrue(caption.shown in 20..40)
-    }
-
-    @Test
-    fun textWithNoVoiceStillGetsShown() {
-        val caption = VoiceCaption()
-        caption.newReply()
-        repeat(24) { caption.tick(100, speaking = false, length = 30, charsPerSecond = 5.0) }
-        assertEquals(0, caption.shown)
-        caption.tick(100, speaking = false, length = 30, charsPerSecond = 5.0)
-        assertEquals(30, caption.shown)
-    }
-
-    @Test
-    fun goingOnAfterASilenceStartsWhereItStopped() {
-        val caption = VoiceCaption()
-        caption.finish()
-        caption.goOnFrom(30)
-        repeat(10) { caption.tick(100, speaking = true, length = 60, charsPerSecond = 5.0) }
-        assertEquals(35, caption.shown)
-    }
-
-    @Test
-    fun visibleHidesOnlyWhatIsNotSpokenYet() {
-        val text = listOf(Message(role = Role.Counselor, text = "你好"), Message(role = Role.Client, text = "今天有点累"))
-        assertEquals(listOf(text[0]), VoiceTranscript.visible(text, 0))
-        assertEquals("今天", VoiceTranscript.visible(text, 2).last().text)
-        assertEquals(text, VoiceTranscript.visible(text, Int.MAX_VALUE))
-        assertEquals(text.take(1), VoiceTranscript.visible(text.take(1), 0))
     }
 }
