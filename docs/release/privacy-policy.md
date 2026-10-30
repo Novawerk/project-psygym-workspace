@@ -2,7 +2,7 @@
 
 > 内容按已定的决定写（[safety.md](../safety.md)、[0005](../decisions/0005-local-practice-history.md)、[open-decisions.md](../product/open-decisions.md) D3、D6、D7、D8，[login.md](../product/login.md)、[ADR 0008](../decisions/0008-sign-in.md)）。官网 `psygym.novawerk.io/privacy` 直接读这个文件。App 里的隐私说明页（P3，[copy.md](../product/copy.md)）是短版，意思要和这里一致。
 
-生效日期：2026-10-30　·　版本：1.0
+生效日期：2026-10-31　·　版本：1.1
 
 ---
 
@@ -18,10 +18,10 @@
 
 | 数据 | 去哪 | 存多久 |
 |------|------|--------|
-| **练习对话**：你和 AI 来访者的每一句 | 只有你在 App 里同意之后才发送。每一轮，App 把整段对话发到我们的服务器，服务器转给第三方 AI 服务 DeepSeek（在中国）生成回复。请求里有对话、病例内容和界面语言，没有你的邮箱和账号 ID。 | 我们的服务器不保存，日志里也不记录对话内容。DeepSeek 按它自己的隐私政策处理（见下方「第三方」）。 |
+| **练习对话**：你和 AI 来访者的每一句 | 只有你在 App 里同意之后才发送。每一轮，App 把整段对话发到我们的服务器，服务器转给第三方 AI 服务 Anthropic（美国公司）生成回复。请求里有对话、病例内容和界面语言，没有你的邮箱和账号 ID。 | 我们的服务器不保存，日志里也不记录对话内容。Anthropic 按它自己的规定处理（见下方「第三方」）。 |
 | **语音会谈的声音**（只在你选了语音会谈并同意后） | 通话时实时发给 ElevenLabs（美国公司）转成文字，来访者的声音也由它合成。声音不经过我们的服务器。 | 我们不接触、不保存声音。我们设置 ElevenLabs 不录音（`record_voice` 关）。 |
-| **语音会谈的转写** | ElevenLabs 把你说的话转成文字，经我们的服务器交给 DeepSeek 写回复；转写也实时发回 App，用来显示和生成督导报告。 | 我们的服务器不保存。我们设置 ElevenLabs 在通话结束后删除转写；删除后，它的调试和审核日志里可能还留有相关数据，备份最长保留 30 天。我们的套餐没有零保留模式。 |
-| **督导报告** | 由 DeepSeek 根据对话生成，经我们的服务器发回 App。 | 同上。 |
+| **语音会谈的转写** | ElevenLabs 把你说的话转成文字，经我们的服务器交给 Anthropic 写回复；转写也实时发回 App，用来显示和生成督导报告。 | 我们的服务器不保存。我们设置 ElevenLabs 在通话结束后删除转写；删除后，它的调试和审核日志里可能还留有相关数据，备份最长保留 30 天。我们的套餐没有零保留模式。 |
+| **督导报告** | 由 Anthropic 的模型根据对话生成，经我们的服务器发回 App。 | 同上。 |
 | **练习记录**：每场的病例编号、开始和结束时间、对话、报告和技能标签 | 只存在你的手机上，App 自己的存储空间里。不上传，不进 iCloud 或 Google 云备份，也不跟着换机迁移。 | 存到你删除为止。可以在「我的」里关掉保存、全部删除，也可以单场删除。卸载 App 就全部删除。记录**没有加密**，保存在 App 的私有空间里。 |
 | **报告评价**：👍 / 👎，加你写的一句话（最多 500 字），以及病例编号、界面语言 | 只有你主动点了才发。经我们的服务器转到我们内部的 Slack 频道（第三方服务）。不带对话。 | 留在 Slack 频道里，用来改进 App。你可以发邮件让我们删除。 |
 | **举报**：你举报的那一段 AI 内容（一条来访者回复，或报告里的一段），举报原因，你写的一句话（最多 500 字），以及病例编号、界面语言 | 只有你主动举报才发。发送前 App 会把要发的那一段给你看。经我们的服务器转到我们内部的 Slack 频道。**只发这一段，不发这场会谈的其余内容。** | 留在 Slack 频道里，用来改进提示词和安全边界。你可以发邮件让我们删除。 |
@@ -39,7 +39,7 @@
 
 - 账号只用邮箱。不收集姓名、手机号、位置、通讯录、照片，也不用第三方账号登录。
 - 没有广告，没有分析或崩溃统计 SDK，不追踪你，也不把数据卖给任何人。我们自己只在服务器上做上面那种汇总统计和假名的活跃人数统计。
-- 我们自己不用你的对话训练模型。DeepSeek 的 API 条款没有写明会不会用（见下方「第三方」）。
+- 我们自己不用你的对话训练模型。Anthropic 说商业 API 的数据不用于训练，除非客户明确允许。
 
 ### 请不要输入真实来访者的信息
 
@@ -53,7 +53,7 @@
 
 | 服务 | 做什么 | 在哪 |
 |------|--------|------|
-| DeepSeek（杭州深度求索人工智能基础技术研究有限公司） | 生成来访者回复和督导报告。收到对话、病例内容和界面语言。按[它的隐私政策](https://cdn.deepseek.com/policies/en-US/deepseek-privacy-policy.html)处理：政策写明数据存放在中国，我们不控制它保留多久。我们和它之间没有单独的数据处理协议，所以不能保证它提供和我们相同的保护，请不要输入任何能认出一个人的信息。 | 中国 |
+| Anthropic（Anthropic, PBC，旧金山） | 生成来访者回复和督导报告。收到对话、病例内容和界面语言。按[它的说明](https://privacy.claude.com/en/articles/7996866-how-long-do-you-store-my-organization-s-data)，商业 API 的输入和输出在 30 天内删除；被自动系统标记为违规的内容最长留 2 年，法律要求时可能更久。请不要输入任何能认出一个人的信息。 | 美国。对欧盟用户属于数据出境。 |
 | ElevenLabs（Eleven Labs Inc.，纽约） | 语音会谈：把声音转成文字，合成来访者的声音 | 美国。对欧盟用户属于数据出境。ElevenLabs 的隐私政策写明数据转到美国存储；欧盟、英国和瑞士用户的相关主体是 ElevenLabs Poland sp. z o.o. |
 | Vercel | 托管我们的服务器 | 欧盟（法兰克福） |
 | Neon | 数据库，存账号（邮箱、注册时间、批次、会话哈希）和统计 | 欧盟（法兰克福） |
@@ -68,7 +68,7 @@
 
 你也可以随时在 App 里删除本机的练习记录。我们的服务器本来就不保存对话，所以没有可以导出或删除的对话。想要一份我们存的账号信息，写信到 info@novawerk.io。报告评价和举报不带账号和邮箱，我们认不出哪些是你的，所以没法按账号删除；如果你记得大概的时间和病例，写信告诉我们，我们尽量找。
 
-如果你在欧盟，你有 GDPR 规定的访问、更正、删除、限制处理、反对处理和向监管机构投诉的权利。处理依据：把对话发给 DeepSeek，是你在 App 里的明确同意（想撤回就停止使用并删除账号，之后不再发送）；账号、练习对话和督导报告，是为了提供你要求的服务；活跃人数的假名统计，基于我们改进服务的正当利益；报告评价和举报，基于你的同意（你主动点了才发）；语音会谈的声音，基于你的同意（开始前单独同意，可以在 App 里撤回）。如果你在中国大陆，你有《个人信息保护法》规定的权利。
+如果你在欧盟，你有 GDPR 规定的访问、更正、删除、限制处理、反对处理和向监管机构投诉的权利。处理依据：把对话发给 Anthropic，是你在 App 里的明确同意（想撤回就停止使用并删除账号，之后不再发送）；账号、练习对话和督导报告，是为了提供你要求的服务；活跃人数的假名统计，基于我们改进服务的正当利益；报告评价和举报，基于你的同意（你主动点了才发）；语音会谈的声音，基于你的同意（开始前单独同意，可以在 App 里撤回）。如果你在中国大陆，你有《个人信息保护法》规定的权利。
 
 ### 年龄
 
@@ -92,9 +92,9 @@ Operator: Novawerk. Contact: info@novawerk.io.
 
 | Data | Where it goes | How long |
 |------|---------------|----------|
-| **Practice conversation**: every message between you and the AI client | Sent only after you agree in the app. Each turn, the app sends the conversation so far to our server, which passes it to DeepSeek, a third-party AI service in China, to write the reply. The request holds the conversation, the case text and your interface language, not your email or account ID. | Our server doesn't store it or log its text. DeepSeek handles it under its own privacy policy (see "Third parties"). |
+| **Practice conversation**: every message between you and the AI client | Sent only after you agree in the app. Each turn, the app sends the conversation so far to our server, which passes it to Anthropic, a third-party AI service run by a US company, to write the reply. The request holds the conversation, the case text and your interface language, not your email or account ID. | Our server doesn't store it or log its text. Anthropic handles it under its own rules (see "Third parties"). |
 | **Voice in a voice session** (only if you choose a voice session and agree) | Sent live to ElevenLabs (a US company) during the call to be turned into text; ElevenLabs also makes the client's voice. Your voice doesn't pass through our server. | We never receive or store your voice. We've set ElevenLabs not to record calls (`record_voice` off). |
-| **Voice-session transcript** | ElevenLabs turns what you say into text, which goes through our server to DeepSeek to write the reply; the transcript also comes back to the app live, to show it and to write the report. | Our server doesn't store it. We've set ElevenLabs to delete the transcript after the call; after deletion its debugging and moderation logs may still hold related data, and backups last up to 30 days. Our plan has no zero-retention mode. |
+| **Voice-session transcript** | ElevenLabs turns what you say into text, which goes through our server to Anthropic to write the reply; the transcript also comes back to the app live, to show it and to write the report. | Our server doesn't store it. We've set ElevenLabs to delete the transcript after the call; after deletion its debugging and moderation logs may still hold related data, and backups last up to 30 days. Our plan has no zero-retention mode. |
 | **Supervision report** | Written by the AI model service from the conversation, sent back to the app through our server. | Same as above. |
 | **Practice history**: case id, start and end time, messages, report and skill tags for each session | Only on your phone, in the app's own storage. Not uploaded, not in iCloud or Google cloud backups, not moved to a new phone. | Until you delete it. Turn saving off or delete everything under Me; delete a single session from your history. Uninstalling the app deletes everything. Records are **not encrypted**; they sit in the app's private storage. |
 | **Report rating**: 👍 / 👎, the line you write (up to 500 characters), the case id and interface language | Only when you tap. Sent through our server to our internal Slack channel (a third-party service). The conversation is never included. | Kept in the Slack channel to improve the app. Email us to have it deleted. |
@@ -113,7 +113,7 @@ Operator: Novawerk. Contact: info@novawerk.io.
 
 - Accounts use email only. We don't collect your name, phone number, location, contacts or photos, and there is no third-party sign-in.
 - No ads, no analytics or crash-reporting SDKs, no tracking, no selling of data. On our own server we only keep the totals and the pseudonymous active-user counts described above.
-- We don't use your conversations to train models ourselves. DeepSeek's API terms don't say whether it does (see "Third parties").
+- We don't use your conversations to train models ourselves. Anthropic says commercial API data isn't used for training unless the customer expressly allows it.
 
 ### Please don't enter real client information
 
@@ -127,7 +127,7 @@ A voice session is optional and separate from typing and hold to talk. The app e
 
 | Service | What for | Where |
 |---------|----------|-------|
-| DeepSeek (Hangzhou DeepSeek Artificial Intelligence Co., Ltd.) | Writes client replies and supervision reports. Receives the conversation, the case text and your interface language. It handles them under [its privacy policy](https://cdn.deepseek.com/policies/en-US/deepseek-privacy-policy.html), which says data is stored in China, and we don't control how long it keeps them. We have no separate data processing agreement with it, so we can't promise it gives the same protection we do. Please don't enter anything that could identify a person. | China |
+| Anthropic (Anthropic, PBC, San Francisco) | Writes client replies and supervision reports. Receives the conversation, the case text and the interface language. Under [its own rules](https://privacy.claude.com/en/articles/7996866-how-long-do-you-store-my-organization-s-data), commercial API inputs and outputs are deleted within 30 days; content flagged by automated systems as a violation may be kept up to 2 years, and longer where the law requires. Please don't enter anything that could identify a person. | United States. For EU users this is a transfer outside the EU. |
 | ElevenLabs (Eleven Labs Inc., New York) | Voice sessions: turns voice into text, makes the client's voice | United States. For EU users this is a transfer outside the EU. ElevenLabs' privacy policy says data is transferred to the US for storage; for the EU, UK and Switzerland the entity is ElevenLabs Poland sp. z o.o. |
 | Vercel | Hosts our server | EU (Frankfurt) |
 | Neon | Database for accounts (email, sign-up date, batch, session hashes) and counts | EU (Frankfurt) |
@@ -142,7 +142,7 @@ We only send them what the feature needs.
 
 You can also delete practice history in the app at any time. Our server doesn't keep conversations, so there are none to export or delete. For a copy of the account data we hold, email info@novawerk.io. Ratings and reports don't carry your account or email, so we can't delete them by account; if you remember the rough time and case, write to us and we'll try to find them.
 
-In the EU you have the GDPR rights of access, rectification, erasure, restriction, objection and to complain to a supervisory authority. Legal basis: sending the conversation to DeepSeek, your explicit consent in the app (to withdraw it, stop using the app and delete your account; nothing more is sent); your account, conversations and reports, to provide the service you ask for; pseudonymous active-user counts, our legitimate interest in improving the service; report ratings and reports, your consent (sent only when you tap); your voice in a voice session, your consent (asked separately before you start, withdrawable in the app). In mainland China you have the rights under the Personal Information Protection Law.
+In the EU you have the GDPR rights of access, rectification, erasure, restriction, objection and to complain to a supervisory authority. Legal basis: sending the conversation to Anthropic, your explicit consent in the app (to withdraw it, stop using the app and delete your account; nothing more is sent); your account, conversations and reports, to provide the service you ask for; pseudonymous active-user counts, our legitimate interest in improving the service; report ratings and reports, your consent (sent only when you tap); your voice in a voice session, your consent (asked separately before you start, withdrawable in the app). In mainland China you have the rights under the Personal Information Protection Law.
 
 ### Age
 
@@ -157,12 +157,11 @@ When this policy changes in substance, we update the date and ask you to confirm
 ## 正式上架前要解决（不进正式文本）
 
 - **运营者主体和地址。** 现在写 Novawerk（用户 2026-10-30 定）。App Store 卖家是个人账号，两者不一致；GDPR 还要求写明控制者的地址。
-- **AI 模型服务的数据所在地。** 生产环境用 DeepSeek 官方 API（没配 `LLM_BASE_URL`，走 `api.deepseek.com`），对话传到中国。对欧盟用户，这是 GDPR 第五章说的跨境传输。现在靠 App 里单独勾选的明确同意，它的 API 条款里没有 DPA。长期要换成欧盟托管或有 DPA 的服务商，这一条要团队定。
-- **AI 模型服务会不会保留对话、会不会拿来训练**：DeepSeek 的 API 条款（2026-04-29 版）没有写，政策里写的是我们现在查到的情况。换服务商时重写。
+- **AI 模型服务（Anthropic）。** 对话传到美国，对欧盟用户是 GDPR 第五章说的跨境传输。公司和 Anthropic 的 DPA 状态、传输依据（DPF 或 SCC）**待确认**，确认后写进正文并升版本。现在靠 App 里单独勾选的明确同意。
+- **切回 DeepSeek 时。** DeepSeek 的代码和配置保留作备选。真切回去，要同时改回同意页、这份政策和商店文案，升同意版本，请用户重新同意。不配置自动回退，否则数据会发给同意页没写的接收方（[ADR 0013](../decisions/0013-voice-elevenlabs.md)）。
 - **代码和这份政策是否一致**：登录版按 [login.md](../product/login.md) 和 [ADR 0008](../decisions/0008-sign-in.md) 写。发正式版前用当时的代码再核一遍，特别是：邀请码不入库只记批次、会话只存哈希、验证码用 HMAC、假名明细的删除时间。
 - **Resend 的发送日志保留期**：按 Resend 的政策核对后补具体天数。
 - **ElevenLabs（语音会谈打开前必须解决）：** 数据处理协议（DPA）用户说已签好（2026-10-30），**合同主体和日期待用户确认**，我们没看到文件。跨境传输的依据待确认：公开的 DPA（2026-04-08 版）同时列了 DPF 和 SCC，没说以哪个为准，要看签好的文件（确认后同意页和这份政策要写明，并升 `VOICE_CONSENT_VERSION`）。训练已关（用户，2026-10-30）。继续用 Creator 套餐，声音留在美国（用户，2026-10-30）。现在是 Creator 套餐，没有零保留模式；上面写的保留情况是 2026-10-30 实测的（见 [ADR 0013](../decisions/0013-voice-elevenlabs.md)）。声音算不算生物识别数据，要有人按 GDPR 第 9 条判断。
-- **这份政策先于语音功能合并时：** 政策已经是 1.0 版并在官网生效。语音会谈的几行写的是「选了才有」，功能关着时不影响别的用户；打开语音时要更新生效日期和版本，并在 App 里再请用户确认。
 - **匿名统计和时长**（[admin.md](../product/admin.md)）：上线时核对代码只存汇总、`durationSec` 只是一个数字。
 - **邀请码搬进数据库以后**（后台 Epic 2）：数据库会存邀请码的哈希和批次名称。到时「邀请码批次」那一行补一句「数据库存邀请码的哈希，用来作废和管理」。英文一起改。
 - **隐私政策的正式地址**：`psygym.novawerk.io/privacy`（官网直接读这个文件，见 [landing.md](../product/landing.md)）。

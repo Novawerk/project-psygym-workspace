@@ -132,7 +132,7 @@ fun VoiceScreen(
     var showEndSheet by rememberSaveable { mutableStateOf(false) }
     var showLive by rememberSaveable { mutableStateOf(false) }
     val listState = rememberLazyListState()
-    val messages = viewModel.messages
+    val messages = viewModel.visibleMessages
     val over = viewModel.phase == VoicePhase.Over
     val connecting = viewModel.phase == VoicePhase.Connecting
 

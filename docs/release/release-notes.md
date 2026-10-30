@@ -7,6 +7,34 @@
 
 版本号在 `apps/mobile/gradle/libs.versions.toml`。iOS 的 build number 由 Xcode Cloud 的 `CI_BUILD_NUMBER` 决定，只往上涨（`iosApp/ci_scripts/ci_post_clone.sh`）。
 
+## 0.4.0（versionCode 5）
+
+语音会谈。AI 改由美国的 Anthropic 生成，所有人要重新同意。
+
+### TestFlight · What to Test
+
+```
+聆镜 PSYGYM 是给新手心理咨询师的练习工具：AI 扮演来访者，练完由 AI 督导给反馈。来访者都是虚构的，这不是心理治疗。
+
+这一版改了：
+· 新增语音会谈：在病例页选「语音」，开始前有单独的说明。声音发给美国的 ElevenLabs。
+· 对话改发给美国的 Anthropic，「开始之前」页会再请你确认一次。
+
+想听的：说话自然吗？接得上吗？打断时停得快吗？在外放和耳机下都试试。
+
+问题和想法发到 info@novawerk.io。请不要输入或说出真实来访者的信息。
+
+聆镜 PSYGYM is a practice tool for new counselors: an AI plays the client, and an AI supervisor gives feedback afterwards. Every client is fictional. This is not therapy.
+
+What changed:
+· Voice sessions: pick "Voice" on the case page. A separate notice comes first. Your voice goes to ElevenLabs in the US.
+· The conversation now goes to Anthropic in the US, so "Before we start" asks you to confirm again.
+
+Please try: does it sound natural? Does it follow what you said? Does it stop quickly when you cut in? Try the speaker and headphones.
+
+Questions and ideas: info@novawerk.io. Please don't type or say anything about real clients.
+```
+
 ## 0.3.1（versionCode 4）
 
 0.3.0 没有通过 App 审核（2026-10-30）。这一版只改审核要求的内容，只发 iOS。

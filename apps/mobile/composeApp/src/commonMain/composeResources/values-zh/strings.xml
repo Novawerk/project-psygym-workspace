@@ -24,14 +24,14 @@
     <string name="onb_consent_1_body">这是给咨询师的练习工具，不给来访者用，不能在危机中提供帮助。如果你自己正在经历困难，请点下方「需⁠要⁠帮⁠助⁠？」。</string>
     <string name="onb_consent_2_title">来访者是虚构的。</string>
     <string name="onb_consent_2_body">由 AI 扮演。对话可能涉及抑郁、焦虑和消极念头。</string>
-    <string name="onb_consent_3_title">对话会发给 DeepSeek。</string>
-    <string name="onb_consent_3_body">为了生成来访者回复和督导反馈，我们会把你输入或说出的内容、之前的对话和界面语言，经我们的服务器发给第三方 AI 服务 DeepSeek（杭州深度求索人工智能基础技术研究有限公司，在中国）。我们不发你的邮箱和账号 ID，服务器也不保存对话。你在下方同意之后才会发送。</string>
+    <string name="onb_consent_3_title">对话会发给 Anthropic。</string>
+    <string name="onb_consent_3_body">为了生成来访者回复和督导反馈，我们会把你输入或说出的内容、之前的对话和界面语言，经我们的服务器发给第三方 AI 服务 Anthropic（美国公司）。我们不发你的邮箱和账号 ID，服务器也不保存对话。你在下方同意之后才会发送。</string>
     <string name="onb_consent_4_title">不要输入真实来访者的信息。</string>
     <string name="onb_consent_4_body">姓名、经历、任何能认出一个人的细节都不要。</string>
     <string name="onb_consent_5_title">督导反馈只供练习参考。</string>
     <string name="onb_consent_5_body">它由 AI 生成，不是资质评估，也不是临床意见。</string>
     <string name="onb_consent_check">我已了解，这是练习工具，不是治疗。</string>
-    <string name="onb_consent_ai_check">我同意把练习对话发给位于中国的 DeepSeek，用来生成回复和反馈。</string>
+    <string name="onb_consent_ai_check">我同意把练习对话发给美国的 Anthropic，用来生成回复和反馈。</string>
     <string name="onb_consent_accept">同意并继续</string>
     <string name="onb_link_privacy">隐私说明</string>
 
@@ -59,7 +59,7 @@
     <string name="brief_client">来访者</string>
     <string name="brief_setup">会谈设置</string>
     <string name="brief_setup_body">初次会谈 · 建议 15–30 轮 · 约 15 分钟 · 你随时可以结束。</string>
-    <string name="brief_content_note">这场会谈可能涉及抑郁、焦虑和消极念头。来访者是虚构的。对话会发给位于中国的 DeepSeek 生成回复，我们的服务器不保存。</string>
+    <string name="brief_content_note">这场会谈可能涉及抑郁、焦虑和消极念头。来访者是虚构的。对话会发给美国的 Anthropic 生成回复，我们的服务器不保存。</string>
     <string name="brief_start">开始会谈</string>
 
     <string name="practice_meta">第 %1$d 轮 · %2$s</string>
@@ -139,13 +139,13 @@
     <string name="settings_version">版本 %1$s</string>
 
     <string name="privacy_title">隐私说明</string>
-    <string name="privacy_vendor">DeepSeek</string>
+    <string name="privacy_vendor">Anthropic</string>
     <string name="privacy_q_where">对话去了哪里？</string>
-    <string name="privacy_a_where">你发的每一句，连同之前的对话，发到我们的服务器，再转给 %1$s 生成回复。它是第三方 AI 服务，由中国的杭州深度求索人工智能基础技术研究有限公司运营。我们不发你的邮箱和账号 ID。</string>
+    <string name="privacy_a_where">你发的每一句，连同之前的对话，发到我们的服务器，再转给 %1$s 生成回复。它是第三方 AI 服务，由美国公司 Anthropic, PBC 运营。我们不发你的邮箱和账号 ID。</string>
     <string name="privacy_q_store">你们存吗？</string>
     <string name="privacy_a_store">我们的服务器不保存对话，也不在日志里记录对话内容。</string>
     <string name="privacy_q_vendor">AI 模型服务存吗？</string>
-    <string name="privacy_a_vendor">它按自己的隐私政策处理对话。它的政策写明数据存放在中国。所以更不要输入真实来访者的信息。</string>
+    <string name="privacy_a_vendor">它按自己的规定处理对话：通常在 30 天内删除，被标记为违规的内容最长留 2 年，法律要求时可能更久。所以更不要输入真实来访者的信息。</string>
     <string name="privacy_q_device">手机上存吗？</string>
     <string name="privacy_a_device">存。每场练习的对话和报告存在这台手机上 App 自己的空间里，未加密，不上传，不进云备份。可以在「我的」里关掉保存或全部删除，也可以在练习记录里删除单场。卸载 App 就全部删除。</string>
     <string name="privacy_q_collect">你们收集什么？</string>
@@ -309,24 +309,24 @@
     <string name="brief_mode_text">打字</string>
     <string name="brief_mode_voice">语音</string>
     <string name="brief_start_voice">开始语音会谈</string>
-    <string name="brief_content_note_voice">这场会谈可能涉及抑郁、焦虑和消极念头。来访者是虚构的。你的声音会发给美国的 ElevenLabs，转出的文字发给位于中国的 DeepSeek 生成回复，我们的服务器不保存。</string>
-    <string name="brief_voice_note">你的声音会发给美国的 ElevenLabs，转出的文字发给位于中国的 DeepSeek 生成回复，我们的服务器不保存。</string>
+    <string name="brief_content_note_voice">这场会谈可能涉及抑郁、焦虑和消极念头。来访者是虚构的。你的声音会发给美国的 ElevenLabs，转出的文字发给美国的 Anthropic 生成回复，我们的服务器不保存。</string>
+    <string name="brief_voice_note">你的声音会发给美国的 ElevenLabs，转出的文字发给美国的 Anthropic 生成回复，我们的服务器不保存。</string>
     <string name="voice_consent_title">语音会谈前，先说清楚</string>
     <string name="voice_consent_1_label">发给谁</string>
     <string name="voice_consent_1_title">声音发给 ElevenLabs。</string>
-    <string name="voice_consent_1_body">它把你的声音转成文字，再把来访者的话读出来。转出的文字经我们的服务器，交给位于中国的第三方 AI 服务 %1$s 生成回复。</string>
+    <string name="voice_consent_1_body">它把你的声音转成文字，再把来访者的话读出来。转出的文字经我们的服务器，交给美国的第三方 AI 服务 %1$s 生成回复。</string>
     <string name="voice_consent_2_label">发到哪</string>
-    <string name="voice_consent_2_title">声音发到美国，文字发到中国。</string>
-    <string name="voice_consent_2_body">声音直接从手机发到美国，不经过我们的服务器。文字从 ElevenLabs 经我们在法兰克福的服务器，发到 DeepSeek。这两段都会离开欧盟。</string>
+    <string name="voice_consent_2_title">声音和文字都发到美国。</string>
+    <string name="voice_consent_2_body">声音直接从手机发到美国，不经过我们的服务器。文字从 ElevenLabs 经我们在法兰克福的服务器，发到 Anthropic。这两段都会离开欧盟。</string>
     <string name="voice_consent_3_label">存多久</string>
     <string name="voice_consent_3_title">我们不存声音。</string>
-    <string name="voice_consent_3_body">我们的服务器和这台手机都不存录音。我们设置了 ElevenLabs 不录音。通话结束后它删除文字，实测一小时内删完。它的调试和审核日志里可能还留有内容，留多久我们还不清楚。备份最长留 30 天。DeepSeek 留多久我们管不了，见隐私说明。文字和报告按你的设置存在这台手机上。</string>
+    <string name="voice_consent_3_body">我们的服务器和这台手机都不存录音。我们设置了 ElevenLabs 不录音。通话结束后它删除文字，实测一小时内删完。它的调试和审核日志里可能还留有内容，留多久我们还不清楚。备份最长留 30 天。Anthropic 通常在 30 天内删除文字，见隐私说明。文字和报告按你的设置存在这台手机上。</string>
     <string name="voice_consent_4_label">怎么撤回</string>
     <string name="voice_consent_4_title">你可以随时撤回。</string>
     <string name="voice_consent_4_body">在「我的」里撤回，以后不再发送。打字和按住说话不受影响。已发出的文字按上面说的删除，日志和备份我们删不到。有问题写信到 info@novawerk.io。</string>
     <string name="voice_consent_5_title">只说虚构的内容。</string>
     <string name="voice_consent_5_body">不要说真实来访者的信息。这是练习工具，不是治疗。</string>
-    <string name="voice_consent_check">我同意把我的声音发给美国的 ElevenLabs，把转出的文字发给位于中国的 DeepSeek。</string>
+    <string name="voice_consent_check">我同意把我的声音发给美国的 ElevenLabs，把转出的文字发给美国的 Anthropic。</string>
     <string name="voice_consent_accept">同意并开始</string>
     <string name="voice_use_text">改用打字</string>
     <string name="voice_connecting">正在接通…</string>
@@ -357,7 +357,7 @@
     <string name="voice_withdraw_confirm">撤回同意</string>
     <string name="voice_withdraw_keep">保留</string>
     <string name="privacy_q_voice_session">语音会谈的声音去了哪里？</string>
-    <string name="privacy_a_voice_session">发给 ElevenLabs，实时转成文字；来访者的话也由它读出来。声音发到美国，不经过我们的服务器。转出的文字和打字一样，经我们的服务器交给位于中国的 %1$s。</string>
+    <string name="privacy_a_voice_session">发给 ElevenLabs，实时转成文字；来访者的话也由它读出来。声音发到美国，不经过我们的服务器。转出的文字和打字一样，经我们的服务器交给美国的 %1$s。</string>
     <string name="privacy_q_voice_store">语音会谈的声音存吗？</string>
     <string name="privacy_a_voice_store">我们不存，手机上也不存。我们设置了 ElevenLabs 不录音。通话结束后它删除文字，实测一小时内删完。它的调试和审核日志里可能还留有内容，留多久我们还不清楚。备份最长留 30 天。</string>
 </resources>

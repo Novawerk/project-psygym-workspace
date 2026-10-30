@@ -27,13 +27,13 @@ enum class StartState { Welcome, Consent, Home }
  * Bump when the O2 disclaimer changes in substance: everyone sees it again on next launch
  * (docs/product/onboarding.md, docs/safety.md §5).
  */
-const val DISCLAIMER_VERSION = "2026-10-v2"
+const val DISCLAIMER_VERSION = "2026-10-v3"
 
 /**
  * Bump when what the voice-session notice says changes in substance: everyone agrees again
  * before their next voice session (docs/safety.md §1).
  */
-const val VOICE_CONSENT_VERSION = "2026-10-v2"
+const val VOICE_CONSENT_VERSION = "2026-10-v3"
 
 /** Small, local-only settings. Conversations live in [io.novawerk.psygym.domain.history.HistoryRepository], never here. */
 class SettingsRepository(private val dataStore: DataStore<Preferences>) {

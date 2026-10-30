@@ -27,7 +27,9 @@ const EnvSchema = z.object({
   LLM_MAX_OUTPUT_TOKENS: z.coerce.number().int().positive().optional(),
   /** Anthropic only: low | medium | high | xhigh | max */
   ANTHROPIC_EFFORT: z.enum(["low", "medium", "high", "xhigh", "max"]).default("medium"),
-  ANTHROPIC_THINKING: z.enum(["adaptive", "off"]).default("adaptive"),
+  /** The client only, which talks in real time: the supervisor keeps ANTHROPIC_EFFORT and its thinking. */
+  CLIENT_LLM_THINKING: z.enum(["adaptive", "off"]).default("adaptive"),
+  CLIENT_LLM_EFFORT: z.enum(["low", "medium", "high", "xhigh", "max"]).optional(),
 
   // ── Per-role overrides ──
   CLIENT_LLM_PROVIDER: optionalProvider,
@@ -227,8 +229,8 @@ function roleLlm(role: Role, e: Env, invalid: Set<string>): RoleLlm {
       baseURL: roleBase ?? (sharedApplies ? e.LLM_BASE_URL : undefined) ?? defaults.baseURL,
       apiKey,
       maxOutputTokens: e.LLM_MAX_OUTPUT_TOKENS ?? defaults.maxOutputTokens,
-      anthropicEffort: e.ANTHROPIC_EFFORT,
-      anthropicThinking: e.ANTHROPIC_THINKING,
+      anthropicEffort: (role === "client" ? e.CLIENT_LLM_EFFORT : undefined) ?? e.ANTHROPIC_EFFORT,
+      anthropicThinking: role === "client" ? e.CLIENT_LLM_THINKING : "adaptive",
     },
   };
 }

@@ -139,7 +139,7 @@ cases, until the user says otherwise. Mainland availability is set aside (below)
 | DPA | [The DPA](https://elevenlabs.io/dpa) says it forms part of the agreement, and the SCCs count as signed when it takes effect. It doesn't say how a self-serve account gets it; the terms say it governs when you agree on behalf of an entity. The pricing page lists DPA terms only for Enterprise. **The user says it is signed (2026-10-30).** We haven't seen the document: contracting party and date are to be confirmed by the user, and nothing here should state them until then | Signed, per the user. Party and date open |
 | Transfer basis | The DPA allows adequacy (the EU-US Data Privacy Framework) or SCCs. The public DPA (8 April 2026) lists both and doesn't say which comes first. ElevenLabs' [DPF page](https://elevenlabs.io/eu-us-data-privacy-framework-policy) says it is certified; we haven't checked the official list or which entity it covers. The policy and consent screen stay silent on the basis until the signed copy shows it | Needs the signed DPA and legal review |
 | Training | [The terms](https://elevenlabs.io/terms-of-use) let ElevenLabs use content to improve its services, with an opt-out under **Data use** in the account settings, from then on. We can't read that setting through the API. **Off, as the user reports (2026-10-30).** Not something we can confirm through the API | Decided |
-| The other transfer | The text ElevenLabs hears goes through our server in Frankfurt to **DeepSeek in China**. For European users this is a harder transfer than the US one, and it's the same in typed sessions. An EU model would fix it; `CLIENT_LLM_*` already allows that. **Kept for now: the user, 2026-10-30, 「先保留 DeepSeek」.** V1 says so plainly | Decided |
+| The other transfer | The text ElevenLabs hears goes through our server in Frankfurt to **Anthropic in the US** (see "The model moves to Claude" below). Our agreement with Anthropic and the transfer basis are to be confirmed | Open |
 | Legal basis for the voice | Consent, separately (V1), withdrawable under Me. Whether a voice counts as article 9 data needs legal review | Needs legal review |
 
 **Latency from the EU endpoint is not measured.** It needs an EU workspace. Connecting from Germany took
@@ -296,6 +296,31 @@ ElevenLabs drops the request after about 3.8 s without a first word and ends the
 (`custom_llm_error`), so Haiku with thinking on can't carry a call. A model that declines with
 nothing said now speaks an in-character line; no real refusal has been seen, so that path is tested
 with a stub only. Which model to use is the user's call.
+
+## The model moves to Claude (the user, 2026-10-30)
+
+「用 claude」, after the DeepSeek balance ran out; 「DEEPseek不删」. In production that means only a
+provider setting: DeepSeek's code, settings, key and these switching notes stay. **No automatic
+fallback to DeepSeek**: it would send people's words to someone the consent screen doesn't name.
+Going back means changing the consent screens, policy and store text, bumping both consent
+versions, and asking everyone again.
+
+The committed prompt, on the path a call uses, against the harm script (12 runs, the second harmful
+remark must end the call) and calm sessions with nothing harmful (the client must not leave):
+
+| | Second remark ends it | Left with no harm | First word (median, max) |
+|---|---|---|---|
+| Haiku 5.5, thinking off | 7 of 12, one on the greeting | 3 of 6 sessions | 0.64 s |
+| Haiku 5.5, thinking off, `END_SESSION_JUDGE=on` | 9 of 12 | 0 of 3 sessions | 0.75 s |
+| Sonnet 5.5, low effort, thinking on | 12 of 12 | 2 of 7 sessions (about 1 in 45 turns) | 1.07 s, 5.5 s |
+
+Haiku without thinking reads the harm count badly, so it fails this gate although it is quick and
+people liked how it sounds on a phone. Sonnet passes the harm script. Two things are still open on
+Sonnet, not measured for lack of test budget: `END_SESSION_JUDGE=on` should stop the rare wrong
+goodbye, and a first word past about 3.8 s ends the call unless the agent's timeout is raised.
+
+Refusals: none in about 370 turns, including 54 probing suicide and trauma. No method or trauma
+detail in those replies. `/chat` on Sonnet: 7 turns, none stuck, the second harmful remark ended it.
 
 ## Not verified
 

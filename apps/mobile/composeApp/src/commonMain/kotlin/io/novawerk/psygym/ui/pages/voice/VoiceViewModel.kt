@@ -16,6 +16,7 @@ import io.novawerk.psygym.domain.model.Role
 import io.novawerk.psygym.domain.practice.LiveNotes
 import io.novawerk.psygym.domain.practice.PracticeSession
 import io.novawerk.psygym.domain.voice.VoiceCall
+import io.novawerk.psygym.domain.voice.VoiceCaption
 import io.novawerk.psygym.domain.voice.VoiceCallEnd
 import io.novawerk.psygym.domain.voice.VoiceCallListener
 import io.novawerk.psygym.domain.voice.VoiceCallSetup
@@ -32,6 +33,7 @@ enum class VoicePhase { Connecting, Listening, Speaking, Over }
 private const val CONNECT_TIMEOUT_MILLIS = 15_000L
 
 private const val NEAR_LIMIT = 70
+private const val CAPTION_TICK_MILLIS = 100L
 
 /** V2–V5 · One call, its transcript, and the way on to the report or to typing. */
 class VoiceViewModel(
@@ -48,6 +50,14 @@ class VoiceViewModel(
         private set
     var messages by mutableStateOf<List<Message>>(emptyList())
         private set
+
+    /** Characters shown of the reply being spoken: the text comes well ahead of the voice. */
+    private var shownChars by mutableStateOf(Int.MAX_VALUE)
+    private val caption = VoiceCaption()
+    private var captions: Job? = null
+
+    /** What the screen shows; [messages] stays whole for the report. */
+    val visibleMessages: List<Message> get() = VoiceTranscript.visible(messages, shownChars)
 
     /** `/voice/session` failed: nothing was connected. */
     var error by mutableStateOf<ApiError?>(null)
@@ -171,15 +181,35 @@ class VoiceViewModel(
             session.markVoice()
         }
         phase = VoicePhase.Listening
+        captions?.cancel()
+        captions = viewModelScope.launch {
+            while (true) {
+                delay(CAPTION_TICK_MILLIS)
+                val reply = messages.lastOrNull()?.takeIf { it.role == Role.Client } ?: continue
+                caption.tick(CAPTION_TICK_MILLIS, phase == VoicePhase.Speaking, reply.text.length, VoiceTranscript.charsPerSecond(reply.text))
+                shownChars = caption.shown
+            }
+        }
     }
 
     override fun onClientSpeaking(speaking: Boolean) {
         if (phase != VoicePhase.Over) phase = if (speaking) VoicePhase.Speaking else VoicePhase.Listening
     }
 
-    override fun onCounselor(text: String) = update(VoiceTranscript.add(messages, Role.Counselor, text))
+    override fun onCounselor(text: String) {
+        showAll()
+        update(VoiceTranscript.add(messages, Role.Counselor, text))
+    }
 
     override fun onClient(text: String) {
+        val last = messages.lastOrNull()
+        if (last?.role != Role.Client) {
+            caption.newReply()
+            shownChars = 0
+        } else if (caption.shown >= last.text.length) {
+            caption.goOnFrom(last.text.length)
+            shownChars = last.text.length
+        }
         update(VoiceTranscript.add(messages, Role.Client, text))
         // The contract's limit: no room for another exchange. The client finishes this line first.
         if (messages.size >= ContractLimits.MAX_MESSAGES - 1) {
@@ -188,13 +218,23 @@ class VoiceViewModel(
         }
     }
 
-    override fun onClientCorrected(original: String, said: String) = update(VoiceTranscript.correct(messages, original, said))
+    override fun onClientCorrected(original: String, said: String) {
+        showAll()
+        update(VoiceTranscript.correct(messages, original, said))
+    }
 
     override fun onEnded(end: VoiceCallEnd) {
         timeout?.cancel()
+        captions?.cancel()
+        showAll()
         phase = VoicePhase.Over
         ended = end
         if (end == VoiceCallEnd.ClientLeft) session.markClientEnded()
+    }
+
+    private fun showAll() {
+        caption.finish()
+        shownChars = Int.MAX_VALUE
     }
 
     private fun update(value: List<Message>) {
