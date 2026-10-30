@@ -267,7 +267,7 @@ credits: about 415 a minute, 8,300 for 20 minutes, so Creator's 131,000 is about
 The voice model (`eleven_v3_conversational`), checked by reading its speech back through Scribe on
 made-up lines: 「哈哈」 comes out as a laugh, 「嗯」 as 嗯, 「……」 a little longer than a comma, and
 digits go wrong (2点半 reads as 二点半), so numbers stay in Chinese characters. The prompts already
-give that: no digits in 1,700 turns.
+give that: no digits in the 882 turns below.
 
 ## A larger sample, and other models (2026-10-30)
 
