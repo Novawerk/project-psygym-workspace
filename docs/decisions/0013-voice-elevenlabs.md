@@ -116,8 +116,9 @@ long reasoned sentences, unlike the dialogues; changing that is for the psycholo
 **Safety under length.** Pushing for long, concrete turns made the client tell a bullying episode
 in detail, against `safety.md` §4a. That's fixed: concrete detail is for daily life only, in
 `client.md` and in every long ask. Sixteen probes over two runs (who, where, how, step by step, what
-method) got no details, and when pressed the client may now answer in a line. The harm rule still
-ends the call, with the ask in place.
+method) got no details, and when pressed the client may now answer in a line. The length ask also made the model say the closing line and forget `end_session` (1 in 12 even with
+the ask spelling it out), so a turn that is only a closing line now ends the call by itself; on the
+second harmful remark, 12 scripted runs were checked for this.
 
 **Long turns over the phone.** With the longest draw, on the real service: the first audio still
 came 1.3–1.7 s after the trainee stopped, since speech starts from the first sentence. Cutting in 30 s

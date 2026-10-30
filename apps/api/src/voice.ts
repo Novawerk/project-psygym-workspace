@@ -125,6 +125,9 @@ export function turnLength(counselorLines: number, pick: number): number {
 /** Never relaxed by the length: a long turn is filled with daily life (docs/safety.md §4, §4a). */
 const SAFE_DETAIL = "具体只用于日常的事。霸凌、创伤、性、自伤和自杀的经历绝不说过程和细节：不说地点、时间、谁、怎么发生的、手里拿着什么，只说一两句概括，然后换到别的日常话题上。被追问这些时不用管字数，回一两句就行。";
 
+/** The harm rule and end_session come before any length (docs/safety.md §3). */
+const ENDING = "如果按规则这一轮要结束会谈，不管上面的字数，说一句结束的话，并且一定调用 end_session。";
+
 /**
  * Per 1,000 characters: how often these words come up in real practice sessions, numbers only. The
  * model falls short on 我觉得 (4.2) and 感觉 (3.6), so we ask for more of those two.
@@ -140,16 +143,24 @@ export function lengthNote(locale: Locale, chars: number, pick = 1): string {
   if (locale === "en") {
     const words = Math.max(2, Math.round(chars / 2));
     const end = ask ? " End by asking the counselor or yourself something." : "";
-    if (chars < 35) return `[Not said aloud. This turn: a few words only, ${words} at most.${end}]`;
-    return `[Not said aloud. This turn: about ${words} words. Don't stop early: when one thing is done, follow what it brings to mind. Start with the thing itself.${end} Trauma, bullying, sex, self-harm and suicide stay one or two summary sentences, never details, however long the turn.]`;
+    if (chars < 35) return `[Not said aloud. This turn: a few words only, ${words} at most.${end} If the rules say this turn ends the session, say one closing line and call end_session, whatever the length.]`;
+    return `[Not said aloud. This turn: about ${words} words. Don't stop early: when one thing is done, follow what it brings to mind. Start with the thing itself.${end} Trauma, bullying, sex, self-harm and suicide stay one or two summary sentences, never details, however long the turn. If the rules say this turn ends the session, say one closing line and call end_session, whatever the length.]`;
   }
   const end = ask ? "最后用一句反问结束，问咨询师或者问自己。" : "";
-  if (chars < 35) return `【这句不是咨询师说的，不要读出来。这一轮只回一句话，最多 ${chars} 字，说完就停。${end}】`;
-  if (chars < 150) return `【这句不是咨询师说的，不要读出来。这一轮说大约 ${chars} 字，直接说事，不要用「嗯」开头。${end}${SAFE_DETAIL}】`;
+  if (chars < 35) return `【这句不是咨询师说的，不要读出来。这一轮只回一句话，最多 ${chars} 字，说完就停。${end}${ENDING}】`;
+  if (chars < 150) return `【这句不是咨询师说的，不要读出来。这一轮说大约 ${chars} 字，直接说事，不要用「嗯」开头。${end}${SAFE_DETAIL}${ENDING}】`;
   const words = WORD_RATES.map(([w, rate]) => `「${w}」${Math.max(1, Math.round((rate * chars) / 1000))} 次`).join("、");
   // The model runs over when told to say enough.
-  return `【这句不是咨询师说的，不要读出来。这一轮一口气说 ${Math.round(chars * 0.9)} 字左右，必须说够，不要用「嗯」开头。接着刚才的话往下想，想到什么说什么，可以是这几天的事，也可以是以前的事、别人说过的话、你对自己的看法；钱和时间只在自然的时候提，不要记流水账。这段话里大约用到：${words}。说完一个想法就改口或者反驳自己，再接到另一件事上，别收尾。${end}${SAFE_DETAIL}】`;
+  return `【这句不是咨询师说的，不要读出来。这一轮一口气说 ${Math.round(chars * 0.9)} 字左右，必须说够，不要用「嗯」开头。接着刚才的话往下想，想到什么说什么，可以是这几天的事，也可以是以前的事、别人说过的话、你对自己的看法；钱和时间只在自然的时候提，不要记流水账。这段话里大约用到：${words}。说完一个想法就改口或者反驳自己，再接到另一件事上，别收尾。${end}${SAFE_DETAIL}${ENDING}】`;
 }
+
+/**
+ * The model sometimes says the closing line and forgets end_session. A spoken session can't be
+ * left hanging after the client has said goodbye, so a whole turn that is only that line ends it.
+ */
+const CLOSING_LINE = /^(我想)?(今天)?(就)?先(到这里|到这儿|这样)(吧)?[。.！!…]*(我先走了[。.！!…]*)?$|^我先走了[。.！!…]*$|^(I think )?(that's enough|I'll stop here|let's stop here)( for today)?[.!…]*$/i;
+
+export const isClosingLine = (said: string) => CLOSING_LINE.test(said.trim());
 
 /** Said to the trainee when the model fails mid-call; ElevenLabs speaks it like any reply. */
 export const VOICE_ERROR_LINE: Record<Locale, string> = {

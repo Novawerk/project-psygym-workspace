@@ -6,7 +6,7 @@ import { loadConfig } from "../src/config.js";
 import { loadCases, loadPrompts } from "../src/content.js";
 import { MOCK_END_TRIGGER } from "../src/llm/mock.js";
 import type { ModelProvider, ModelRequest } from "../src/llm/types.js";
-import { SILENCE, TURN_LENGTHS, VOICE_ERROR_LINE, lengthNote, turnLength, voiceTurn } from "../src/voice.js";
+import { SILENCE, TURN_LENGTHS, VOICE_ERROR_LINE, isClosingLine, lengthNote, turnLength, voiceTurn } from "../src/voice.js";
 
 const cases = loadCases();
 const prompts = loadPrompts();
@@ -102,6 +102,7 @@ describe("how long a voice turn runs", () => {
     expect(lengthNote("zh", 712)).toContain("必须说够");
     expect(lengthNote("en", 712)).toContain("356 words");
     expect(lengthNote("zh", 712)).toContain("绝不说过程和细节");
+    for (const chars of [17, 100, 712]) expect(lengthNote("zh", chars)).toContain("一定调用 end_session");
     expect(lengthNote("zh", 712, 0.05)).toContain("反问");
     expect(lengthNote("zh", 712, 0.5)).not.toContain("反问");
   });
@@ -122,7 +123,14 @@ describe("how long a voice turn runs", () => {
     const lines = [{ role: "user", content: "a" }, { role: "assistant", content: "b" }, { role: "user", content: "c" }, { role: "assistant", content: "d" }, { role: "user", content: "e" }];
     await (await llm(app, llmBody(lines))).text();
     expect(asked!.system).toContain("语音会谈");
-    expect(JSON.stringify(asked!.messages.at(-1))).toContain(`${TURN_LENGTHS[18]} 字`);
+    expect(JSON.stringify(asked!.messages.at(-1))).toContain(`${Math.round(TURN_LENGTHS[18]! * 0.9)} 字`);
+  });
+});
+
+describe("a closing line without end_session", () => {
+  it("knows the line, and only the whole line", () => {
+    for (const t of ["我想今天先到这里。", "今天先到这里吧", "我先走了。", "我想今天先到这里。我先走了。", "I think that's enough for today."]) expect(isClosingLine(t)).toBe(true);
+    for (const t of ["今天先到这里吧，但是我还想说一件事", "我先走了两步，然后回头看", "我想今天先把作业写了。"]) expect(isClosingLine(t)).toBe(false);
   });
 });
 

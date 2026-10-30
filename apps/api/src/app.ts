@@ -32,7 +32,7 @@ import { readBody } from "./read-body.js";
 import { ReportBody, reportSlackMessage } from "./report.js";
 import { ChatBody, SupervisionBody, type ErrorCode, type Locale, type Message, type StreamEvent } from "./schema.js";
 import { FAREWELL, clientRequest, endsSession, liveSupervisorRequest, supervisorRequest } from "./session.js";
-import { VOICE_ERROR_LINE, VOICE_NOTE, VoiceLlmBody, VoiceSessionBody, chunk, conversationToken, endCallDelta, lengthNote, turnLength, voiceTurn } from "./voice.js";
+import { VOICE_ERROR_LINE, VOICE_NOTE, VoiceLlmBody, VoiceSessionBody, chunk, conversationToken, endCallDelta, isClosingLine, lengthNote, turnLength, voiceTurn } from "./voice.js";
 
 /** Keeps proxies from closing the stream while the model thinks. */
 export const PING_MS = 15_000;
@@ -307,6 +307,7 @@ export function createApp(deps: AppDeps) {
           logger.info({ ...log, msg: "turn aborted", ms: Date.now() - started });
           return;
         }
+        sessionEnd ||= isClosingLine(said);
         if (sessionEnd && !said.trim()) say(FAREWELL[locale]);
         else if (!said.trim()) say(VOICE_ERROR_LINE[locale]);
         // The session ends in character: ElevenLabs speaks the closing line, then hangs up.
