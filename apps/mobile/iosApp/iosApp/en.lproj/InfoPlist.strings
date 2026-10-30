@@ -2,5 +2,6 @@
 CFBundleDisplayName = "PSYGYM";
 
 /* Hold to talk (docs/product/voice-input.md §5). */
+NSCameraUsageDescription = "The app doesn't use the camera. A voice library we include can reach it, so Apple asks for this line.";
 NSMicrophoneUsageDescription = "To hear you. With hold to talk, your voice is turned into text on this phone. In a voice session, your voice goes to ElevenLabs.";
 NSSpeechRecognitionUsageDescription = "To turn what you say into text on this phone, offline.";
