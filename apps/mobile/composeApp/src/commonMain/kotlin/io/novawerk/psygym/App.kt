@@ -347,7 +347,6 @@ fun App(component: AppComponent) {
                             casesError = caseStore.error,
                             onStart = { nav.navigate(CasesRoute) },
                             onPickCase = openCase,
-                            onAllCases = { nav.navigate(CasesRoute) },
                             onRetryCases = { caseStore.load(force = true) },
                             onHelp = openHelp,
                             onTab = onTab,

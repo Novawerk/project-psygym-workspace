@@ -36,12 +36,9 @@
     <string name="onb_link_privacy">隐私说明</string>
 
     <string name="home_greeting">今天练一场？</string>
-    <string name="home_tagline">选一位来访者，开始一次 CBT 会谈。</string>
-    <string name="home_start_card_title">开始练习</string>
-    <string name="home_start_card_meta">约 15 分钟 · 结束后有督导反馈</string>
+    <string name="home_start_card_meta">CBT 会谈 · 约 15 分钟 · 结束后有督导反馈</string>
     <string name="home_start_card_button">选一位来访者</string>
     <string name="home_cases_section">病例</string>
-    <string name="home_cases_all">全部</string>
     <string name="home_disclaimer">聆镜 PSYGYM 是给咨询师的练习工具。来访者由 AI 扮演，全部是虚构的。这不是心理治疗。</string>
     <string name="home_settings">设置</string>
 

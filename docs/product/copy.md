@@ -47,12 +47,9 @@ key 沿用 App 现有命名（`home_*`、`cases_*`、`practice_*`、`supervision
 | key | | 中文 | English |
 |-----|---|------|---------|
 | home_greeting | 新 | 今天练一场？ | Ready for a session? |
-| home_start_card_title | 新 | 开始练习 | Start practising |
 | home_start_card_button | 新 | 选一位来访者 | Pick a client |
-| home_tagline | 改 | 选一位来访者，开始一次 CBT 会谈。 | Pick a client and start a CBT session. |
-| home_start_card_meta | 新 | 约 15 分钟 · 结束后有督导反馈 | About 15 min · supervision feedback at the end |
+| home_start_card_meta | 新 | CBT 会谈 · 约 15 分钟 · 结束后有督导反馈 | CBT session · about 15 min · supervision feedback at the end |
 | home_cases_section | 新 | 病例 | Cases |
-| home_cases_all | 新 | 全部 | All |
 | home_disclaimer | 新（替代 home_safety_title/body，和 `safety.md` §5 首页短版一致） | 聆镜 PSYGYM 是给咨询师的练习工具。来访者由 AI 扮演，全部是虚构的。这不是心理治疗。 | 聆镜 PSYGYM is a practice tool for counselors. An AI plays the client. Every client is fictional. This is not therapy. |
 | help_link | 新 | 需要帮助？ | Need help? |
 
