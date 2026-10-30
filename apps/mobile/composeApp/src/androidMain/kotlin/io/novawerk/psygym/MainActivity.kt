@@ -1,6 +1,7 @@
 package io.novawerk.psygym
 
 import io.novawerk.psygym.data.auth.KeystoreSecureStore
+import io.novawerk.psygym.data.voice.ElevenLabsVoiceCall
 import io.novawerk.psygym.data.voice.SherpaVoiceInput
 import android.content.Context
 import android.os.Bundle
@@ -30,6 +31,7 @@ private val componentLock = Any()
 private fun appComponent(context: Context, screenshot: ScreenshotLaunch?): AppComponent {
     sharedComponent?.let { return it }
     return synchronized(componentLock) {
+        val voice by lazy { SherpaVoiceInput(context, AppConfig.modelBaseUrl) }
         sharedComponent ?: AppComponent.create(
             appDataStore(context),
             // App-private storage; allowBackup=false keeps it out of backups.
@@ -37,7 +39,8 @@ private fun appComponent(context: Context, screenshot: ScreenshotLaunch?): AppCo
             // Always null in release builds (see ScreenshotHooks in src/androidRelease).
             ScreenshotModeHolder(screenshot?.mode),
             KeystoreSecureStore(context),
-            SherpaVoiceInput(context, AppConfig.modelBaseUrl),
+            voice,
+            ElevenLabsVoiceCall(context, voice),
         ).also { sharedComponent = it }
     }
 }

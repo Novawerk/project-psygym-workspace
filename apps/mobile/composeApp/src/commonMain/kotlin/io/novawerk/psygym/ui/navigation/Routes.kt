@@ -22,6 +22,12 @@ import kotlinx.serialization.Serializable
 /** S1 (S2 is a sheet on it). */
 @Serializable data object PracticeRoute
 
+/** V1 · The notice and consent before a first voice session. */
+@Serializable data object VoiceConsentRoute
+
+/** V2–V5 · A voice session. */
+@Serializable data object VoiceRoute
+
 /** R1. */
 @Serializable data object SupervisionRoute
 

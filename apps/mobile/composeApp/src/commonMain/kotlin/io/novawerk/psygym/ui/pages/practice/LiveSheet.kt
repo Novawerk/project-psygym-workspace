@@ -95,7 +95,7 @@ fun LiveChip(notes: LiveNotes, turns: Int, enabled: Boolean, onOpen: () -> Unit,
 /** The notes. Opens half-height (the conversation stays visible above), can be pulled up. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LiveSheet(notes: LiveNotes, onRetry: () -> Unit, onDismiss: () -> Unit) {
+fun LiveSheet(notes: LiveNotes, onRetry: () -> Unit, onDismiss: () -> Unit, note: String? = null) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.background,
@@ -109,6 +109,9 @@ fun LiveSheet(notes: LiveNotes, onRetry: () -> Unit, onDismiss: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 2.dp, bottom = 12.dp),
             )
+            if (note != null) {
+                Text(note, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 8.dp))
+            }
             Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 when {
                     // Only this one line while waiting: no other status labels (decided 2026-10-11).

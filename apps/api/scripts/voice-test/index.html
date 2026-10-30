@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>聆镜 语音会谈测试</title>
+<style>
+  :root {
+    --bg: #fafaf9; --surface: #ffffff; --text: #1c1917; --muted: #78716c; --line: #e7e5e4;
+    --accent: #0f766e; --accent-text: #ffffff; --danger: #b91c1c; --client: #f5f5f4; --counselor: #ccfbf1;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1c1917; --surface: #292524; --text: #f5f5f4; --muted: #a8a29e; --line: #44403c;
+      --accent: #2dd4bf; --accent-text: #042f2e; --danger: #f87171; --client: #292524; --counselor: #134e4a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 -apple-system, "PingFang SC", "Noto Sans SC", system-ui, sans-serif; }
+  main { max-width: 640px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 20px; margin: 8px 0 4px; }
+  .note { color: var(--muted); font-size: 14px; margin: 0 0 16px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+  label { display: block; font-size: 14px; color: var(--muted); margin: 0 0 4px; }
+  input, select { width: 100%; font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px; margin-bottom: 12px; }
+  button { font: inherit; border: 0; border-radius: 999px; padding: 12px 20px; cursor: pointer; }
+  button.primary { background: var(--accent); color: var(--accent-text); width: 100%; font-weight: 600; }
+  button.secondary { background: transparent; color: var(--text); border: 1px solid var(--line); }
+  button:disabled { opacity: .5; cursor: default; }
+  .status { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); }
+  .dot.listening { background: var(--accent); }
+  .dot.speaking { background: #d97706; animation: pulse 1s infinite; }
+  @keyframes pulse { 50% { opacity: .4; } }
+  .row { display: flex; gap: 8px; margin-top: 12px; }
+  .row button { flex: 1; }
+  .stats { color: var(--muted); font-size: 14px; margin-top: 8px; }
+  #log { display: flex; flex-direction: column; gap: 8px; }
+  .msg { padding: 10px 12px; border-radius: 12px; max-width: 90%; white-space: pre-wrap; word-break: break-word; }
+  .msg.client { background: var(--client); border: 1px solid var(--line); align-self: flex-start; }
+  .msg.counselor { background: var(--counselor); align-self: flex-end; }
+  .msg .meta { display: block; font-size: 12px; color: var(--muted); }
+  .sys { text-align: center; font-size: 13px; color: var(--muted); }
+  .err { color: var(--danger); }
+</style>
+</head>
+<body>
+<main>
+  <h1>聆镜 语音会谈测试</h1>
+  <p class="note">这是训练工具的内部测试，不是心理咨询。对面是 AI 扮演的来访者。你说的话会发给 ElevenLabs 转成文字，来访者的回复由我们的服务生成。请只说测试脚本，不要说真实来访者的信息。</p>
+
+  <section class="card" id="setup">
+    <label for="invite">邀请码</label>
+    <input id="invite" autocomplete="off" placeholder="测试用的邀请码">
+    <label for="case">病例</label>
+    <select id="case"><option value="cbt-depression-anxiety-01">cbt-depression-anxiety-01</option></select>
+    <button class="primary" id="start">开始语音会谈</button>
+    <p class="stats" id="setupMsg"></p>
+  </section>
+
+  <section class="card" id="call" hidden>
+    <div class="status"><span class="dot" id="dot"></span><span id="statusText">连接中…</span></div>
+    <p class="stats" id="stats">还没有回合</p>
+    <div class="row">
+      <button class="secondary" id="mute">静音</button>
+      <button class="secondary" id="stop">结束会谈</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <div id="log"><p class="sys">会谈开始后，双方的话会显示在这里。咨询师先开口。</p></div>
+    <div class="row"><button class="secondary" id="copy">复制逐字稿和延迟</button></div>
+  </section>
+</main>
+
+<script type="module">
+  import { Conversation } from "https://cdn.jsdelivr.net/npm/@elevenlabs/client@1.27.0/+esm";
+
+  const $ = (id) => document.getElementById(id);
+  const transcript = [];
+  const latencies = [];
+  let conversation = null;
+  let muted = false;
+  // The trainee's transcript arrives about when the client starts speaking, so the delay is timed
+  // from the last moment ElevenLabs' voice detection heard the trainee instead.
+  let lastSpeechAt = 0;
+  let speaking = false;
+  let startedAt = 0;
+
+  try { $("invite").value = localStorage.getItem("psygym-voice-invite") ?? ""; } catch {}
+
+  const headers = () => ({ "Content-Type": "application/json", "X-Invite-Code": $("invite").value.trim() });
+  const secs = () => ((performance.now() - startedAt) / 1000).toFixed(1);
+
+  async function loadCases() {
+    try {
+      const res = await fetch("/cases", { headers: headers() });
+      if (!res.ok) return;
+      const { cases } = await res.json();
+      $("case").innerHTML = cases.map((c) => `<option value="${c.id}">${c.title?.zh ?? c.id}</option>`).join("");
+    } catch {}
+  }
+  $("invite").addEventListener("change", loadCases);
+  loadCases();
+
+  function add(role, text) {
+    transcript.push({ t: secs(), role, text });
+    const p = document.createElement("p");
+    p.className = `msg ${role}`;
+    const meta = document.createElement("span");
+    meta.className = "meta";
+    meta.textContent = `${role === "client" ? "来访者" : "咨询师"} · ${secs()} 秒`;
+    p.append(meta, document.createTextNode(text));
+    $("log").append(p);
+    p.scrollIntoView({ block: "end", behavior: "smooth" });
+  }
+  function sys(text, isError = false) {
+    transcript.push({ t: secs(), role: "system", text });
+    const p = document.createElement("p");
+    p.className = isError ? "sys err" : "sys";
+    p.textContent = text;
+    $("log").append(p);
+  }
+  function setMode(mode) {
+    $("dot").className = `dot ${mode}`;
+    $("statusText").textContent = mode === "speaking" ? "来访者在说话" : "在听你说";
+  }
+  function showStats() {
+    if (!latencies.length) return;
+    const sorted = [...latencies].sort((a, b) => a - b);
+    const mid = sorted[Math.floor(sorted.length / 2)];
+    $("stats").textContent = `首句延迟（你说完到来访者开口）：上一轮 ${latencies.at(-1).toFixed(1)} 秒 · 中位 ${mid.toFixed(1)} 秒 · ${latencies.length} 轮`;
+  }
+
+  $("start").addEventListener("click", async () => {
+    $("start").disabled = true;
+    $("setupMsg").textContent = "正在请求麦克风和会话…";
+    try {
+      try { localStorage.setItem("psygym-voice-invite", $("invite").value.trim()); } catch {}
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+      const res = await fetch("/voice/session", {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify({ caseId: $("case").value, locale: "zh" }),
+      });
+      if (!res.ok) throw new Error(`会话没开起来（HTTP ${res.status}）${res.status === 401 ? "：邀请码不对" : ""}`);
+      const session = await res.json();
+      $("log").innerHTML = "";
+      startedAt = performance.now();
+      conversation = await Conversation.startSession({
+        conversationToken: session.conversationToken,
+        connectionType: "webrtc",
+        dynamicVariables: session.dynamicVariables,
+        customLlmExtraBody: session.extraBody,
+        onConnect: () => { sys("已连接。请先开口。"); setMode("listening"); },
+        onMessage: ({ message, source }) => add(source === "user" ? "counselor" : "client", message),
+        onVadScore: ({ vadScore }) => {
+          if (!speaking && vadScore > 0.5) lastSpeechAt = performance.now();
+        },
+        onModeChange: ({ mode }) => {
+          speaking = mode === "speaking";
+          if (speaking && lastSpeechAt) {
+            latencies.push((performance.now() - lastSpeechAt) / 1000);
+            lastSpeechAt = 0;
+            showStats();
+          }
+          setMode(mode);
+        },
+        onDisconnect: (details) => {
+          const why = details?.reason === "agent" ? "来访者结束了这次会谈" : details?.reason === "error" ? `连接出错：${details?.message ?? ""}` : "会谈已结束";
+          sys(why, details?.reason === "error");
+          $("statusText").textContent = why;
+          $("dot").className = "dot";
+          $("stop").disabled = true;
+          $("mute").disabled = true;
+          $("setup").hidden = false;
+          $("start").disabled = false;
+          $("start").textContent = "再开一场";
+          conversation = null;
+        },
+        onError: (message) => sys(`出错：${message}`, true),
+      });
+      $("setup").hidden = true;
+      $("call").hidden = false;
+      $("stop").disabled = false;
+      $("mute").disabled = false;
+      $("setupMsg").textContent = "";
+    } catch (err) {
+      $("setupMsg").textContent = err?.name === "NotAllowedError" ? "需要麦克风权限才能语音会谈。" : (err?.message ?? String(err));
+      $("start").disabled = false;
+    }
+  });
+
+  $("stop").addEventListener("click", () => conversation?.endSession());
+  $("mute").addEventListener("click", () => {
+    muted = !muted;
+    conversation?.setMicMuted(muted);
+    $("mute").textContent = muted ? "取消静音" : "静音";
+  });
+  $("copy").addEventListener("click", async () => {
+    const lines = transcript.map((m) => `[${m.t}s] ${m.role === "client" ? "来访者" : m.role === "counselor" ? "咨询师" : "系统"}：${m.text}`);
+    lines.push("", `首句延迟（秒）：${latencies.map((l) => l.toFixed(1)).join(", ") || "无"}`, `浏览器：${navigator.userAgent}`);
+    try { await navigator.clipboard.writeText(lines.join("\n")); $("copy").textContent = "已复制"; } catch { $("copy").textContent = "复制失败"; }
+    setTimeout(() => ($("copy").textContent = "复制逐字稿和延迟"), 2000);
+  });
+</script>
+</body>
+</html>

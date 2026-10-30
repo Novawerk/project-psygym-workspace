@@ -74,6 +74,12 @@ import io.novawerk.psygym.resources.settings_debug
 import io.novawerk.psygym.resources.settings_fake_api
 import io.novawerk.psygym.resources.settings_fake_api_desc
 import io.novawerk.psygym.resources.settings_help_section
+import io.novawerk.psygym.resources.settings_voice_where
+import io.novawerk.psygym.resources.settings_voice_withdraw
+import io.novawerk.psygym.resources.voice_withdraw_body
+import io.novawerk.psygym.resources.voice_withdraw_confirm
+import io.novawerk.psygym.resources.voice_withdraw_keep
+import io.novawerk.psygym.resources.voice_withdraw_title
 import io.novawerk.psygym.resources.settings_history_delete_action
 import io.novawerk.psygym.resources.settings_history_delete_all
 import io.novawerk.psygym.resources.settings_history_delete_confirm
@@ -123,12 +129,27 @@ fun MeScreen(
     onReplayOnboarding: () -> Unit,
     onHelp: () -> Unit,
     onPrivacy: () -> Unit,
+    /** The server offers voice sessions: where the voice goes. */
+    voiceOffered: Boolean,
+    /** Agreed to the notice: the way to withdraw, as easy as agreeing (GDPR article 7(3)). */
+    voiceConsented: Boolean,
+    onWithdrawVoice: () -> Unit,
     onLicenses: () -> Unit,
     onTab: (TopTab) -> Unit,
 ) {
     var confirmDeleteAll by rememberSaveable { mutableStateOf(false) }
     var confirmSignOut by rememberSaveable { mutableStateOf(false) }
+    var confirmWithdraw by rememberSaveable { mutableStateOf(false) }
     var pickLanguage by rememberSaveable { mutableStateOf(false) }
+    if (confirmWithdraw) {
+        WithdrawVoiceDialog(
+            onDismiss = { confirmWithdraw = false },
+            onConfirm = {
+                confirmWithdraw = false
+                onWithdrawVoice()
+            },
+        )
+    }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -205,6 +226,14 @@ fun MeScreen(
                 RowDivider()
                 LinkRow(Res.string.settings_privacy, onClick = onPrivacy)
                 RowDivider()
+                if (voiceOffered || voiceConsented) {
+                    LinkRow(Res.string.settings_voice_where, onClick = onPrivacy)
+                    RowDivider()
+                }
+                if (voiceConsented) {
+                    LinkRow(Res.string.settings_voice_withdraw, onClick = { confirmWithdraw = true })
+                    RowDivider()
+                }
                 LinkRow(Res.string.settings_licenses, onClick = onLicenses)
                 RowDivider()
                 LinkRow(Res.string.settings_replay_onboarding, onClick = onReplayOnboarding)
@@ -312,6 +341,17 @@ private fun ValueRow(label: StringResource, value: String, onClick: () -> Unit) 
         Text(value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
+}
+
+@Composable
+private fun WithdrawVoiceDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(Res.string.voice_withdraw_title)) },
+        text = { Text(stringResource(Res.string.voice_withdraw_body)) },
+        confirmButton = { TextButton(onClick = onConfirm) { Text(stringResource(Res.string.voice_withdraw_confirm)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(Res.string.voice_withdraw_keep)) } },
+    )
 }
 
 @Composable

@@ -32,6 +32,7 @@ import { readBody } from "./read-body.js";
 import { ReportBody, reportSlackMessage } from "./report.js";
 import { ChatBody, SupervisionBody, type ErrorCode, type Locale, type Message, type StreamEvent } from "./schema.js";
 import { FAREWELL, clientRequest, endsSession, liveSupervisorRequest, supervisorRequest } from "./session.js";
+import { VOICE_DECLINE_LINE, VOICE_ERROR_LINE, VOICE_NOTE, VoiceLlmBody, VoiceSessionBody, chunk, conversationToken, endCallDelta, isClosingLine, lengthNote, turnLength, voiceTurn } from "./voice.js";
 
 /** Keeps proxies from closing the stream while the model thinks. */
 export const PING_MS = 15_000;
@@ -53,6 +54,8 @@ export interface AppDeps {
   providerFor?: (role: Role) => ModelProvider;
   logger?: Logger;
   now?: () => number;
+  /** 0..1. Tests fix how long a voice turn runs. Default: Math.random. */
+  random?: () => number;
   /** Tests inject a fake Slack here. Default: global fetch. */
   fetch?: FetchLike;
   /** How long we wait for Slack. Default 5 s. */
@@ -229,6 +232,110 @@ export function createApp(deps: AppDeps) {
     const request = clientRequest(prompts, theCase, locale, messages);
     const judge = config.endSessionJudge ? { messages } : undefined;
     return streamTurn(c, { path: "/admin/preview-chat", caseId: theCase.id, locale, count: messages.length, provider, request, judge });
+  }
+
+  // Voice sessions (docs/decisions/0013-voice-elevenlabs.md): the ElevenLabs agent's custom LLM.
+  // ElevenLabs calls it, not the app, so it sits ahead of the gate with its own secret. Off: 404.
+  // Both paths, because the agent's server URL may or may not end in /v1.
+  for (const path of ["/voice/llm/chat/completions", "/voice/llm/v1/chat/completions"]) app.post(path, voiceLlmTurn);
+
+  async function voiceLlmTurn(c: Context) {
+    if (!config.voice) return c.json({ error: { code: "not_found", message: "Not found." } }, 404);
+    const given = c.req.header("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1]?.trim() ?? "";
+    if (!sameToken(given, config.voice.llmSecret)) return c.json({ error: { code: "unauthorized", message: "A valid secret is required." } }, 401);
+    const body = await readJson(c, VoiceLlmBody);
+    if (body instanceof Response) return body;
+    const turn = voiceTurn(body);
+    if (!turn) return failCounted(c, 400, "invalid_request", "No case or language: set the psygym dynamic variable or extra_body.");
+    const snap = await content.current();
+    const theCase = snap.cases.get(turn.caseId);
+    if (!theCase) return failCounted(c, 404, "case_not_found");
+    const provider = providerFor("client");
+    if (typeof provider === "string") {
+      logger.error({ msg: "model unavailable", route: "/voice/llm", reason: provider });
+      return failCounted(c, 503, "model_unavailable");
+    }
+    const { locale } = turn;
+    // The agent may ask for a reply before anyone spoke; the client then waits to be greeted.
+    const messages: Message[] = turn.messages.length ? turn.messages : [{ role: "counselor", text: locale === "zh" ? "（会谈开始）" : "(The session begins.)" }];
+    const base = clientRequest({ ...prompts, rubrics: snap.rubrics }, theCase, locale, messages);
+    const at = { caseId: theCase.id, locale };
+    const counselorLines = messages.filter((m) => m.role === "counselor").length;
+    const target = turnLength(counselorLines, (deps.random ?? Math.random)());
+    const note = lengthNote(locale, target, (deps.random ?? Math.random)());
+    // At the very end: in the system prompt the model ignores it and copies its own last reply.
+    const asked = base.messages.map((m, i) => (i === base.messages.length - 1 && m.role === "user" ? { ...m, text: `${m.text}\n\n${note}` } : m));
+    const request = { ...base, system: `${base.system}\n\n${VOICE_NOTE[locale]}`, messages: asked };
+    const log = { route: "/voice/llm", caseId: theCase.id, locale, messages: messages.length, provider: provider.name, model: provider.model };
+
+    c.header("Cache-Control", "no-cache, no-transform");
+    c.header("X-Accel-Buffering", "no");
+    return streamSSE(c, async (stream) => {
+      const started = Date.now();
+      const abort = new AbortController();
+      stream.onAbort(() => abort.abort());
+      const id = `chatcmpl-${started.toString(36)}`;
+      const created = Math.floor(started / 1000);
+      let chain: Promise<unknown> = Promise.resolve();
+      const write = (data: string) => {
+        chain = chain.then(() => stream.writeSSE({ data })).catch(() => {});
+      };
+      let said = "";
+      const say = (text: string) => {
+        if (!text) return;
+        if (!said) write(chunk(id, created, provider.model, { role: "assistant", content: "" }));
+        said += text;
+        write(chunk(id, created, provider.model, { content: text }));
+      };
+      try {
+        let sessionEnd: boolean;
+        let usage: Usage;
+        let judged: Record<string, unknown> = {};
+        let stopReason: string | undefined;
+        if (config.endSessionJudge) {
+          const r = await judgedTurn(provider, request, locale, messages, abort.signal, say, () => said);
+          ({ sessionEnd, usage, judged } = r);
+        } else {
+          const endTags = new EndTagFilter();
+          const res = await provider.stream({ ...request, signal: abort.signal }, { onText: (text) => say(endTags.push(text)) });
+          say(endTags.flush());
+          usage = res.usage;
+          stopReason = res.stopReason;
+          sessionEnd = endsSession(res.message.toolCalls) || endTags.found;
+        }
+        // ElevenLabs drops a request when the trainee turns out not to be done. The model stream
+        // can end quietly then: nothing was said, so nothing is counted.
+        if (abort.signal.aborted) {
+          logger.info({ ...log, msg: "turn aborted", ms: Date.now() - started });
+          return;
+        }
+        sessionEnd ||= isClosingLine(said);
+        if (sessionEnd && !said.trim()) say(FAREWELL[locale]);
+        else if (!said.trim()) say(stopReason === "refusal" ? VOICE_DECLINE_LINE[locale] : VOICE_ERROR_LINE[locale]);
+        // The session ends in character: ElevenLabs speaks the closing line, then hangs up.
+        const hangUp = sessionEnd && turn.canEndCall;
+        if (hangUp) write(chunk(id, created, provider.model, endCallDelta(locale)));
+        write(chunk(id, created, provider.model, {}, hangUp ? "tool_calls" : "stop"));
+        write("[DONE]");
+        counter.count({ metric: "chat_turn", ...at });
+        if (counselorLines === 1) counter.count({ metric: "session_started", ...at });
+        if (sessionEnd) counter.count({ metric: "session_ended_by_client", ...at });
+        logger.info({ ...log, msg: "turn", ...(sessionEnd ? { sessionEnd: true } : {}), ...judged, stopReason, inputTokens: usage.inputTokens, outputTokens: usage.outputTokens, ms: Date.now() - started });
+      } catch (err) {
+        if (abort.signal.aborted) {
+          logger.info({ ...log, msg: "turn aborted", ms: Date.now() - started });
+        } else {
+          logger.error({ ...log, msg: "turn failed", ...describe(err), ms: Date.now() - started });
+          // A spoken call can't show an error banner: the client asks to hear it again instead.
+          if (!said.trim()) say(VOICE_ERROR_LINE[locale]);
+          write(chunk(id, created, provider.model, {}, "stop"));
+          write("[DONE]");
+          counter.count({ metric: "error", dim: "stream_error" });
+        }
+      } finally {
+        await chain;
+      }
+    });
   }
 
   // The gate for everything below. A request with Authorization is judged by its token alone.
@@ -586,6 +693,35 @@ export function createApp(deps: AppDeps) {
   const chars = (s: string | undefined) => [...(s ?? "")].length;
 
   // POST /feedback → 204: a rating of a report. Never conversation text.
+  // GET /voice/status: whether the app shows "Voice session". Off (no voice config): 404.
+  app.get("/voice/status", (c) => {
+    if (!config.voice) return c.json({ error: { code: "not_found", message: "Not found." } }, 404);
+    return c.json({ available: true });
+  });
+
+  // POST /voice/session: a conversation token for the ElevenLabs agent, and what the app passes
+  // when it starts the call. Behind the gate like /chat. Off (no voice config): 404.
+  app.post("/voice/session", async (c) => {
+    if (!config.voice) return c.json({ error: { code: "not_found", message: "Not found." } }, 404);
+    const limited = rateLimited(c, limiter);
+    if (limited) return limited;
+    const body = await readJson(c, VoiceSessionBody);
+    if (body instanceof Response) return body;
+    const snap = await content.current();
+    if (!snap.cases.has(body.caseId)) return failCounted(c, 404, "case_not_found");
+    try {
+      const token = await conversationToken(deps.fetch ?? fetch, config.voice.apiKey, config.voice.agentId);
+      return c.json({
+        conversationToken: token,
+        dynamicVariables: { psygym: `case=${body.caseId} locale=${body.locale}` },
+        extraBody: { caseId: body.caseId, locale: body.locale },
+      });
+    } catch (err) {
+      logger.error({ msg: "voice token failed", ...describe(err) });
+      return failCounted(c, 503, "model_unavailable", "Voice is not available right now.");
+    }
+  });
+
   app.post("/feedback", async (c) => {
     const limited = rateLimited(c, feedbackLimiter);
     if (limited) return limited;

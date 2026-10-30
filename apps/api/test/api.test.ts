@@ -291,6 +291,24 @@ describe("temperature in the adapters", () => {
     expect(new AnthropicProvider(llm("anthropic", "claude-haiku-5-5")).buildRequest(req)).not.toHaveProperty("temperature");
   });
 
+  it("Claude Haiku 5.5 gets effort; Haiku 4.5 keeps the legacy shape", () => {
+    expect(new AnthropicProvider(llm("anthropic", "claude-haiku-5-5")).buildRequest(req)).toHaveProperty("output_config");
+    expect(new AnthropicProvider(llm("anthropic", "claude-haiku-4-5")).buildRequest(req)).not.toHaveProperty("output_config");
+  });
+
+  it("thinking off for voice: each model's own way", () => {
+    const off = (model: string) => new AnthropicProvider({ ...llm("anthropic", model), anthropicThinking: "off" }).buildRequest(req);
+    expect(off("claude-haiku-5-5").thinking).toEqual({ type: "disabled" });
+    expect(off("claude-sonnet-5-5").thinking).toEqual({ type: "between_tools" });
+  });
+
+  it("the thinking and effort of the client never reach the supervisor", () => {
+    const cfg = loadConfig({ LLM_PROVIDER: "anthropic", ANTHROPIC_API_KEY: "k", CLIENT_LLM_THINKING: "off", CLIENT_LLM_EFFORT: "low" });
+    const of = (role: "client" | "supervisor") => { const r = cfg.llm[role]; if (!r.ok) throw new Error(r.reason); return r.llm; };
+    expect(of("client")).toMatchObject({ anthropicThinking: "off", anthropicEffort: "low" });
+    expect(of("supervisor")).toMatchObject({ anthropicThinking: "adaptive", anthropicEffort: "medium" });
+  });
+
   it("Claude models with adaptive thinking don't (thinking + temperature is a 400)", () => {
     const sonnet46 = new AnthropicProvider(llm("anthropic", "claude-sonnet-4-6")).buildRequest(req);
     expect(sonnet46).toHaveProperty("thinking");

@@ -4,7 +4,7 @@ import ComposeApp
 
 struct ComposeView: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
-        MainViewControllerKt.MainViewController(speech: SpeechBridge())
+        MainViewControllerKt.MainViewController(speech: SpeechBridge(), voiceCall: VoiceCallBridge())
     }
 
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}

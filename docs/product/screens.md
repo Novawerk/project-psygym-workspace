@@ -198,6 +198,10 @@
 
 ---
 
+## V0–V6 · 语音会谈
+
+规格在 [voice-session-design.md](./voice-session-design.md)。默认关，服务器没配 ElevenLabs 时 C2 和以前一样。
+
 ## S2 · 结束会谈（底部弹层）
 
 | 情况 | 标题 | 说明 | 主按钮 | 次按钮 |

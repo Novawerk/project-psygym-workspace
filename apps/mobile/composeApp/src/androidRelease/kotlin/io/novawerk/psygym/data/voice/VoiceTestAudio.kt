@@ -6,4 +6,7 @@ import java.io.File
 internal object VoiceTestAudio {
     @Suppress("UNUSED_PARAMETER")
     fun file(filesDir: File): File? = null
+
+    @Suppress("UNUSED_PARAMETER")
+    fun callLines(filesDir: File): List<String> = emptyList()
 }

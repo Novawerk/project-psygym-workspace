@@ -37,7 +37,7 @@ const FALLBACK_MODELS = /^claude-(opus-5|fable-5-1|sonnet-5-5)/;
  */
 const NO_SAMPLING = /^claude-(fable|mythos|opus-5|opus-4-[78]|sonnet-5|haiku-5)/;
 /** Haiku 4.5 and older models don't support adaptive thinking / effort */
-const LEGACY_THINKING = /^claude-(haiku|3|sonnet-4-5|opus-4-5|opus-4-1|sonnet-4-0|opus-4-0)/;
+const LEGACY_THINKING = /^claude-(haiku-[34]|3|sonnet-4-5|opus-4-5|opus-4-1|sonnet-4-0|opus-4-0)/;
 
 export class AnthropicProvider implements ModelProvider {
   readonly name = "anthropic";
@@ -45,11 +45,13 @@ export class AnthropicProvider implements ModelProvider {
   private readonly client: Anthropic;
   private readonly maxOutputTokens: number;
   private readonly effort: LlmConfig["anthropicEffort"];
+  private readonly thinking: LlmConfig["anthropicThinking"];
 
   constructor(cfg: LlmConfig) {
     this.model = cfg.model;
     this.maxOutputTokens = cfg.maxOutputTokens;
     this.effort = cfg.anthropicEffort;
+    this.thinking = cfg.anthropicThinking;
     // Without an apiKey the SDK looks for credentials in ANTHROPIC_API_KEY → ANTHROPIC_AUTH_TOKEN → the `ant auth login` profile
     this.client = new Anthropic({
       ...(cfg.apiKey ? { apiKey: cfg.apiKey } : {}),
@@ -81,7 +83,8 @@ export class AnthropicProvider implements ModelProvider {
       ...(legacy
         ? {}
         : {
-            thinking: { type: "adaptive", display: "summarized" },
+            // A voice call can't wait: ElevenLabs hangs up when the first word takes about 4 s.
+            thinking: this.thinking === "off" ? { type: /^claude-sonnet-5-5/.test(this.model) ? "between_tools" : "disabled" } : { type: "adaptive", display: "summarized" },
             output_config: { effort: this.effort },
           }),
       ...(fallback ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" } : {}),

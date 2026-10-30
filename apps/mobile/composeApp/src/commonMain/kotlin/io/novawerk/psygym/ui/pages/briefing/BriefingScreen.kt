@@ -33,6 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.novawerk.psygym.domain.model.CaseSummary
+import io.novawerk.psygym.domain.voice.VoiceCall
 import io.novawerk.psygym.resources.Res
 import io.novawerk.psygym.resources.back
 import io.novawerk.psygym.resources.brief_client
@@ -42,15 +43,23 @@ import io.novawerk.psygym.resources.brief_session_first_note
 import io.novawerk.psygym.resources.brief_setup
 import io.novawerk.psygym.resources.brief_setup_body
 import io.novawerk.psygym.resources.brief_start
+import io.novawerk.psygym.resources.brief_content_note_voice
+import io.novawerk.psygym.resources.brief_mode
+import io.novawerk.psygym.resources.brief_mode_text
+import io.novawerk.psygym.resources.brief_mode_voice
+import io.novawerk.psygym.resources.brief_start_voice
+import io.novawerk.psygym.resources.brief_voice_note
 import io.novawerk.psygym.ui.components.BorderedCard
 import io.novawerk.psygym.ui.components.BottomActions
 import io.novawerk.psygym.ui.components.CaseAvatar
 import io.novawerk.psygym.ui.components.CaseTags
 import io.novawerk.psygym.ui.components.displayTitle
 import io.novawerk.psygym.ui.components.HelpLink
+import io.novawerk.psygym.ui.components.PillToggle
 import io.novawerk.psygym.ui.components.PrimaryButton
 import io.novawerk.psygym.ui.components.SafetyNote
 import io.novawerk.psygym.ui.locale.rememberApiLocale
+import io.novawerk.psygym.ui.pages.voice.rememberMicGate
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -64,6 +73,8 @@ fun BriefingScreen(
     case: CaseSummary?,
     caseIndex: Int,
     onStart: () -> Unit,
+    /** Null: the server has no voice sessions (docs/decisions/0013). */
+    voice: BriefingVoice?,
     onBack: () -> Unit,
     onHelp: () -> Unit,
     onSessionLost: () -> Unit,
@@ -90,7 +101,14 @@ fun BriefingScreen(
         },
         bottomBar = {
             BottomActions {
-                PrimaryButton(stringResource(Res.string.brief_start), onStart)
+                voice?.let { ModeToggle(it) }
+                val talk = voice?.takeIf { it.selected }
+                val startCall = talk?.let { rememberMicGate(it.call, it.onStart, onTypeInstead = { it.onSelect(false) }) }
+                when {
+                    talk == null -> PrimaryButton(stringResource(Res.string.brief_start), onStart)
+                    talk.consented -> PrimaryButton(stringResource(Res.string.brief_start_voice), { startCall?.invoke() })
+                    else -> PrimaryButton(stringResource(Res.string.brief_start_voice), talk.onConsent)
+                }
                 HelpLink(onHelp)
             }
         },
@@ -133,12 +151,42 @@ fun BriefingScreen(
             Section(stringResource(Res.string.brief_setup), stringResource(Res.string.brief_setup_body))
             SafetyNote {
                 Text(
-                    case.contentNotes?.get(locale) ?: stringResource(Res.string.brief_content_note),
+                    // Each time, in the words of the brief: where the voice goes (V0).
+                    when {
+                        voice?.selected != true -> case.contentNotes?.get(locale) ?: stringResource(Res.string.brief_content_note)
+                        case.contentNotes != null -> "${case.contentNotes.get(locale)} ${stringResource(Res.string.brief_voice_note)}"
+                        else -> stringResource(Res.string.brief_content_note_voice)
+                    },
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
             Spacer(Modifier.height(8.dp))
         }
+    }
+}
+
+/** The "type or talk" choice. Null on [BriefingScreen] when the server has no voice sessions. */
+class BriefingVoice(
+    val call: VoiceCall,
+    val selected: Boolean,
+    val consented: Boolean,
+    val onSelect: (Boolean) -> Unit,
+    /** The notice hasn't been agreed to yet: V1. */
+    val onConsent: () -> Unit,
+    val onStart: () -> Unit,
+)
+
+@Composable
+private fun ModeToggle(voice: BriefingVoice) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(stringResource(Res.string.brief_mode), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        PillToggle(
+            options = listOf(false to stringResource(Res.string.brief_mode_text), true to stringResource(Res.string.brief_mode_voice)),
+            selected = voice.selected,
+            onSelect = voice.onSelect,
+            fill = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 

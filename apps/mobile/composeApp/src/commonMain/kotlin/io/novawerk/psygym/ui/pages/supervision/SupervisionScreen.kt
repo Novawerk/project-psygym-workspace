@@ -54,6 +54,10 @@ import io.novawerk.psygym.ui.components.BorderedCard
 import io.novawerk.psygym.ui.components.BottomActions
 import io.novawerk.psygym.ui.components.DemoBadge
 import io.novawerk.psygym.ui.components.ErrorCard
+import io.novawerk.psygym.resources.voice_report_note
+import io.novawerk.psygym.resources.voice_session_tag
+import io.novawerk.psygym.ui.components.GrayCard
+import io.novawerk.psygym.ui.components.Tag
 import io.novawerk.psygym.ui.components.displayTitle
 import io.novawerk.psygym.ui.components.PrimaryButton
 import io.novawerk.psygym.ui.components.SecondaryButton
@@ -148,6 +152,12 @@ fun SupervisionScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                if (viewModel.voice) {
+                    Tag(stringResource(Res.string.voice_session_tag), Modifier.padding(top = 6.dp))
+                    GrayCard(Modifier.padding(top = 8.dp)) {
+                        Text(stringResource(Res.string.voice_report_note), style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
                 Spacer(Modifier.height(16.dp))
             }
             if (viewModel.streaming && viewModel.report.isEmpty()) {

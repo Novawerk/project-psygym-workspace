@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>语音会谈设计稿</title>
+<!-- Source of the PNGs in this folder. Colours, radii and spacing follow Theme.kt and screens.md. -->
+<style>
+  :root {
+    --bg:#FFFFFF; --fg:#09090B; --muted:#52525B; --line:#E4E4E7; --block:#F4F4F5;
+    --primary:#18181B; --on-primary:#FAFAFA; --ring:#18181B;
+  }
+  .dark {
+    --bg:#09090B; --fg:#FAFAFA; --muted:#A1A1AA; --line:#27272A; --block:#18181B;
+    --primary:#FAFAFA; --on-primary:#18181B; --ring:#FAFAFA;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#D4D4D8; font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif; padding:32px; }
+  #board { display:grid; grid-template-columns:repeat(5,360px); gap:40px 28px; width:max-content; }
+  .cell h3 { font-size:15px; margin:0 0 4px; color:#09090B; }
+  .cell p.cap { font-size:12px; margin:0 0 10px; color:#3F3F46; height:32px; line-height:16px; }
+  .phone { width:360px; height:780px; background:var(--bg); color:var(--fg); border-radius:24px; overflow:hidden; position:relative; display:flex; flex-direction:column; }
+  .status { height:32px; flex:none; display:flex; justify-content:space-between; align-items:center; padding:0 22px; font-size:12px; font-weight:600; }
+  .status .mic-dot { width:7px; height:7px; border-radius:50%; background:#71717A; display:inline-block; margin-left:6px; }
+  .top { height:56px; flex:none; display:flex; align-items:center; padding:0 6px; gap:2px; }
+  .top .ib { width:48px; height:48px; display:flex; align-items:center; justify-content:center; }
+  .top .title { flex:1; min-width:0; }
+  .top .title b { display:block; font-size:16px; font-weight:600; }
+  .top .title small { font-size:11px; color:var(--muted); }
+  .top .txt { font-size:14px; font-weight:500; padding:0 12px; }
+  svg.i { width:24px; height:24px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; display:block; }
+  svg.s { width:18px; height:18px; }
+  svg.xs { width:15px; height:15px; }
+
+  .body { flex:1; min-height:0; overflow:hidden; display:flex; flex-direction:column; }
+  .pad { padding:8px 20px; display:flex; flex-direction:column; gap:12px; }
+  .bottom { flex:none; padding:12px 20px 18px; display:flex; flex-direction:column; gap:8px; }
+  .btn { height:48px; border-radius:8px; display:flex; align-items:center; justify-content:center; gap:8px; font-size:14px; font-weight:600; width:100%; }
+  .btn.p { background:var(--primary); color:var(--on-primary); }
+  .btn.s { border:1px solid var(--line); color:var(--fg); }
+  .btn.off { background:var(--block); color:#A1A1AA; }
+  .box.empty { background:none; border:2px solid var(--fg); }
+  .gray em { display:block; font-style:normal; font-size:11px; color:var(--muted); margin-bottom:2px; }
+  .gray span.tbc, .tbc { display:inline; background:var(--line); border-radius:4px; padding:0 3px; color:var(--fg); }
+  .row { display:flex; align-items:center; font-size:14.5px; min-height:48px; border-bottom:1px solid var(--line); }
+  .link { text-align:center; font-size:13px; color:var(--muted); padding:6px 0 2px; }
+  .card { border:1px solid var(--line); border-radius:12px; padding:14px 16px; }
+  .card label, .lbl { font-size:13px; color:var(--muted); font-weight:500; display:block; margin-bottom:4px; }
+  .card div { font-size:14.5px; line-height:21px; }
+  .gray { background:var(--block); border-radius:12px; padding:12px 14px; }
+  .gray b { display:block; font-size:14px; font-weight:600; margin-bottom:3px; }
+  .gray span { display:block; font-size:12.5px; line-height:18px; color:var(--muted); }
+  .note { background:var(--block); border:1px solid var(--line); border-radius:12px; padding:12px 14px; display:flex; gap:10px; font-size:13px; line-height:19px; }
+  .note svg { flex:none; }
+  .tags { display:flex; gap:6px; flex-wrap:wrap; }
+  .tag { font-size:11.5px; background:var(--block); border-radius:99px; padding:3px 9px; }
+  .avatar { width:52px; height:52px; border-radius:50%; background:var(--block); display:flex; align-items:center; justify-content:center; font-weight:600; flex:none; }
+  .pill { background:var(--block); border-radius:99px; height:38px; padding:3px; display:flex; }
+  .pill span { flex:1; display:flex; align-items:center; justify-content:center; gap:5px; font-size:13.5px; color:#52525B; border-radius:99px; }
+  .dark .pill span { color:#D4D4D8; }
+  .pill span.on { background:var(--bg); color:var(--fg); font-weight:600; }
+  .check { display:flex; gap:10px; align-items:flex-start; font-size:13.5px; line-height:19px; }
+  .box { width:20px; height:20px; border-radius:5px; background:var(--primary); color:var(--on-primary); flex:none; display:flex; align-items:center; justify-content:center; }
+  .box svg { width:14px; height:14px; stroke-width:3; }
+
+  /* Call */
+  .hero { flex:none; height:206px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; position:relative; }
+  .hero.small { height:150px; gap:10px; }
+  .orb { position:relative; width:128px; height:128px; display:flex; align-items:center; justify-content:center; }
+  .orb i { position:absolute; inset:0; border-radius:50%; border:1.5px solid var(--ring); }
+  .orb i:nth-child(1) { transform:scale(.98); opacity:.38; }
+  .orb i:nth-child(2) { transform:scale(.84); opacity:.6; }
+  .orb.quiet i { opacity:.12; transform:scale(.76); }
+  .orb.quiet i:nth-child(2) { display:none; }
+  .orb.dim { opacity:.45; }
+  .orb .a { width:84px; height:84px; border-radius:50%; background:var(--block); display:flex; align-items:center; justify-content:center; font-size:26px; font-weight:600; position:relative; }
+  .state { font-size:14px; font-weight:500; display:flex; align-items:center; gap:7px; height:22px; }
+  .state small { color:var(--muted); font-size:13px; font-weight:400; }
+  .wave { display:flex; align-items:center; gap:2.5px; height:22px; }
+  .wave u { display:block; width:2.5px; border-radius:2px; background:var(--fg); }
+  .chip-row { flex:none; padding:0 16px; height:40px; display:flex; align-items:center; }
+  .chip { background:var(--block); border-radius:99px; padding:6px 12px; font-size:12px; color:var(--muted); display:flex; align-items:center; gap:6px; }
+  .chip em { width:6px; height:6px; border-radius:50%; background:var(--fg); }
+  .list { flex:1; min-height:0; padding:6px 16px; display:flex; flex-direction:column; gap:8px; overflow:hidden; justify-content:flex-end; }
+  .who { font-size:11px; color:var(--muted); padding:0 6px 2px; }
+  .m { display:flex; flex-direction:column; align-items:flex-start; }
+  .m.me { align-items:flex-end; }
+  .b { max-width:290px; font-size:15px; line-height:22px; padding:9px 13px; border-radius:16px 16px 16px 4px; background:var(--block); }
+  .m.me .b { background:var(--primary); color:var(--on-primary); border-radius:16px 16px 4px 16px; }
+  .sys { display:flex; align-items:center; gap:12px; font-size:12px; color:var(--muted); padding:6px 0; }
+  .sys:before,.sys:after { content:""; flex:1; height:1px; background:var(--line); }
+  .hint { text-align:center; font-size:11px; color:var(--muted); padding:0 20px 8px; flex:none; }
+  .dock { flex:none; padding:10px 20px 20px; display:flex; align-items:flex-start; gap:12px; border-top:1px solid var(--line); }
+  .ctl { display:flex; flex-direction:column; align-items:center; gap:4px; width:72px; flex:none; font-size:11px; color:var(--muted); }
+  .round { width:56px; height:56px; border-radius:50%; background:var(--block); display:flex; align-items:center; justify-content:center; color:var(--fg); }
+  .round.mute { background:var(--bg); border:2px solid var(--fg); }
+  .endbtn { flex:none; height:56px; border-radius:99px; background:var(--primary); color:var(--on-primary); display:flex; align-items:center; justify-content:center; gap:8px; font-size:15px; font-weight:600; }
+  .endbtn.off { background:var(--block); color:#A1A1AA; }
+  .banner { flex:none; margin:0 16px 6px; background:var(--block); border-radius:8px; padding:8px 12px; font-size:13px; display:flex; gap:8px; align-items:center; }
+  .spin { width:14px; height:14px; border-radius:50%; border:2px solid var(--line); border-top-color:var(--fg); }
+  .scrim { position:absolute; inset:0; background:rgba(0,0,0,.6); }
+  .sheet { position:absolute; left:0; right:0; bottom:0; background:var(--bg); border-radius:16px 16px 0 0; padding:10px 20px 20px; display:flex; flex-direction:column; gap:10px; }
+  .grab { width:32px; height:4px; border-radius:2px; background:#A1A1AA; margin:2px auto 6px; }
+  .sheet h4 { margin:0; font-size:21px; font-weight:500; }
+  .sheet p { margin:0; font-size:14px; line-height:20px; color:var(--muted); }
+  .sheet .fine { font-size:12px; text-align:center; line-height:17px; }
+  .sheet li { font-size:14px; line-height:20px; margin-bottom:8px; }
+  .sheet ul { margin:2px 0; padding-left:18px; }
+  .err { border:1px solid var(--line); border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:10px; margin:0 16px 10px; flex:none; }
+  .err .t { display:flex; gap:10px; font-size:14px; line-height:20px; }
+  .rep-h { font-size:13px; color:var(--muted); }
+  .sec { font-size:15px; font-weight:600; display:flex; gap:8px; align-items:center; }
+  .q { background:var(--block); border-radius:8px; padding:8px 10px; font-size:13.5px; line-height:19px; }
+  .q small { display:block; font-size:11px; color:var(--muted); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+  <symbol id="back" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
+  <symbol id="shield" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.500-7-5.500-7-10V6z"/><path d="M12 8v4M12 15.500v.5"/></symbol>
+  <symbol id="shield0" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.500-3 8.500-7 10-4-1.500-7-5.500-7-10V6z"/></symbol>
+  <symbol id="mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></symbol>
+  <symbol id="micoff" viewBox="0 0 24 24"><path d="M4 4l16 16M9 9v2a3 3 0 0 0 4.800 2.400M15 10.500V6a3 3 0 0 0-5.700-1.300M5 11a7 7 0 0 0 11 5.700M19 11a7 7 0 0 1-.6 2.800M12 18v3"/></symbol>
+  <symbol id="end" viewBox="0 0 24 24"><path d="M3 14c5-4.500 13-4.500 18 0l-2.500 3-3.500-1.500v-2.500c-2-.6-4-.6-6 0v2.500L5.500 17z"/></symbol>
+  <symbol id="kbd" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M11 10h.01M15 10h.01M8 14h8"/></symbol>
+  <symbol id="eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="check" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></symbol>
+  <symbol id="circlecheck" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></symbol>
+  <symbol id="wifi" viewBox="0 0 24 24"><path d="M4 4l16 16M8.500 16a5 5 0 0 1 7 0M5 12.500a10 10 0 0 1 4-2.500M19 12.500a10 10 0 0 0-5.500-2.900M12 20h.01"/></symbol>
+</defs></svg>
+
+<div id="board"></div>
+
+<script>
+const ic=(n,c='')=>`<svg class="i ${c}"><use href="#${n}"/></svg>`;
+const statusBar=(mic=true)=>`<div class="status"><span>9:41</span><span>${mic?'<span class="mic-dot"></span>':''}</span></div>`;
+const wave=(h)=>`<div class="wave">${h.map(x=>`<u style="height:${x}px"></u>`).join('')}</div>`;
+const WAVE=[5,9,14,8,18,12,6,10,16,20,11,7,13,17,9,5,8,12,6,4];
+const bar=(sub)=>`<div class="top"><div class="ib">${ic('back')}</div><div class="title"><b>小林</b><small>${sub}</small></div><div class="ib">${ic('shield')}</div></div>`;
+const b=(t,me)=>`<div class="m ${me?'me':''}"><div class="who">${me?'咨询师':'来访者'}</div><div class="b">${t}</div></div>`;
+const chip=(t='督导怎么看',dot=false)=>`<div class="chip-row"><div class="chip">${ic('eye','xs')}${t}${dot?'<em></em>':''}</div></div>`;
+const hint=`<div class="hint">练习会谈 · 虚构的来访者由 AI 扮演 · 这不是治疗</div>`;
+const orb=(cls='')=>`<div class="orb ${cls}"><i></i><i></i><div class="a">林</div></div>`;
+const dock=({mute=false,dis=false}={})=>`<div class="dock">
+  <div class="ctl"><div class="round ${mute?'mute':''}">${ic(mute?'micoff':'mic')}</div>${mute?'麦克风已关':'麦克风开着'}</div>
+  <div class="ctl" style="flex:1;width:auto"><div class="endbtn ${dis?'off':''}" style="width:100%">${ic('end')}结束</div></div></div>`;
+const talk=[b('嗯，你想从哪里说起都可以。',true),b('就是……我也不知道怎么说，这学期，那个，好像什么都没劲。')];
+const list=(items)=>`<div class="list">${items.join('')}</div>`;
+
+const brief=(voice)=>`${statusBar(false)}
+<div class="top"><div class="ib">${ic('back')}</div></div>
+<div class="body"><div class="pad">
+  <div style="display:flex;gap:14px;align-items:center"><div class="avatar">林</div><div><div style="font-size:20px;font-weight:600;margin-bottom:6px">小林 · 低落的大学生</div><div class="tags"><span class="tag">初次会谈</span><span class="tag">抑郁</span><span class="tag">入门</span><span class="tag">CBT</span></div></div></div>
+  <div class="card"><label>来访者</label><div>小林，20 岁，大二学生。情绪低落了几个月，室友建议找人聊聊。</div></div>
+  <div class="card"><label>会谈设置</label><div>初次会谈 · 建议 15–30 轮 · 约 15 分钟 · 你随时可以结束。</div></div>
+  <div class="note">${ic('shield0','s')}<span>这场会谈可能涉及抑郁、焦虑和消极念头。来访者是虚构的。${voice?'你的声音会发给美国的 ElevenLabs，转出的文字发给位于中国的 DeepSeek 生成回复，我们的服务器不保存。':'对话会发给位于中国的 DeepSeek 生成回复，我们的服务器不保存。'}</span></div>
+</div></div>
+<div class="bottom">
+  <div class="lbl" style="margin:0">会谈方式</div>
+  <div class="pill"><span class="${voice?'':'on'}">${ic('kbd','xs')}打字</span><span class="${voice?'on':''}">${ic('mic','xs')}语音</span></div>
+  <div class="btn p" style="margin-top:4px">${voice?'开始语音会谈':'开始会谈'}</div>
+  <div class="link">需要帮助？</div>
+</div>`;
+
+const consent=`${statusBar(false)}
+<div class="top"><div class="ib">${ic('back')}</div></div>
+<div class="body"><div class="pad" style="padding-top:0;gap:8px">
+  <div style="font-size:22px;font-weight:600;margin-bottom:4px">语音会谈前，先说清楚</div>
+  <div class="gray"><em>发给谁</em><b>声音发给 ElevenLabs。</b><span>它把你的声音转成文字，再把来访者的话读出来。转出的文字经我们的服务器，交给位于中国的第三方 AI 服务 DeepSeek 生成回复。</span></div>
+  <div class="gray"><em>发到哪</em><b>声音发到美国，文字发到中国。</b><span>声音直接从手机发到美国，不经过我们的服务器。文字从 ElevenLabs 经我们在法兰克福的服务器，发到 DeepSeek。这两段都会离开欧盟。</span></div>
+  <div class="gray"><em>存多久</em><b>我们不存声音。</b><span>我们的服务器和这台手机都不存录音。我们设置了 ElevenLabs 不录音。通话结束后它删除文字，实测一小时内删完。它的调试和审核日志里可能还留有内容，留多久我们还不清楚。备份最长留 30 天。DeepSeek 留多久我们管不了，见隐私说明。文字和报告按你的设置存在这台手机上。</span></div>
+  <div class="gray"><em>怎么撤回</em><b>你可以随时撤回。</b><span>在「我的」里撤回，以后不再发送。打字和按住说话不受影响。已发出的文字按上面说的删除，日志和备份我们删不到。有问题写信到 info@novawerk.io。</span></div>
+  <div class="gray"><b>只说虚构的内容。</b><span>不要说真实来访者的信息。这是练习工具，不是治疗。</span></div>
+</div></div>
+<div class="bottom" style="padding-top:10px;border-top:1px solid var(--line)">
+  <div class="check"><span class="box empty"></span><span>我同意把我的声音发给美国的 ElevenLabs，把转出的文字发给位于中国的 DeepSeek。</span></div>
+  <div class="btn off">同意并开始</div>
+  <div class="btn s">改用打字</div>
+  <div class="link" style="display:flex;justify-content:center;gap:18px;padding-top:2px"><u>隐私说明</u><u>需要帮助？</u></div>
+</div>`;
+
+const withdraw=`${statusBar(false)}<div class="top"><div class="title" style="padding-left:14px"><b>我的</b></div></div>
+<div class="body"><div class="pad" style="padding-top:0;gap:0"><div class="lbl" style="margin:8px 0 4px">语音会谈</div>
+<div class="row">声音去哪、存多久</div><div class="row">撤回语音会谈的同意</div></div></div>
+<div class="scrim"></div><div class="sheet"><div class="grab"></div>
+<h4>撤回语音会谈的同意？</h4><p>以后不再把你的声音发给 ElevenLabs。打字和按住说话不受影响。已发出的文字按隐私说明删除，日志和备份我们删不到。有问题写信到 info@novawerk.io。</p>
+<div style="height:6px"></div><div class="btn p">撤回同意</div><div class="btn s">保留</div></div>`;
+
+const connecting=`${statusBar(false)}${bar('正在接通')}
+<div class="body"><div class="hero" style="height:300px">${orb('quiet')}<div class="state"><span class="spin"></span>正在接通…</div></div>
+<div style="flex:1"></div>${hint}</div>${dock({dis:true})}`;
+
+const ready=`${statusBar()}${bar('00:04')}
+<div class="body"><div class="hero" style="height:300px">${orb('quiet')}<div class="state">接通了。你先开口。</div>${wave([3,3,3,4,3,3,5,3,3,3,4,3,3,3,5,3,3,4,3,3])}</div>
+<div style="flex:1"></div>${hint}</div>${dock()}`;
+
+const speaking=`${statusBar()}${bar('第 6 轮 · 08:32')}
+<div class="body"><div class="hero">${orb()}<div class="state">来访者在说话<small>· 可以随时打断</small></div></div>
+${chip()}${list(talk)}${hint}</div>${dock()}`;
+
+const listening=`${statusBar()}${bar('第 6 轮 · 08:41')}
+<div class="body"><div class="hero">${orb('quiet')}<div class="state">在听你说</div>${wave(WAVE)}</div>
+${chip()}${list([talk[1],b('那种没劲，是什么时候开始的？',true)])}${hint}</div>${dock()}`;
+
+const muted=`${statusBar(false)}${bar('第 6 轮 · 08:55')}
+<div class="body"><div class="hero">${orb('quiet dim')}<div class="state">${ic('micoff','xs')}麦克风已关<small>· 来访者听不到你</small></div></div>
+${chip()}${list(talk)}${hint}</div>${dock({mute:true})}`;
+
+const live=`${statusBar()}${bar('第 6 轮 · 09:02')}
+<div class="body"><div class="hero">${orb()}<div class="state">来访者在说话</div></div>${chip('督导 · 第 6 轮')}${list(talk)}</div>${dock()}
+<div class="scrim"></div><div class="sheet"><div class="grab"></div>
+<div style="font-size:18px;font-weight:600">督导的提示</div><div style="font-size:12px;color:var(--muted);margin-top:-6px">第 6 轮 · 对话还在进行</div>
+<ul><li>你说「你想从哪里说起都可以」，好在把开头交给了来访者。</li><li>接下来可以慢一点，留一点沉默。可以换成：嗯，你慢慢说。</li></ul>
+<p style="font-size:12px">通话还在继续，来访者听得到你。</p>
+<p style="font-size:12px">这是会谈中途的简短提示，结束后有完整报告。</p>
+<div class="btn p">回到对话</div></div>`;
+
+const reconnect=`${statusBar()}${bar('第 6 轮 · 09:15')}
+<div class="body"><div class="hero">${orb('quiet dim')}<div class="state"><span class="spin"></span>网断了，正在重连…</div></div>
+${chip()}${list(talk)}${hint}</div>${dock({dis:false})}`;
+
+const dropped=`${statusBar(false)}${bar('第 6 轮 · 通话已断开')}
+<div class="body">${list(talk)}
+<div class="err"><div class="t">${ic('wifi','s')}<span>通话断了。这场的文字还在，可以打字接着练。</span></div>
+<div class="btn p">打字继续</div><div class="btn s">结束并查看督导</div></div></div>`;
+
+const denied=`${statusBar(false)}${bar('',false)}
+<div class="body"><div class="hero" style="height:300px">${orb('quiet dim')}</div></div>
+<div class="scrim"></div><div class="sheet"><div class="grab"></div>
+<h4>需要麦克风权限</h4><p>语音会谈要用麦克风。你也可以改用打字，这个病例照样能练。</p>
+<div style="height:6px"></div><div class="btn p">去设置</div><div class="btn s">改用打字</div></div>`;
+
+const clientEnded=`${statusBar(false)}<div class="top"><div class="ib">${ic('back')}</div><div class="title"><b>小林</b><small>第 9 轮 · 12:06</small></div><div class="ib">${ic('shield')}</div></div>
+<div class="body">${list([b('我只是觉得你这样不对。',true),b('……你这么说，我不知道还要不要说下去。我想今天先到这里。'),'<div class="sys">来访者结束了这次会谈</div>'])}</div>
+<div class="bottom"><div class="btn p">结束并查看督导</div></div>`;
+
+const endSheet=`${statusBar()}${bar('第 12 轮 · 14:20')}
+<div class="body"><div class="hero">${orb('quiet')}</div>${list(talk)}</div>${dock()}
+<div class="scrim"></div><div class="sheet"><div class="grab"></div>
+<h4>结束这次会谈？</h4><p>通话会挂断。督导会读完整场对话，给你一份反馈。</p><div style="height:6px"></div>
+<div class="btn p">结束并查看督导</div><div class="btn s">继续会谈</div>
+<p class="fine">文字和报告会存在这台手机上，录音不存。可以在「我的」里关掉。</p></div>`;
+
+const report=`${statusBar(false)}<div class="top"><div class="title" style="padding-left:14px"><b>督导反馈</b></div><div class="ib">${ic('shield')}</div></div>
+<div class="body"><div class="pad" style="padding-top:0">
+  <div class="rep-h">小林 · 低落的大学生 · 10月30日 · 14 分钟 · 12 轮</div>
+  <div class="tags"><span class="tag" style="display:flex;gap:4px;align-items:center">${ic('mic','xs')}语音会谈</span></div>
+  <div class="note"><span>这场是语音会谈。原话来自自动转写，可能有出入。</span></div>
+  <div class="sec">${ic('circlecheck','s')}做得好的地方</div>
+  <div style="font-size:14.5px;line-height:21px">好在把开头交给了来访者，没有急着问问题。</div>
+  <div class="q"><small>你说</small>你想从哪里说起都可以。</div>
+  <div class="sec" style="margin-top:6px">${ic('back','s')}需要改进的地方</div>
+  <div style="font-size:14.5px;line-height:21px">来访者提到没劲时，你很快转去问时间，情绪还没接住。</div>
+</div></div>
+<div class="bottom" style="padding-top:6px"><div class="btn p">再练这个病例</div><div class="btn s">换个病例</div></div>`;
+
+const FRAMES=[
+ ['V0 病例简介 · 打字（默认）','会谈方式放在主按钮上方。一页仍只有一个主按钮。',brief(false)],
+ ['V0 病例简介 · 语音','选语音后：按钮文案和内容提示跟着变。',brief(true)],
+ ['V1 说明和同意','默认不勾选。拒绝和同意一样容易。文案变长时滚动。',consent],
+ ['P1 撤回同意','在「我的」里，和同意一样容易。',withdraw],
+ ['V2 正在接通','拿 token、连 WebRTC。「结束」此时不可点，返回可退出。',connecting],
+ ['V3 接通了','来访者不先说话，咨询师先开口（ADR 0013）。',ready],
+ ['V3 来访者在说话','圆环跟随来访者音量。可以直接开口打断。',speaking],
+ ['V3 在听你说','波形跟随麦克风音量，沿用按住说话的细波形。',listening],
+ ['V3 麦克风已关','边框按钮。状态写明来访者听不到你。',muted],
+ ['V3 实时督导','沿用 LiveSheet。多一行：通话还在继续。',live],
+ ['V4 断网重连','最多等 15 秒。不挡转写，「结束」仍可点。',reconnect],
+ ['V4 通话断了','文字还在：打字接着练，或直接看督导。',dropped],
+ ['V4 麦克风被拒','不让用户卡住：一步转到打字。',denied],
+ ['V5 来访者结束会谈','说完结束语挂断。沿用 S1 的系统行和主按钮。',clientEnded],
+ ['V5 咨询师结束','沿用 S2，多写明「通话会挂断」和录音不存。',endSheet],
+ ['V6 督导报告','沿用 R1。加语音标签和转写提示。',report],
+];
+const dark=[['V3 深色','深色和浅色都走 Theme.kt，不单独做一套。',speaking],['V1 深色','',consent]];
+document.getElementById('board').innerHTML=FRAMES.concat(dark).map(([t,c,h],i)=>`<div class="cell" id="f${i}"><h3>${t}</h3><p class="cap">${c}</p><div class="phone ${t.includes('深色')?'dark':''}">${h}</div></div>`).join('');
+</script>
+</body>
+</html>

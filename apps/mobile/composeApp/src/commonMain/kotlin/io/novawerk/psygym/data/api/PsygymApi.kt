@@ -16,6 +16,13 @@ interface PsygymApi {
 
     /** `POST /supervision`. Emits the Markdown report in pieces; throws [ApiException]. */
     fun supervision(request: TurnRequest): Flow<String>
+
+    /** `GET /voice/status`: whether to offer a voice session. Any failure reads as no. */
+    suspend fun voiceAvailable(): Boolean = false
+
+    /** `POST /voice/session`: what the voice call needs to start. Throws [ApiException]. */
+    suspend fun voiceSession(caseId: String, locale: ApiLocale): VoiceTicket =
+        throw ApiException(ApiErrorCode.ModelUnavailable, "no voice here")
 }
 
 /**
@@ -50,6 +57,13 @@ data class Account(val email: String, val createdAt: String? = null, val inviteB
 
 @Serializable
 data class AuthSession(val token: String, val expiresAt: String? = null, val me: Account)
+
+@Serializable
+data class VoiceTicket(
+    val conversationToken: String,
+    val dynamicVariables: Map<String, String>,
+    val extraBody: Map<String, String>,
+)
 
 sealed interface ChatEvent {
     data class Delta(val text: String) : ChatEvent

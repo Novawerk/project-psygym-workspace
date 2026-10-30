@@ -75,6 +75,7 @@ kotlin {
             implementation(libs.androidx.activity.compose)
             implementation(libs.ktor.client.okhttp)
             implementation(libs.sherpa.onnx)
+            implementation(libs.elevenlabs.android)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
@@ -161,6 +162,8 @@ android {
         }
     }
     buildTypes {
+        // Beside the store build on the same phone: signatures differ.
+        getByName("debug") { applicationIdSuffix = ".debug" }
         getByName("release") {
             // If R8 is turned on: keep com.k2fsa.sherpa.onnx.** (its JNI looks classes up by name).
             isMinifyEnabled = false

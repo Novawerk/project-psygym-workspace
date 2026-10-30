@@ -27,7 +27,13 @@ enum class StartState { Welcome, Consent, Home }
  * Bump when the O2 disclaimer changes in substance: everyone sees it again on next launch
  * (docs/product/onboarding.md, docs/safety.md §5).
  */
-const val DISCLAIMER_VERSION = "2026-10-v2"
+const val DISCLAIMER_VERSION = "2026-10-v3"
+
+/**
+ * Bump when what the voice-session notice says changes in substance: everyone agrees again
+ * before their next voice session (docs/safety.md §1).
+ */
+const val VOICE_CONSENT_VERSION = "2026-10-v3"
 
 /** Small, local-only settings. Conversations live in [io.novawerk.psygym.domain.history.HistoryRepository], never here. */
 class SettingsRepository(private val dataStore: DataStore<Preferences>) {
@@ -90,6 +96,28 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
     }
 
     /** Demo data instead of the backend. Debug builds only; always false in release. */
+    /** Agreed to the voice-session notice, this version of it. */
+    val voiceConsent: Flow<Boolean> = dataStore.data.map { it[VOICE_CONSENT] == VOICE_CONSENT_VERSION }
+
+    suspend fun acceptVoiceConsent() {
+        dataStore.edit { it[VOICE_CONSENT] = VOICE_CONSENT_VERSION }
+    }
+
+    /** Withdrawn under Me. The notice comes back the next time the user picks voice. */
+    suspend fun withdrawVoiceConsent() {
+        dataStore.edit {
+            it.remove(VOICE_CONSENT)
+            it[VOICE_SESSION] = false
+        }
+    }
+
+    /** The last choice of "type or talk" on the case brief. */
+    val voiceSession: Flow<Boolean> = dataStore.data.map { it[VOICE_SESSION] ?: false }
+
+    suspend fun setVoiceSession(value: Boolean) {
+        dataStore.edit { it[VOICE_SESSION] = value }
+    }
+
     val useFakeApi: Flow<Boolean> = dataStore.data.map {
         AppConfig.isDebug && (it[USE_FAKE_API] ?: AppConfig.fakeApiDefault)
     }
@@ -159,5 +187,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         val SIGNED_IN_ONCE = booleanPreferencesKey("signed_in_once")
         val LIVE_NOTES = booleanPreferencesKey("live_notes")
         val VOICE_MODE = booleanPreferencesKey("voice_mode")
+        val VOICE_CONSENT = stringPreferencesKey("voice_consent")
+        val VOICE_SESSION = booleanPreferencesKey("voice_session")
     }
 }
