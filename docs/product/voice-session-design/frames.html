@@ -38,6 +38,10 @@
   .btn.p { background:var(--primary); color:var(--on-primary); }
   .btn.s { border:1px solid var(--line); color:var(--fg); }
   .btn.off { background:var(--block); color:#A1A1AA; }
+  .box.empty { background:none; border:2px solid var(--fg); }
+  .gray em { display:block; font-style:normal; font-size:11px; color:var(--muted); margin-bottom:2px; }
+  .gray span.tbc, .tbc { display:inline; background:var(--line); border-radius:4px; padding:0 3px; color:var(--fg); }
+  .row { display:flex; align-items:center; font-size:14.5px; min-height:48px; border-bottom:1px solid var(--line); }
   .link { text-align:center; font-size:13px; color:var(--muted); padding:6px 0 2px; }
   .card { border:1px solid var(--line); border-radius:12px; padding:14px 16px; }
   .card label, .lbl { font-size:13px; color:var(--muted); font-weight:500; display:block; margin-bottom:4px; }
@@ -161,17 +165,25 @@ const consent=`${statusBar(false)}
 <div class="top"><div class="ib">${ic('back')}</div></div>
 <div class="body"><div class="pad" style="padding-top:0;gap:8px">
   <div style="font-size:22px;font-weight:600;margin-bottom:4px">语音会谈前，先说清楚</div>
-  <div class="gray"><b>你的声音会发给 ElevenLabs。</b><span>ElevenLabs 是美国公司。它实时把你的声音转成文字，再把来访者的话读出来。声音不经过我们的服务器。</span></div>
-  <div class="gray"><b>文字会经过我们和 AI 模型服务。</b><span>转出的文字发到我们的服务器，再交给第三方 AI 模型服务生成回复。我们的服务器不保存。</span></div>
-  <div class="gray"><b>录音不留，日志可能留。</b><span>我们把 ElevenLabs 设成不存录音、保存 0 天。它仍可能按自己的政策留日志，这部分我们管不到。</span></div>
-  <div class="gray"><b>手机上只存文字。</b><span>不存录音。文字和报告按你的设置存在这台手机上。</span></div>
+  <div class="gray"><em>发给谁</em><b>声音发给 ElevenLabs。</b><span>它把你的声音转成文字，再把来访者的话读出来。转出的文字经我们的服务器，交给 AI 模型服务 <span class="tbc">【待确认：服务商】</span> 生成回复。</span></div>
+  <div class="gray"><em>发到哪</em><b>声音发到 <span class="tbc">【待确认：区域】</span>。</b><span>声音直接从手机发出，不经过我们的服务器。<span class="tbc">【待确认：出欧盟时的传输依据】</span></span></div>
+  <div class="gray"><em>存多久</em><b>我们不存声音。</b><span>我们的服务器和这台手机都不存录音。ElevenLabs：<span class="tbc">【待确认：录音、文字、日志各存多久】</span>。文字和报告按你的设置存在这台手机上。</span></div>
+  <div class="gray"><em>怎么撤回</em><b>你可以随时撤回。</b><span>在「我的」里撤回，以后不再发送。打字和按住说话不受影响。已发出的数据：<span class="tbc">【待确认：能不能删、怎么删】</span></span></div>
   <div class="gray"><b>只说虚构的内容。</b><span>不要说真实来访者的信息。这是练习工具，不是治疗。</span></div>
 </div></div>
-<div class="bottom" style="padding-top:8px">
-  <div class="check"><span class="box">${ic('check')}</span><span>我同意把我的声音发给 ElevenLabs 处理。</span></div>
-  <div class="btn p">同意并开始</div>
-  <div class="link" style="display:flex;justify-content:center;gap:18px;padding-top:2px"><u>改用打字</u><u>隐私说明</u><u>需要帮助？</u></div>
+<div class="bottom" style="padding-top:10px;border-top:1px solid var(--line)">
+  <div class="check"><span class="box empty"></span><span>我同意把我的声音发给 ElevenLabs 处理。</span></div>
+  <div class="btn off">同意并开始</div>
+  <div class="btn s">改用打字</div>
+  <div class="link" style="display:flex;justify-content:center;gap:18px;padding-top:2px"><u>隐私说明</u><u>需要帮助？</u></div>
 </div>`;
+
+const withdraw=`${statusBar(false)}<div class="top"><div class="title" style="padding-left:14px"><b>我的</b></div></div>
+<div class="body"><div class="pad" style="padding-top:0;gap:0"><div class="lbl" style="margin:8px 0 4px">语音会谈</div>
+<div class="row">声音去哪、存多久</div><div class="row">撤回语音会谈的同意</div></div></div>
+<div class="scrim"></div><div class="sheet"><div class="grab"></div>
+<h4>撤回语音会谈的同意？</h4><p>以后不再把你的声音发给 ElevenLabs。打字和按住说话不受影响。已发出的数据：<span class="tbc">【待确认：能不能删、怎么删】</span></p>
+<div style="height:6px"></div><div class="btn p">撤回同意</div><div class="btn s">保留</div></div>`;
 
 const connecting=`${statusBar(false)}${bar('正在接通')}
 <div class="body"><div class="hero" style="height:300px">${orb('quiet')}<div class="state"><span class="spin"></span>正在接通…</div></div>
@@ -244,7 +256,8 @@ const report=`${statusBar(false)}<div class="top"><div class="title" style="padd
 const FRAMES=[
  ['V0 病例简介 · 打字（默认）','会谈方式放在主按钮上方。一页仍只有一个主按钮。',brief(false)],
  ['V0 病例简介 · 语音','选语音后：按钮文案和内容提示跟着变。',brief(true)],
- ['V1 说明和同意','第一次用语音时出现。声明版本升级后再出现。',consent],
+ ['V1 说明和同意','默认不勾选。拒绝和同意一样容易。文案变长时滚动。',consent],
+ ['P1 撤回同意','在「我的」里，和同意一样容易。',withdraw],
  ['V2 正在接通','拿 token、连 WebRTC。「结束」此时不可点，返回可退出。',connecting],
  ['V3 接通了','来访者不先说话，咨询师先开口（ADR 0013）。',ready],
  ['V3 来访者在说话','圆环跟随来访者音量。可以直接开口打断。',speaking],
