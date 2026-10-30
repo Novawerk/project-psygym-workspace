@@ -6,7 +6,7 @@
 
 **事实来源：** [ADR 0013](https://github.com/Novawerk/project-psygym-workspace/blob/spike/elevenlabs-voice/docs/decisions/0013-voice-elevenlabs.md)（在 `spike/elevenlabs-voice` 分支，合并后路径是 `docs/decisions/0013-voice-elevenlabs.md`）、同分支的 `api-contract.md` 和 `apps/api/scripts/voice-test/index.html`。视觉沿用 [screens.md](./screens.md)「通用」和 `Theme.kt`。
 
-**设计稿：** [`voice-session-design/board.png`](./voice-session-design/board.png)。源文件是同目录的 `frames.html`，用浏览器打开就能看。Stitch 这次没有登录，所以稿子是按 `Theme.kt` 的色值手写的 HTML。
+**设计稿：** 画布 <https://claude.ai/artifact/T45X7MHd59Zh82us1SXgbK>（内部链接，需要分享后才能打开）。不用登录也能看的版本是 [`voice-session-design/board.png`](./voice-session-design/board.png)，源文件是同目录的 `frames.html`。稿子按 `Theme.kt` 的色值手写，没有用 Stitch（这次没有登录）。
 
 ![语音会谈设计稿](./voice-session-design/board.png)
 
