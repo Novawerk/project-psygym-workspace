@@ -134,11 +134,11 @@ cases, until the user says otherwise. Mainland availability is set aside (below)
 
 | Question | What we found | Who decides |
 |---|---|---|
-| EU data residency | **Enterprise only.** A separate workspace, account and key at `eu.residency.elevenlabs.io`; our key is refused there. Data is stored in the EU; processing may still leave it (support, moderation, subprocessors), unless Zero Retention Mode is on too. Agents can be used there; existing ones are recreated | The user: stay on Creator or talk to sales |
+| EU data residency | **Enterprise only.** A separate workspace, account and key at `eu.residency.elevenlabs.io`; our key is refused there. Data is stored in the EU; processing may still leave it (support, moderation, subprocessors), unless Zero Retention Mode is on too. Agents can be used there; existing ones are recreated | **Stay on Creator (the user, 2026-10-30).** The voice stays in the US |
 | Where the voice goes today | The United States (global environment) | |
-| DPA | [The DPA](https://elevenlabs.io/dpa) says it forms part of the agreement, and the SCCs count as signed when it takes effect. It doesn't say how a self-serve account gets it; the terms say it governs when you agree on behalf of an entity. The pricing page lists DPA terms only for Enterprise. **Nothing has been signed.** To do: accept or sign it in the company's name, or ask ElevenLabs in writing | The user signs |
+| DPA | [The DPA](https://elevenlabs.io/dpa) says it forms part of the agreement, and the SCCs count as signed when it takes effect. It doesn't say how a self-serve account gets it; the terms say it governs when you agree on behalf of an entity. The pricing page lists DPA terms only for Enterprise. **Nothing has been signed.** **Test first, sign later (the user, 2026-10-30).** Until it's signed, voice is for team tests with made-up material, not real users | Open: must close before real users |
 | Transfer basis | The DPA allows adequacy (the EU-US Data Privacy Framework) or SCCs. ElevenLabs' [DPF page](https://elevenlabs.io/eu-us-data-privacy-framework-policy) says it is certified; we haven't checked the official list or which entity it covers | Needs legal review |
-| Training | [The terms](https://elevenlabs.io/terms-of-use) let ElevenLabs use content to improve its services, with an opt-out under **Data use** in the account settings, from then on. We can't read that setting through the API. **It should be switched off before real users** | The user |
+| Training | [The terms](https://elevenlabs.io/terms-of-use) let ElevenLabs use content to improve its services, with an opt-out under **Data use** in the account settings, from then on. We can't read that setting through the API. **Off, as the user reports (2026-10-30).** Not something we can confirm through the API | Decided |
 | The other transfer | The text ElevenLabs hears goes through our server in Frankfurt to **DeepSeek in China**. For European users this is a harder transfer than the US one, and it's the same in typed sessions. An EU model would fix it; `CLIENT_LLM_*` already allows that. **Kept for now: the user, 2026-10-30, 「先保留 DeepSeek」.** V1 says so plainly | Decided |
 | Legal basis for the voice | Consent, separately (V1), withdrawable under Me. Whether a voice counts as article 9 data needs legal review | Needs legal review |
 
@@ -230,7 +230,7 @@ transfer of personal information, and ElevenLabs is not a filed service in China
 Setting the three variables in production makes the entry appear for everyone, on existing builds
 too. So, in order:
 
-1. Choose the plan, sign the DPA, confirm no training on our data.
+1. Sign the DPA and fill in the transfer basis (plan: Creator; training: off, per the user).
 2. Merge and publish the privacy policy, labels, Data safety form and review notes (`docs/release/`).
 3. Create a production agent with the settings above, pointing at `https://psygym-api.novawerk.io/voice/llm`.
    The agent used so far is a test agent on a laptop tunnel.
