@@ -7,6 +7,36 @@
 
 版本号在 `apps/mobile/gradle/libs.versions.toml`。iOS 的 build number 由 Xcode Cloud 的 `CI_BUILD_NUMBER` 决定，只往上涨（`iosApp/ci_scripts/ci_post_clone.sh`）。
 
+## 0.3.1（versionCode 4）
+
+0.3.0 没有通过 App 审核（2026-10-30）。这一版只改审核要求的内容，只发 iOS。
+
+### TestFlight · What to Test
+
+```
+聆镜 PSYGYM 是给新手心理咨询师的练习工具：AI 扮演来访者，练完由 AI 督导给反馈。来访者都是虚构的。
+
+这一版改了：
+· 「开始之前」页写明发什么、发给谁：对话经我们的服务器发给位于中国的 DeepSeek。这件事要单独勾选同意。用过上一版的人会再看到这一页。
+· 隐私政策写全了。
+
+问题和想法发到 info@novawerk.io。请不要输入真实来访者的信息。
+
+聆镜 PSYGYM is a practice tool for new counselors: an AI plays the client, and an AI supervisor gives feedback afterwards. Every client is fictional.
+
+What changed:
+· The "Before we start" page now says what is sent and to whom: the conversation goes through our server to DeepSeek in China. You agree to this with its own tick box. If you used the last version, you'll see this page again.
+· The privacy policy is complete.
+
+Send problems and ideas to info@novawerk.io. Please don't enter real client information.
+```
+
+### App Store · What's New
+
+```
+We now say clearly what we send to the AI service and who runs it, and ask for your consent first. The privacy policy is complete.
+```
+
 ## 0.3.0（versionCode 3）
 
 ### Play 发行说明
