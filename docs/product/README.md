@@ -11,6 +11,7 @@
 | [screens.md](./screens.md) | 每个页面：目的、内容、操作、状态、文案。 |
 | [history-and-progress.md](./history-and-progress.md) | 本机练习记录和技能进度。 |
 | [skill-tags.md](./skill-tags.md) | 督导报告技能标签的格式草案（等督导标准）。 |
+| [voice-session-design.md](./voice-session-design.md) | 语音会谈的界面设计：入口、同意页、通话、异常、结束。 |
 | [copy.md](./copy.md) | 文案规范和中英文对照表。 |
 | [open-decisions.md](./open-decisions.md) | 待决策项：会改合同、数据存储或验收的事，写清利弊。 |
 | [admin.md](./admin.md) | 后台方案和决定（D-A1–D-A10）。 |
