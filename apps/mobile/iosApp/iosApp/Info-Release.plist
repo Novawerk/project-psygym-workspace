@@ -9,7 +9,7 @@
 	<false/>
 	<!-- Hold to talk (ADR 0010): recognised on the device, never uploaded. Translations in *.lproj/InfoPlist.strings. -->
 	<key>NSMicrophoneUsageDescription</key>
-	<string>To hear you while you hold to talk. Your voice is turned into text on this phone and never uploaded.</string>
+	<string>To hear you. With hold to talk, your voice is turned into text on this phone. In a voice session, your voice goes to ElevenLabs.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>To turn what you say into text on this phone, offline.</string>
 	<key>CFBundleLocalizations</key>

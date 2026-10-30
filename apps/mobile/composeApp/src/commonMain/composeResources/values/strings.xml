@@ -27,24 +27,22 @@
     <string name="onb_consent_1_body">It’s a practice tool for counselors. It’s not for clients, and it can’t help in a crisis. If you’re going through a hard time yourself, tap “Need help?” below.</string>
     <string name="onb_consent_2_title">The clients are fictional.</string>
     <string name="onb_consent_2_body">An AI plays them. Sessions may touch on depression, anxiety and dark thoughts.</string>
-    <string name="onb_consent_3_title">An AI model processes the conversation.</string>
-    <string name="onb_consent_3_body">We send the conversation to a third-party AI model service to generate replies. Our servers don’t store it.</string>
+    <string name="onb_consent_3_title">Your conversation goes to Anthropic.</string>
+    <string name="onb_consent_3_body">To write the client’s replies and your feedback, we send what you type or dictate, the conversation so far and your interface language through our server to Anthropic, a third-party AI service run by a US company. We don’t send your email or account ID, and our servers don’t store the conversation. Nothing is sent unless you agree below.</string>
     <string name="onb_consent_4_title">Don’t enter real client information.</string>
     <string name="onb_consent_4_body">No names, histories or any detail that could identify someone.</string>
     <string name="onb_consent_5_title">The feedback is for practice only.</string>
     <string name="onb_consent_5_body">An AI writes it. It is not an assessment and not clinical advice.</string>
     <string name="onb_consent_check">I understand this is a practice tool, not therapy.</string>
-    <string name="onb_consent_accept">Got it</string>
+    <string name="onb_consent_ai_check">I agree that my practice conversations are sent to Anthropic in the US to write replies and feedback.</string>
+    <string name="onb_consent_accept">Agree and continue</string>
     <string name="onb_link_privacy">Privacy</string>
 
     <!-- Home (H1) -->
     <string name="home_greeting">Ready for a session?</string>
-    <string name="home_tagline">Pick a client and start a CBT session.</string>
-    <string name="home_start_card_title">Start practising</string>
-    <string name="home_start_card_meta">About 15 min · supervision feedback at the end</string>
+    <string name="home_start_card_meta">CBT session · about 15 min · supervision feedback at the end</string>
     <string name="home_start_card_button">Pick a client</string>
     <string name="home_cases_section">Cases</string>
-    <string name="home_cases_all">All</string>
     <string name="home_disclaimer">聆镜 PSYGYM is a practice tool for counselors. An AI plays the client. Every client is fictional. This is not therapy.</string>
     <string name="home_settings">Settings</string>
 
@@ -63,7 +61,7 @@
     <string name="brief_client">The client</string>
     <string name="brief_setup">Session</string>
     <string name="brief_setup_body">First session · 15–30 turns suggested · about 15 min · end any time.</string>
-    <string name="brief_content_note">This session may touch on depression, anxiety and dark thoughts. The client is fictional. A third-party AI model processes the conversation; our servers don’t store it.</string>
+    <string name="brief_content_note">This session may touch on depression, anxiety and dark thoughts. The client is fictional. Your conversation is sent to Anthropic in the US to write the replies; our servers don’t store it.</string>
     <string name="brief_start">Start session</string>
 
     <!-- Session (S1, S2) -->
@@ -148,13 +146,13 @@
 
     <!-- Privacy (P3) -->
     <string name="privacy_title">Privacy</string>
-    <string name="privacy_vendor">DeepSeek</string>
+    <string name="privacy_vendor">Anthropic</string>
     <string name="privacy_q_where">Where does the conversation go?</string>
-    <string name="privacy_a_where">Each message, with the conversation so far, goes to our server and on to a third-party AI model service that writes the reply. We currently use %1$s.</string>
+    <string name="privacy_a_where">Each message, with the conversation so far, goes to our server and on to %1$s, a third-party AI service run by Anthropic, PBC, a US company, which writes the reply. We don’t send your email or account ID.</string>
     <string name="privacy_q_store">Do you store it?</string>
     <string name="privacy_a_store">Our servers don’t store the conversation or log its text.</string>
     <string name="privacy_q_vendor">Does the AI model service store it?</string>
-    <string name="privacy_a_vendor">It follows its own policy.</string>
+    <string name="privacy_a_vendor">It handles the conversation under its own rules: usually deleted within 30 days, up to 2 years for content flagged as a violation, longer if the law requires. That’s one more reason not to enter real client information.</string>
     <string name="privacy_q_device">Is it stored on my phone?</string>
     <string name="privacy_a_device">Yes. Each session and its report are saved, unencrypted, in the app’s own space on this phone. Nothing is uploaded or backed up to the cloud. Turn saving off or delete everything under Me; delete a single session from your practice history. Uninstalling the app deletes everything.</string>
     <string name="privacy_q_collect">What do you collect?</string>
@@ -316,4 +314,59 @@
     <string name="licenses_show_text">Read the licence</string>
     <string name="privacy_q_voice">Does hold to talk upload my voice?</string>
     <string name="privacy_a_voice">No. Your voice is turned into text on your phone; it isn’t uploaded or stored. The text is like what you type: it goes to the AI model only when you send it.</string>
+    <string name="brief_mode">How to practise</string>
+    <string name="brief_mode_text">Type</string>
+    <string name="brief_mode_voice">Voice</string>
+    <string name="brief_start_voice">Start voice session</string>
+    <string name="brief_content_note_voice">This session may touch on depression, anxiety and dark thoughts. The client is fictional. Your voice goes to ElevenLabs in the US, and the text goes to Anthropic in the US to write the replies; our servers don’t store it.</string>
+    <string name="brief_voice_note">Your voice goes to ElevenLabs in the US, and the text goes to Anthropic in the US to write the replies; our servers don’t store it.</string>
+    <string name="voice_consent_title">Before your first voice session</string>
+    <string name="voice_consent_1_label">Who receives it</string>
+    <string name="voice_consent_1_title">Your voice goes to ElevenLabs.</string>
+    <string name="voice_consent_1_body">It turns your voice into text and reads out the client’s words. The text goes through our server to %1$s, a third-party AI service in the US, which writes the reply.</string>
+    <string name="voice_consent_2_label">Where it goes</string>
+    <string name="voice_consent_2_title">Your voice and the text go to the US.</string>
+    <string name="voice_consent_2_body">Your voice goes straight from your phone to the US and skips our servers. The text goes from ElevenLabs through our server in Frankfurt to Anthropic. Both steps leave the EU.</string>
+    <string name="voice_consent_3_label">How long it’s kept</string>
+    <string name="voice_consent_3_title">We don’t store your voice.</string>
+    <string name="voice_consent_3_body">Neither our servers nor this phone keep a recording. We’ve told ElevenLabs not to record. It deletes the text after the call; in our tests that took under an hour. Its debugging and moderation logs may still hold content, and we don’t yet know for how long. Its backups last up to 30 days. Anthropic usually deletes the text within 30 days; see the Privacy page. The text and report are saved on this phone, following your setting.</string>
+    <string name="voice_consent_4_label">How to withdraw</string>
+    <string name="voice_consent_4_title">You can withdraw at any time.</string>
+    <string name="voice_consent_4_body">Withdraw under Me and we stop sending it. Typing and hold to talk keep working. Text already sent is deleted as described above. We can’t reach logs or backups. Questions: info@novawerk.io.</string>
+    <string name="voice_consent_5_title">Keep it fictional.</string>
+    <string name="voice_consent_5_body">Don’t mention real clients. This is a practice tool, not therapy.</string>
+    <string name="voice_consent_check">I agree to send my voice to ElevenLabs in the US, and the text to Anthropic in the US.</string>
+    <string name="voice_consent_accept">Agree and start</string>
+    <string name="voice_use_text">Type instead</string>
+    <string name="voice_connecting">Connecting…</string>
+    <string name="voice_connected">You’re connected. You speak first.</string>
+    <string name="voice_client_speaking">The client is speaking</string>
+    <string name="voice_can_interrupt">You can cut in any time</string>
+    <string name="voice_listening_you">Listening to you</string>
+    <string name="voice_mic_on">Mic on</string>
+    <string name="voice_mic_off">Mic off</string>
+    <string name="voice_mic_off_hint">The client can’t hear you</string>
+    <string name="voice_mic_on_cd">Turn the mic off</string>
+    <string name="voice_mic_off_cd">Turn the mic on</string>
+    <string name="voice_end">End</string>
+    <string name="voice_practice_line">Practice session · an AI plays a fictional client · not therapy</string>
+    <string name="voice_live_note">The call is still on. The client can hear you.</string>
+    <string name="voice_connect_failed">We couldn’t connect. Try again, or type instead.</string>
+    <string name="voice_dropped">The call dropped. The text is safe, so you can keep going by typing.</string>
+    <string name="voice_left">The call ended when you left. The text is safe, so you can keep going by typing.</string>
+    <string name="voice_continue_text">Keep going by typing</string>
+    <string name="voice_mic_needed_title">Microphone needed</string>
+    <string name="voice_mic_needed">Voice sessions need the microphone. You can type instead and practise the same case.</string>
+    <string name="voice_session_tag">Voice session</string>
+    <string name="voice_report_note">This was a voice session. Quotes come from automatic transcription and may differ a little from what was said.</string>
+    <string name="settings_voice_where">Where your voice goes and how long it’s kept</string>
+    <string name="settings_voice_withdraw">Withdraw consent for voice sessions</string>
+    <string name="voice_withdraw_title">Withdraw consent for voice sessions?</string>
+    <string name="voice_withdraw_body">We stop sending your voice to ElevenLabs. Typing and hold to talk keep working. Text already sent is deleted as the Privacy page says. We can’t reach logs or backups. Questions: info@novawerk.io.</string>
+    <string name="voice_withdraw_confirm">Withdraw consent</string>
+    <string name="voice_withdraw_keep">Keep it</string>
+    <string name="privacy_q_voice_session">Where does my voice go in a voice session?</string>
+    <string name="privacy_a_voice_session">To ElevenLabs, which turns it into text as you speak and reads out the client’s words. It goes to the United States and doesn’t pass through our servers. The text then goes through our server to %1$s in the US, like typed text.</string>
+    <string name="privacy_q_voice_store">Is my voice stored?</string>
+    <string name="privacy_a_voice_store">We don’t store it, and neither does your phone. We’ve told ElevenLabs not to record. It deletes the text after the call; in our tests that took under an hour. Its debugging and moderation logs may still hold content, and we don’t yet know for how long. Its backups last up to 30 days.</string>
 </resources>

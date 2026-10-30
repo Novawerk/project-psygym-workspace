@@ -21,12 +21,14 @@
 
 | 事实 | 依据 |
 |------|------|
-| App 只连我们自己的服务器（release：`https://psygym-api.novawerk.io`），只走 HTTPS | `AppConfig.kt`；release 的 `network_security_config.xml` 禁止明文 |
+| App 只连我们自己的服务器（release：`https://psygym-api.novawerk.io`），只走 HTTPS。例外：语音会谈时连 ElevenLabs | `AppConfig.kt`；release 的 `network_security_config.xml` 禁止明文 |
 | `/chat`、`/supervision` 的请求体是整段对话；`/supervision` 还带 `durationSec`（一场多长，整数秒） | `KtorPsygymApi.kt`、`Models.kt`、#62 |
 | 不发设备信息，也不加自定义 User-Agent | 同上 |
-| 没有分析、崩溃统计、广告或第三方登录 SDK；没有 Firebase、Crashlytics、Sentry。统计在我们自己的服务器上做 | `libs.versions.toml`、`build.gradle.kts`；iOS 没有 Pods 和 SPM 依赖 |
+| 没有分析、崩溃统计、广告或第三方登录 SDK；没有 Firebase、Crashlytics、Sentry。统计在我们自己的服务器上做 | `libs.versions.toml`、`build.gradle.kts`；iOS 没有 Pods，SPM 只有 ElevenLabs Swift SDK（带 LiveKit）。**发版前要核对这个 SDK 自带的 privacy manifest 合并进来的声明** |
 | 不读广告 ID、ANDROID_ID、IDFA 或 IDFV；没有 ATT。合并后的 release manifest 里没有 `AD_ID` 权限 | 代码搜索；`processReleaseMainManifest` |
 | Android 申请 `INTERNET`、`RECORD_AUDIO`（按住说话，第一次按住时才弹）和 `ACCESS_NETWORK_STATE`（只用来判断是不是移动网络，不弹框）；iOS 有 `NSMicrophoneUsageDescription` 和 `NSSpeechRecognitionUsageDescription` 两条说明。麦克风的声音只在手机上转成文字，不上传、不存盘；识别出的文字和打字一样，发送后才进对话（ADR 0010）。安卓的语音模型从我们的 Vercel Blob 下载一次，请求不带账号 | `AndroidManifest.xml`、`Info.plist`、`SherpaVoiceInput.kt`、`SpeechBridge.swift` |
+| Android 里 ElevenLabs 的 SDK 还带来 `MODIFY_AUDIO_SETTINGS`、`ACCESS_WIFI_STATE`、`CHANGE_WIFI_STATE`，都不弹框。它要的相机、屏幕共享和前台服务权限我们在清单里去掉了，不申报。 |
+| **语音会谈（0.4.0 打开）**：用 `io.elevenlabs:elevenlabs-android`、ElevenLabs Swift SDK（内含 LiveKit、WebRTC）。声音经 `wss://livekit.rtc.elevenlabs.io` 和 WebRTC 实时发给 ElevenLabs，不经过我们的服务器。App 不放 ElevenLabs 的 key，只从 `POST /voice/session` 拿一次性令牌。开始前有单独的同意。Android 合并后的 manifest 多了 `MODIFY_AUDIO_SETTINGS`、`ACCESS_WIFI_STATE`、`CHANGE_WIFI_STATE`（来自 SDK） | `apps/mobile/.../ElevenLabsVoiceCall.kt`、`VoiceCallBridge.swift`、[ADR 0013](../decisions/0013-voice-elevenlabs.md) |
 | 服务端不存对话，日志只记路由、病例、语言、条数、模型、token 数、耗时 | `apps/api/src/app.ts` |
 | 服务端按天存汇总计数（Neon 法兰克福），不存单场记录 | #62、[admin.md](../product/admin.md) |
 | 登录用邮件验证码。服务器存邮箱、注册时间、邀请码批次和登录会话；验证码邮件由 Resend 发送 | [login.md](../product/login.md)、ADR 0008 |
@@ -47,6 +49,7 @@ Apple 的「收集」指：数据离开设备，并且我们或第三方能在�
 | Identifiers → **User ID** | App Functionality | **是** | 否 |
 | Usage Data → **Product Interaction**（场次、时长、轮数等计数；活跃人数的假名从账号算出） | Analytics | **是** | 否 |
 | User Content → **Other User Content**（练习对话和督导报告；报告评价和举报的那一段） | App Functionality | 否 | 否 |
+| User Content → **Audio Data**（0.4.0 起勾；声音发给 ElevenLabs 转写） | App Functionality | 否 | 否 |
 
 说明：
 
@@ -56,7 +59,7 @@ Apple 的「收集」指：数据离开设备，并且我们或第三方能在�
   - Health & Fitness、Sensitive Info 不选：来访者是虚构的，对话不是用户本人的健康数据。我们也在 App 里要求用户不输入真实来访者信息。
   - Diagnostics 不选：我们只在服务端按错误码计数，不从设备收集诊断数据。
 - 只存在设备上、从不发出的数据（练习记录、「关于你」）：不算收集。
-- **Audio Data 不勾**（0.3.0 起有按住说话）：声音只在设备上处理，从不离开手机。转出来的文字发送后才进对话，已经在 Other User Content 里。
+- **Audio Data：0.4.0 起要勾，语音会谈从这版打开。** 按住说话的声音只在设备上处理，从不离开手机，不算收集。语音会谈的声音会离开手机发给 ElevenLabs，而且它的日志和备份可能留一段时间，不符合 Apple「只为实时处理」的例外，所以要勾。这个开关在服务器上，所以**先改好标签和商店填写，再在生产环境配 ElevenLabs 的密钥**，顺序不能反。
 
 **Tracking：** 否。`NSPrivacyTracking = false`，没有追踪域名。
 
@@ -74,6 +77,8 @@ NSPrivacyCollectedDataTypes:
       Linked: true, Tracking: false, Purposes: [Analytics]
   - NSPrivacyCollectedDataTypeOtherUserContent
       Linked: false, Tracking: false, Purposes: [AppFunctionality]
+  - NSPrivacyCollectedDataTypeAudioData   # 0.4.0 起
+      Linked: false, Tracking: false, Purposes: [AppFunctionality]
 NSPrivacyAccessedAPITypes:
   - NSPrivacyAccessedAPICategoryUserDefaults: [CA92.1]
   - NSPrivacyAccessedAPICategoryFileTimestamp: [C617.1]
@@ -82,7 +87,7 @@ NSPrivacyAccessedAPITypes:
 
 **账号删除（审核指南 5.1.1(v)）：** 能在 App 里注册账号，就必须能在 App 里发起删除。我们在「我的 → 删除账号」。
 
-**审核指南 5.1.2(i)：** 把个人数据发给第三方 AI 之前，要明确告诉用户并取得同意。第一次打开时的 O2「先说清楚」页满足这一条，不要删。
+**审核指南 5.1.2(i)：** 把个人数据发给第三方 AI 之前，要明确告诉用户并取得同意。第一次打开时的 O2「先说清楚」页满足这一条：写明发什么、发给谁（Anthropic，美国），并单独勾选同意。不要删。只写在隐私政策里不够，也不能写成笼统的「第三方 AI 模型服务」（0.3.0 因此被拒）。 语音会谈的声音发给 ElevenLabs，O2 没有覆盖，靠语音会谈前单独的同意页（`VoiceConsentScreen`）满足。
 
 ## Google Play · Data safety（登录版）
 
@@ -105,9 +110,11 @@ Google 的「收集」指：数据离开设备。「共享」指：转给第三�
 | App activity → **App interactions**（场次、时长等计数） | 收集；不共享 | 否 | 必需 | Analytics |
 | App activity → **Other user-generated content**（对话、报告；报告评价和举报） | 收集；不共享 | 否（评价和举报留在 Slack） | 必需 | App functionality |
 
-不申报：Location、Financial info、Health and fitness、Messages、Photos and videos、Audio、Files and docs、Calendar、Contacts、Web browsing、App info and performance、Device or other IDs。
+| Audio → **Voice or sound recordings**（0.4.0 起填） | 收集；不共享（ElevenLabs 是代我们处理的服务商）。这一点要在签 DPA 后再确认 | 否（它的日志和备份可能留一段时间） | 可选 | App functionality |
 
-Audio 不申报的理由（0.3.0 起有 `RECORD_AUDIO`）：按住说话的声音只在手机上转成文字，不上传、不保存。Play 审核如果问起这个权限，就这样回答：「Only for hold-to-talk. Audio is turned into text on the device and is never uploaded or stored.」
+不申报：Location、Financial info、Health and fitness、Messages、Photos and videos、Files and docs、Calendar、Contacts、Web browsing、App info and performance、Device or other IDs。语音会谈还关着的版本也不申报 Audio。
+
+`RECORD_AUDIO` 的说明。语音会谈还关着时，照旧回答：「Only for hold-to-talk. Audio is turned into text on the device and is never uploaded or stored.」打开语音会谈后改成：「Hold-to-talk: audio is turned into text on the device and never uploaded. Voice session (optional, after a separate consent): audio is streamed to ElevenLabs to transcribe it; we don't record it.」
 
 ## 登录前版（2026-10-11 保存在 Play Console，未送审）
 
@@ -130,6 +137,7 @@ Audio 不申报的理由（0.3.0 起有 `RECORD_AUDIO`）：按住说话的声�
 
 - 新增 SDK（尤其是 Firebase、崩溃统计、分析）
 - 新增接口，或者请求里多了字段
+- 在生产环境打开或关闭语音会谈，或者 ElevenLabs 的保留设置、套餐变了
 - 换模型服务商或邮件服务商
 - 本机存储加密，或者练习记录开始上云
 - 账号存的字段变了，或者开始把账号和对话关联

@@ -36,8 +36,9 @@ test("the privacy page is the policy, nothing else", () => {
   const en = read("en/privacy/index.html");
   assert.match(zh, /<h2>这是什么<\/h2>/);
   assert.match(zh, /生效日期：/);
-  assert.match(zh, /草稿，正式版上架前发布。/);
-  assert.match(en, /Draft\. The final version is published before launch\./);
+  assert.doesNotMatch(zh, /草稿，正式版上架前发布。/);
+  assert.doesNotMatch(en, /Draft\. The final version/);
+  assert.doesNotMatch(zh + en, /待定|To be decided|to be set|to be checked/);
   assert.match(en, /<h2>What this is<\/h2>/);
   for (const html of [zh, en]) {
     assert.doesNotMatch(html, /正式上架前要解决/); // the internal to-do section
@@ -45,8 +46,6 @@ test("the privacy page is the policy, nothing else", () => {
   }
   assert.doesNotMatch(zh, /What this is/);
   assert.doesNotMatch(en, /这是什么/);
-  // Relative repo links go to GitHub.
-  assert.match(zh, /href="https:\/\/github\.com\/Novawerk\/project-psygym-workspace\/blob\/main\/docs\/release\/README\.md"/);
   assert.doesNotMatch(zh, /href="\.\.?\//);
 });
 

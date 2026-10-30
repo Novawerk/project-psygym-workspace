@@ -30,14 +30,15 @@ key 沿用 App 现有命名（`home_*`、`cases_*`、`practice_*`、`supervision
 | onb_consent_1_body | 这是给咨询师的练习工具，不给来访者用，不能在危机中提供帮助。如果你自己正在经历困难，请点下方「需要帮助？」。 | It's a practice tool for counselors. It's not for clients, and it can't help in a crisis. If you're going through a hard time yourself, tap "Need help?" below. |
 | onb_consent_2_title | 来访者是虚构的。 | The clients are fictional. |
 | onb_consent_2_body | 由 AI 扮演。对话可能涉及抑郁、焦虑和消极念头。 | An AI plays them. Sessions may touch on depression, anxiety and dark thoughts. |
-| onb_consent_3_title | 对话会交给 AI 模型处理。 | An AI model processes the conversation. |
-| onb_consent_3_body | 我们把对话发给第三方 AI 模型服务生成回复。我们的服务器不保存对话。 | We send the conversation to a third-party AI model service to generate replies. Our servers don't store it. |
+| onb_consent_3_title | 对话会发给 Anthropic。 | Your conversation goes to Anthropic. |
+| onb_consent_3_body | 为了生成来访者回复和督导反馈，我们会把你输入或说出的内容、之前的对话和界面语言，经我们的服务器发给第三方 AI 服务 Anthropic（美国公司）。我们不发你的邮箱和账号 ID，服务器也不保存对话。你在下方同意之后才会发送。 | To write the client's replies and your feedback, we send what you type or dictate, the conversation so far and your interface language through our server to Anthropic, a third-party AI service run by Hangzhou Anthropic Artificial Intelligence Co., Ltd. in China. We don't send your email or account ID, and our servers don't store the conversation. Nothing is sent unless you agree below. |
 | onb_consent_4_title | 不要输入真实来访者的信息。 | Don't enter real client information. |
 | onb_consent_4_body | 姓名、经历、任何能认出一个人的细节都不要。 | No names, histories or any detail that could identify someone. |
 | onb_consent_5_title | 督导反馈只供练习参考。 | The feedback is for practice only. |
 | onb_consent_5_body | 它由 AI 生成，不是资质评估，也不是临床意见。 | An AI writes it. It is not an assessment and not clinical advice. |
 | onb_consent_check | 我已了解，这是练习工具，不是治疗。 | I understand this is a practice tool, not therapy. |
-| onb_consent_accept | 我知道了 | Got it |
+| onb_consent_ai_check | 我同意把练习对话发给美国的 Anthropic，用来生成回复和反馈。 | I agree that my practice conversations are sent to Anthropic in China to write replies and feedback. |
+| onb_consent_accept | 同意并继续 | Agree and continue |
 | onb_link_privacy | 隐私说明 | Privacy |
 | onb_link_help | 需要帮助？ | Need help? |
 
@@ -46,12 +47,9 @@ key 沿用 App 现有命名（`home_*`、`cases_*`、`practice_*`、`supervision
 | key | | 中文 | English |
 |-----|---|------|---------|
 | home_greeting | 新 | 今天练一场？ | Ready for a session? |
-| home_start_card_title | 新 | 开始练习 | Start practising |
 | home_start_card_button | 新 | 选一位来访者 | Pick a client |
-| home_tagline | 改 | 选一位来访者，开始一次 CBT 会谈。 | Pick a client and start a CBT session. |
-| home_start_card_meta | 新 | 约 15 分钟 · 结束后有督导反馈 | About 15 min · supervision feedback at the end |
+| home_start_card_meta | 新 | CBT 会谈 · 约 15 分钟 · 结束后有督导反馈 | CBT session · about 15 min · supervision feedback at the end |
 | home_cases_section | 新 | 病例 | Cases |
-| home_cases_all | 新 | 全部 | All |
 | home_disclaimer | 新（替代 home_safety_title/body，和 `safety.md` §5 首页短版一致） | 聆镜 PSYGYM 是给咨询师的练习工具。来访者由 AI 扮演，全部是虚构的。这不是心理治疗。 | 聆镜 PSYGYM is a practice tool for counselors. An AI plays the client. Every client is fictional. This is not therapy. |
 | help_link | 新 | 需要帮助？ | Need help? |
 
@@ -71,7 +69,7 @@ key 沿用 App 现有命名（`home_*`、`cases_*`、`practice_*`、`supervision
 | brief_setup_body | 改 | 初次会谈 · 建议 15–30 轮 · 约 15 分钟 · 你随时可以结束。 | First session · 15–30 turns suggested · about 15 min · end any time. |
 | brief_session_first | 新 | 初次会谈 | First session |
 | brief_session_first_note | 新 | 初次会谈的主要任务：做风险筛查，判断能不能承接这位来访者。 | The main tasks of a first session: screen for risk, and decide whether you can take this client on. |
-| brief_content_note | 新 | 这场会谈可能涉及抑郁、焦虑和消极念头。来访者是虚构的。对话会交给第三方 AI 模型处理，我们的服务器不保存。 | This session may touch on depression, anxiety and dark thoughts. The client is fictional. A third-party AI model processes the conversation; our servers don't store it. |
+| brief_content_note | 新 | 这场会谈可能涉及抑郁、焦虑和消极念头。来访者是虚构的。对话会发给美国的 Anthropic 生成回复，我们的服务器不保存。 | This session may touch on depression, anxiety and dark thoughts. The client is fictional. Your conversation is sent to Anthropic in China to write the replies; our servers don't store it. |
 | brief_start | 新 | 开始会谈 | Start session |
 
 ### 会谈
@@ -204,7 +202,7 @@ key 沿用 App 现有命名（`home_*`、`cases_*`、`practice_*`、`supervision
 | key | 中文 | English |
 |-----|------|---------|
 | privacy_q_where | 对话去了哪里？ | Where does the conversation go? |
-| privacy_a_where | 你发的每一句，连同之前的对话，发到我们的服务器，再转给第三方 AI 模型服务生成回复。目前用的是 %1$s。 | Each message, with the conversation so far, goes to our server and on to a third-party AI model service that writes the reply. We currently use %1$s. |
+| privacy_a_where | 你发的每一句，连同之前的对话，发到我们的服务器，再转给 %1$s 生成回复。它是第三方 AI 服务，由美国公司 Anthropic, PBC 运营。我们不发你的邮箱和账号 ID。 | Each message, with the conversation so far, goes to our server and on to %1$s, a third-party AI service run by Hangzhou Anthropic Artificial Intelligence Co., Ltd. in China, which writes the reply. We don't send your email or account ID. |
 | privacy_q_store | 你们存吗？ | Do you store it? |
 | privacy_a_store | 我们的服务器不保存对话，也不在日志里记录对话内容。 | Our servers don't store the conversation or log its text. |
 | privacy_q_vendor | AI 模型服务存吗？ | Does the AI model service store it? |
@@ -219,6 +217,10 @@ key 沿用 App 现有命名（`home_*`、`cases_*`、`practice_*`、`supervision
 | privacy_a_stats | 我们在服务器上按天统计次数，按病例和界面语言分开（开始了几场、来访者主动结束了几场、写了几份报告、每场几轮、一场多长、出了几次错、收到几次 👍/👎 和举报）。活跃人数用每天、每周轮换的假名统计，不用邮箱，明细很快就汇总后删掉。不含对话。 | On our server we count numbers per day, split by case and interface language: sessions started, sessions the client ended, reports written, turns per session, how long a session lasts, errors, and 👍/👎 ratings and reports. Active users are counted with pseudonyms that change every day and every week, never with your email, and the details are summed up and deleted soon after. No conversation. |
 | privacy_q_real | 我能输入真实来访者的信息吗？ | Can I enter real client information? |
 | privacy_a_real | 不能。请只把它当练习。 | No. Please use it for practice only. |
+
+### 语音会谈
+
+文案在 [voice-session-design.md](./voice-session-design.md) 第 5 节，`strings.xml` 的 `voice_consent_*`、`voice_*`、`privacy_*_voice_session`、`privacy_*_voice_store`。
 
 ### 按住说话（voice-input.md）
 

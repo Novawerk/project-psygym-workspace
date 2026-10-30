@@ -150,6 +150,8 @@ fun PracticeScreen(
 
     // The app was restarted and the in-memory practice is gone: back to the case list.
     LaunchedEffect(Unit) { if (viewModel.case == null) onSessionLost() }
+    // Come here from a dropped call with the counselor's line unanswered: the client answers it.
+    LaunchedEffect(Unit) { if (items.lastOrNull()?.message?.role == Role.Counselor) viewModel.retry(locale) }
 
     // Follow the conversation, including each new piece of a streaming reply.
     LaunchedEffect(items.size, lastText?.length, viewModel.error, viewModel.clientEnded) {
@@ -163,7 +165,7 @@ fun PracticeScreen(
 
     val clock by produceState("00:00") {
         while (true) {
-            value = elapsed().format()
+            value = elapsed().clockText()
             delay(1_000)
         }
     }
@@ -325,7 +327,7 @@ fun PracticeScreen(
     }
 }
 
-private fun Duration.format(): String {
+internal fun Duration.clockText(): String {
     val total = inWholeSeconds
     val m = total / 60
     val s = total % 60
@@ -335,7 +337,7 @@ private fun Duration.format(): String {
 /** S2 · End sheet: three cases (screens.md). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun EndSheet(kind: EndKind, saveHistory: Boolean, onEnd: () -> Unit, onLeave: () -> Unit, onDismiss: () -> Unit) {
+internal fun EndSheet(kind: EndKind, saveHistory: Boolean, onEnd: () -> Unit, onLeave: () -> Unit, onDismiss: () -> Unit) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
@@ -384,7 +386,7 @@ private fun EndSheet(kind: EndKind, saveHistory: Boolean, onEnd: () -> Unit, onL
 
 /** A centered grey line with rules on both sides, e.g. "The client has ended the session". */
 @Composable
-private fun SystemLine(text: String) {
+internal fun SystemLine(text: String) {
     Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         HorizontalDivider(Modifier.weight(1f), color = MaterialTheme.colorScheme.outline)
         Text(

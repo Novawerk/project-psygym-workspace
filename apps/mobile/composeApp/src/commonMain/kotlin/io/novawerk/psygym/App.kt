@@ -16,6 +16,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -63,8 +64,11 @@ import io.novawerk.psygym.ui.navigation.MeRoute
 import io.novawerk.psygym.ui.navigation.LoginRoute
 import io.novawerk.psygym.ui.navigation.DeleteAccountRoute
 import io.novawerk.psygym.ui.navigation.SupervisionRoute
+import io.novawerk.psygym.ui.navigation.VoiceConsentRoute
+import io.novawerk.psygym.ui.navigation.VoiceRoute
 import io.novawerk.psygym.ui.navigation.WelcomeRoute
 import io.novawerk.psygym.ui.pages.briefing.BriefingScreen
+import io.novawerk.psygym.ui.pages.briefing.BriefingVoice
 import io.novawerk.psygym.ui.pages.cases.CasesScreen
 import io.novawerk.psygym.ui.pages.help.HelpScreen
 import io.novawerk.psygym.ui.pages.home.HomeScreen
@@ -79,6 +83,9 @@ import io.novawerk.psygym.ui.pages.me.MeScreen
 import io.novawerk.psygym.ui.components.TopTab
 import io.novawerk.psygym.ui.pages.supervision.SupervisionScreen
 import io.novawerk.psygym.ui.pages.supervision.SupervisionViewModel
+import io.novawerk.psygym.ui.pages.voice.VoiceConsentScreen
+import io.novawerk.psygym.ui.pages.voice.VoiceScreen
+import io.novawerk.psygym.ui.pages.voice.VoiceViewModel
 import io.novawerk.psygym.ui.theme.PsygymTheme
 import kotlinx.coroutines.launch
 
@@ -102,6 +109,8 @@ fun App(component: AppComponent) {
     val realInfoHintSeen by settings.realInfoHintSeen.collectAsState(initial = true)
     val liveNotes by settings.liveNotes.collectAsState(initial = true)
     val voiceMode by settings.voiceMode.collectAsState(initial = false)
+    val voiceConsent by settings.voiceConsent.collectAsState(initial = false)
+    val voiceSession by settings.voiceSession.collectAsState(initial = false)
     val demoData by settings.useFakeApi.collectAsState(initial = AppConfig.fakeApiDefault)
     // Store-screenshot mode (Android debug builds only): no demo badges, written sessions.
     val shot = component.screenshot.mode
@@ -156,6 +165,10 @@ fun App(component: AppComponent) {
                     scope.launch { settings.setPracticeInProgress(false) }
                     nav.goHome()
                 }
+                val startVoice = {
+                    scope.launch { settings.setPracticeInProgress(true) }
+                    nav.navigate(VoiceRoute) { popUpTo(BriefingRoute) }
+                }
                 val caseIndex = { case: CaseSummary? -> caseStore.cases?.indexOfFirst { it.id == case?.id }?.coerceAtLeast(0) ?: 0 }
 
                 // After the intro: home when signed in, else sign-in (with O2 still behind it).
@@ -180,6 +193,7 @@ fun App(component: AppComponent) {
                 }
                 val meScreen: @Composable () -> Unit = {
                     var voiceModelBytes by remember { mutableStateOf(component.voice.modelBytes()) }
+                    val voiceOffered by produceState(false) { value = stored != null && component.api.voiceAvailable() }
                     MeScreen(
                         language = lang,
                         email = stored?.email,
@@ -203,6 +217,9 @@ fun App(component: AppComponent) {
                         onReplayOnboarding = { nav.navigate(WelcomeRoute) },
                         onHelp = openHelp,
                         onPrivacy = { nav.navigate(PrivacyRoute) },
+                        voiceOffered = voiceOffered,
+                        voiceConsented = voiceConsent,
+                        onWithdrawVoice = { scope.launch { settings.withdrawVoiceConsent() } },
                         onLicenses = { nav.navigate(LicensesRoute) },
                         onTab = onTab,
                     )
@@ -330,7 +347,6 @@ fun App(component: AppComponent) {
                             casesError = caseStore.error,
                             onStart = { nav.navigate(CasesRoute) },
                             onPickCase = openCase,
-                            onAllCases = { nav.navigate(CasesRoute) },
                             onRetryCases = { caseStore.load(force = true) },
                             onHelp = openHelp,
                             onTab = onTab,
@@ -381,6 +397,9 @@ fun App(component: AppComponent) {
                         )
                     }
                     composable<BriefingRoute> {
+                        // Off unless the server has voice keys. Asked each time: a failed check
+                        // only hides the entry for this page.
+                        val voiceAvailable by produceState(false) { value = stored != null && component.api.voiceAvailable() }
                         BriefingScreen(
                             case = session.case,
                             caseIndex = caseIndex(session.case),
@@ -391,9 +410,58 @@ fun App(component: AppComponent) {
                                 if (shot == null) scope.launch { settings.setPracticeInProgress(true) }
                                 nav.navigate(PracticeRoute)
                             },
+                            voice = if (voiceAvailable && shot == null) {
+                                BriefingVoice(
+                                    call = component.voiceCall,
+                                    selected = voiceSession,
+                                    consented = voiceConsent,
+                                    onSelect = { scope.launch { settings.setVoiceSession(it) } },
+                                    onConsent = { nav.navigate(VoiceConsentRoute) },
+                                    onStart = startVoice,
+                                )
+                            } else {
+                                null
+                            },
                             onBack = { nav.popBackStack() },
                             onHelp = openHelp,
                             onSessionLost = sessionLost,
+                        )
+                    }
+                    composable<VoiceConsentRoute> {
+                        VoiceConsentScreen(
+                            call = component.voiceCall,
+                            onAccepted = { scope.launch { settings.acceptVoiceConsent() } },
+                            onGo = { startVoice() },
+                            onTypeInstead = {
+                                scope.launch { settings.setVoiceSession(false) }
+                                nav.popBackStack()
+                            },
+                            onBack = { nav.popBackStack() },
+                            onPrivacy = { nav.navigate(PrivacyRoute) },
+                            onHelp = openHelp,
+                        )
+                    }
+                    composable<VoiceRoute> {
+                        val vm = viewModel { VoiceViewModel(component.api, session, component.voiceCall) }
+                        VoiceScreen(
+                            viewModel = vm,
+                            elapsed = { session.elapsed },
+                            saveHistory = saveHistory,
+                            liveEnabled = liveNotes,
+                            caseIndex = caseIndex(session.case),
+                            onLeave = {
+                                session.finish()
+                                scope.launch { settings.setPracticeInProgress(false) }
+                                nav.popBackStack()
+                            },
+                            onSessionLost = sessionLost,
+                            onEnd = { nav.navigate(SupervisionRoute) { popUpTo(BriefingRoute) { inclusive = true } } },
+                            onContinueTyping = { nav.navigate(PracticeRoute) { popUpTo(VoiceRoute) { inclusive = true } } },
+                            onHelp = openHelp,
+                            onOtherCase = {
+                                scope.launch { settings.setPracticeInProgress(false) }
+                                nav.navigate(CasesRoute) { popUpTo(HomeRoute) }
+                            },
                         )
                     }
                     composable<PracticeRoute> {

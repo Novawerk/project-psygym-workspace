@@ -84,6 +84,25 @@ class KtorPsygymApi(
         response.body<CasesResponse>().cases
     }
 
+    override suspend fun voiceAvailable(): Boolean = try {
+        mapErrors {
+            val bearer = token()
+            client.get("voice/status") { auth(bearer) }.status.isSuccess()
+        }
+    } catch (e: ApiException) {
+        false
+    }
+
+    override suspend fun voiceSession(caseId: String, locale: ApiLocale): VoiceTicket = mapErrors {
+        val bearer = token()
+        val response = client.post("voice/session") {
+            auth(bearer)
+            jsonBody(VoiceBody.serializer(), VoiceBody(caseId, locale))
+        }
+        if (!response.status.isSuccess()) throw response.toApiException()
+        json.decodeFromString(VoiceTicket.serializer(), response.bodyAsText())
+    }
+
     override suspend fun startSignIn(email: String, locale: ApiLocale) = mapErrors {
         val response = client.post("auth/start") { jsonBody(StartBody.serializer(), StartBody(email, locale)) }
         if (!response.status.isSuccess()) throw response.toApiException()
@@ -216,6 +235,9 @@ class KtorPsygymApi(
         val code: String? = null,
         val message: String? = null,
     )
+
+    @Serializable
+    private data class VoiceBody(val caseId: String, val locale: ApiLocale)
 
     @Serializable
     private data class StartBody(val email: String, val locale: ApiLocale)

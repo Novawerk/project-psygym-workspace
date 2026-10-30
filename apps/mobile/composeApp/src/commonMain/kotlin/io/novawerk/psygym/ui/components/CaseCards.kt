@@ -32,6 +32,7 @@ import io.novawerk.psygym.resources.case_difficulty_intro
 import io.novawerk.psygym.resources.case_difficulty_medium
 import io.novawerk.psygym.resources.cases_minutes
 import io.novawerk.psygym.resources.cases_school_cbt
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 
 private val ZH_NUMERALS = listOf("一", "二", "三", "四", "五", "六", "七", "八", "九", "十")
@@ -72,6 +73,13 @@ fun CaseSummary.displayTitle(locale: ApiLocale): String {
     return stringResource(Res.string.case_title_with_alias, alias, title.get(locale))
 }
 
+private val Difficulty.label: StringResource
+    get() = when (this) {
+        Difficulty.Intro -> Res.string.case_difficulty_intro
+        Difficulty.Medium -> Res.string.case_difficulty_medium
+        Difficulty.Hard -> Res.string.case_difficulty_hard
+    }
+
 /** Topic tags · difficulty · about N min · CBT. Missing fields are left out. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -80,23 +88,20 @@ fun CaseTags(case: CaseSummary, locale: ApiLocale, firstSession: Boolean = false
         // C2 only: every practice is a first session for now (S-1, copy.md).
         if (firstSession) Tag(stringResource(Res.string.brief_session_first))
         case.tags.forEach { Tag(it.get(locale)) }
-        case.difficulty?.let {
-            Tag(
-                stringResource(
-                    when (it) {
-                        Difficulty.Intro -> Res.string.case_difficulty_intro
-                        Difficulty.Medium -> Res.string.case_difficulty_medium
-                        Difficulty.Hard -> Res.string.case_difficulty_hard
-                    },
-                ),
-            )
-        }
+        case.difficulty?.let { Tag(stringResource(it.label)) }
         case.estimatedMinutes?.let { Tag(stringResource(Res.string.cases_minutes, it)) }
         if (case.school == "cbt") Tag(stringResource(Res.string.cases_school_cbt))
     }
 }
 
-/** C1's card; [compact] is the narrower one on Home, with the mark above the title. */
+/** "入门 · 约 15 分钟": the one line a compact card carries. Missing fields are left out. */
+@Composable
+private fun CaseSummary.compactMeta(): String = listOfNotNull(
+    difficulty?.let { stringResource(it.label) },
+    estimatedMinutes?.let { stringResource(Res.string.cases_minutes, it) },
+).joinToString(" · ")
+
+/** C1's card; [compact] is the narrower one on Home: mark, title and one line (screens.md H1). */
 @Composable
 fun CaseCard(case: CaseSummary, index: Int, locale: ApiLocale, onClick: () -> Unit, modifier: Modifier = Modifier, compact: Boolean = false) {
     BorderedCard(modifier = modifier, onClick = onClick) {
@@ -105,11 +110,17 @@ fun CaseCard(case: CaseSummary, index: Int, locale: ApiLocale, onClick: () -> Un
                 CaseAvatar(case, index, locale, size = 36.dp)
                 Spacer(Modifier.height(10.dp))
                 Text(case.displayTitle(locale), style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis, minLines = 2)
-            } else {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    CaseAvatar(case, index, locale)
-                    Text(case.displayTitle(locale), style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                }
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    case.compactMeta(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                return@Column
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                CaseAvatar(case, index, locale)
+                Text(case.displayTitle(locale), style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
             Spacer(Modifier.height(8.dp))
             Text(
@@ -118,7 +129,6 @@ fun CaseCard(case: CaseSummary, index: Int, locale: ApiLocale, onClick: () -> Un
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-                minLines = if (compact) 2 else 1,
             )
             Spacer(Modifier.height(12.dp))
             CaseTags(case, locale)

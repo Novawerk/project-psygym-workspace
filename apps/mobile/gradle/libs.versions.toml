@@ -2,8 +2,8 @@
 # App identity and version. `app-id` is the Android applicationId and the
 # Kotlin namespace; iOS reads its bundle id from iosApp/Configuration.
 app-id = "io.novawerk.psygym"
-app-versionCode = "3"
-app-versionName = "0.3.0"
+app-versionCode = "5"
+app-versionName = "0.4.0"
 
 agp = "8.12.3"
 android-compileSdk = "36"
@@ -31,8 +31,10 @@ markdown-renderer = "0.41.0"
 
 junit = "4.13.2"
 sherpa-onnx = "v1.13.8"
+elevenlabs-android = "0.13.0"
 
 [libraries]
+elevenlabs-android = { module = "io.elevenlabs:elevenlabs-android", version.ref = "elevenlabs-android" }
 sherpa-onnx = { module = "com.github.k2-fsa.sherpa-onnx:sherpa-onnx", version.ref = "sherpa-onnx" }
 datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
 kotlin-inject-compiler = { module = "me.tatarka.inject:kotlin-inject-compiler-ksp", version.ref = "kotlin-inject" }

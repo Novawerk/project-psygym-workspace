@@ -8,6 +8,7 @@ import io.novawerk.psygym.resources.history_meta
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import io.novawerk.psygym.resources.turns_count
+import io.novawerk.psygym.resources.voice_session_tag
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 import kotlin.time.Instant
@@ -24,11 +25,14 @@ internal fun formatDateTime(millis: Long, locale: ApiLocale): String {
     }
 }
 
-/** Date and time · minutes · turns. */
+/** Date and time · minutes · turns, and "Voice session" when it was one. */
 @Composable
-internal fun sessionMeta(session: SavedSession, locale: ApiLocale): String = stringResource(
-    Res.string.history_meta,
-    formatDateTime(session.startedAtMillis, locale),
-    (session.durationMillis / 60_000).toInt().coerceAtLeast(1),
-    pluralStringResource(Res.plurals.turns_count, session.turns, session.turns),
-)
+internal fun sessionMeta(session: SavedSession, locale: ApiLocale): String {
+    val meta = stringResource(
+        Res.string.history_meta,
+        formatDateTime(session.startedAtMillis, locale),
+        (session.durationMillis / 60_000).toInt().coerceAtLeast(1),
+        pluralStringResource(Res.plurals.turns_count, session.turns, session.turns),
+    )
+    return if (session.voice) "$meta · ${stringResource(Res.string.voice_session_tag)}" else meta
+}

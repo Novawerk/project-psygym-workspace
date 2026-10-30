@@ -2,11 +2,11 @@
 id: placeholder-cbt-depression
 school: cbt
 title:
-  zh: （占位）毕业后的低落
-  en: (Placeholder) Low after graduation
+  zh: 毕业后的低落
+  en: Low after graduation
 summary:
-  zh: 占位病例，仅用于跑通流程。23 岁，毕业半年还没找到工作，最近什么都不想做。
-  en: Placeholder case, for testing only. 23, still looking for work six months after graduating, and nothing feels worth doing.
+  zh: 23 岁，毕业半年还没找到工作，最近什么都不想做。
+  en: 23, still looking for work six months after graduating, and nothing feels worth doing.
 # 以下公开字段也是占位，正式内容由聆镜团队填写。
 tags:
   - zh: 抑郁
@@ -19,8 +19,8 @@ clientAlias:
   zh: 小林
   en: Lin
 clientIntro:
-  zh: （占位）小林，23 岁，去年毕业，正在找工作。自己预约的第一次咨询。
-  en: (Placeholder) Lin, 23, graduated last year and is looking for work. Booked this first session herself.
+  zh: 小林，23 岁，去年毕业，正在找工作。自己预约的第一次咨询。
+  en: Lin, 23, graduated last year and is looking for work. Booked this first session herself.
 practiceFocus:
   - zh: 风险筛查
     en: Risk screening

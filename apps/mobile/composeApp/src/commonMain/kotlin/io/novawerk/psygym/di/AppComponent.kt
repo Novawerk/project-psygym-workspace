@@ -17,6 +17,7 @@ import io.novawerk.psygym.domain.practice.CaseStore
 import io.novawerk.psygym.domain.practice.PracticeSession
 import io.novawerk.psygym.domain.screenshot.ScreenshotModeHolder
 import io.novawerk.psygym.domain.settings.SettingsRepository
+import io.novawerk.psygym.domain.voice.VoiceCall
 import io.novawerk.psygym.domain.voice.VoiceInput
 import me.tatarka.inject.annotations.Component
 import okio.Path.Companion.toPath
@@ -37,6 +38,8 @@ abstract class AppComponent(
     @get:Provides protected val secureStore: SecureStore,
     /** Hold to talk: sherpa-onnx on Android, Apple's Speech framework on iOS. */
     @get:Provides val voice: VoiceInput,
+    /** Voice sessions: the ElevenLabs SDKs. */
+    @get:Provides val voiceCall: VoiceCall,
 ) {
     abstract val settingsRepository: SettingsRepository
     abstract val practiceSession: PracticeSession
@@ -97,4 +100,5 @@ expect fun AppComponent.Companion.create(
     screenshot: ScreenshotModeHolder,
     secureStore: SecureStore,
     voice: VoiceInput,
+    voiceCall: VoiceCall,
 ): AppComponent

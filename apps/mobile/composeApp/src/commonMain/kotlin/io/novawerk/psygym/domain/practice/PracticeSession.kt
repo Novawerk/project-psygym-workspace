@@ -28,6 +28,10 @@ class PracticeSession {
     var clientEnded: Boolean = false
         private set
 
+    /** It began as a voice session, even if it went on by typing. Shown on the report. */
+    var voice: Boolean = false
+        private set
+
     /** Names the saved record. New for every session. */
     var id: String = ""
         private set
@@ -68,6 +72,10 @@ class PracticeSession {
         transcript = messages
     }
 
+    fun markVoice() {
+        voice = true
+    }
+
     fun markClientEnded() {
         if (!clientEnded) frozenElapsed = elapsed
         clientEnded = true
@@ -84,6 +92,7 @@ class PracticeSession {
     private fun reset() {
         transcript = emptyList()
         clientEnded = false
+        voice = false
         frozenElapsed = null
         startedAt = null
         startMark = null
