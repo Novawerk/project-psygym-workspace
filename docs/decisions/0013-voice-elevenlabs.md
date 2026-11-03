@@ -261,6 +261,13 @@ Swift SDK's `startConversation` overwrites `onAgentReady` and `onDisconnect` fro
 unless they are passed to the call itself, so the clock stood still and a dropped call went unseen.
 Fixed. The simulator's turns had no spoken counselor.
 
+## On a real phone (2026-11-03)
+
+The client, Jinghao Feng, ran a voice session on his own phone with the internal build, against
+production. His verdict: natural enough, good for an MVP. One complaint: the Chinese voice has an
+accent (somewhere between Fujian and an American speaking Chinese). In English it sounds good. A
+native Mandarin voice (`voice_id`) is worth trying.
+
 ## Long turns and cost, measured (2026-10-30)
 
 Over a real call: 1,892 characters took about 6 min 20 s, about 5 a second, and played to the end.
