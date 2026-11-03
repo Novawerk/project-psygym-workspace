@@ -2,7 +2,7 @@
 
 > 内容按已定的决定写（[safety.md](../safety.md)、[0005](../decisions/0005-local-practice-history.md)、[open-decisions.md](../product/open-decisions.md) D3、D6、D7、D8，[login.md](../product/login.md)、[ADR 0008](../decisions/0008-sign-in.md)）。官网 `psygym.novawerk.io/privacy` 直接读这个文件。App 里的隐私说明页（P3，[copy.md](../product/copy.md)）是短版，意思要和这里一致。
 
-生效日期：2026-10-31　·　版本：1.1
+生效日期：2026-11-03　·　版本：1.2
 
 ---
 
@@ -12,7 +12,7 @@
 
 聆镜 PSYGYM 是给心理咨询师的练习工具。AI 扮演虚构的来访者，练完由 AI 督导给反馈。它不是心理治疗，不给来访者用。
 
-运营者：Novawerk。联系我们：info@novawerk.io。
+运营者（数据控制者）：Jinghao Feng，个人，住在欧盟。Novawerk 受他委托开发和运营 App 和服务器，按他的指示处理数据。联系我们：info@novawerk.io。
 
 ### 我们处理哪些数据
 
@@ -53,8 +53,8 @@
 
 | 服务 | 做什么 | 在哪 |
 |------|--------|------|
-| Anthropic（Anthropic, PBC，旧金山） | 生成来访者回复和督导报告。收到对话、病例内容和界面语言。按[它的说明](https://privacy.claude.com/en/articles/7996866-how-long-do-you-store-my-organization-s-data)，商业 API 的输入和输出在 30 天内删除；被自动系统标记为违规的内容最长留 2 年，法律要求时可能更久。请不要输入任何能认出一个人的信息。 | 美国。对欧盟用户属于数据出境。 |
-| ElevenLabs（Eleven Labs Inc.，纽约） | 语音会谈：把声音转成文字，合成来访者的声音 | 美国。对欧盟用户属于数据出境。ElevenLabs 的隐私政策写明数据转到美国存储；欧盟、英国和瑞士用户的相关主体是 ElevenLabs Poland sp. z o.o. |
+| Anthropic（Anthropic, PBC，旧金山） | 生成来访者回复和督导报告。收到对话、病例内容和界面语言。按[它的说明](https://privacy.claude.com/en/articles/7996866-how-long-do-you-store-my-organization-s-data)，商业 API 的输入和输出在 30 天内删除；被自动系统标记为违规的内容最长留 2 年，法律要求时可能更久。请不要输入任何能认出一个人的信息。 | 美国。对欧盟用户属于数据出境，依据 Anthropic 数据处理协议里的标准合同条款（SCC）。 |
+| ElevenLabs（Eleven Labs Inc.，纽约） | 语音会谈：把声音转成文字，合成来访者的声音 | 美国。对欧盟用户属于数据出境，依据欧盟-美国数据隐私框架（ElevenLabs 已认证）；不适用时，依据它数据处理协议里的标准合同条款（SCC）。ElevenLabs 的隐私政策写明数据转到美国存储；欧盟、英国和瑞士用户的相关主体是 ElevenLabs Poland sp. z o.o. |
 | Vercel | 托管我们的服务器 | 欧盟（法兰克福） |
 | Neon | 数据库，存账号（邮箱、注册时间、批次、会话哈希）和统计 | 欧盟（法兰克福） |
 | Resend | 发送验证码邮件（收件邮箱、邮件内容） | Resend 是美国公司；我们用它在欧盟区发送。作为美国公司，数据可能被传到美国或受美国法律管辖，属于数据出境，依据它的标准合同条款。它的发送日志按它的政策保留。 |
@@ -86,7 +86,7 @@
 
 聆镜 PSYGYM is a practice tool for counselors. An AI plays a fictional client; afterwards an AI supervisor gives feedback. It is not therapy and not for clients.
 
-Operator: Novawerk. Contact: info@novawerk.io.
+Operator (data controller): Jinghao Feng, an individual living in the EU. Novawerk builds and runs the app and the server for him and processes data on his instructions. Contact: info@novawerk.io.
 
 ### What we process
 
@@ -127,8 +127,8 @@ A voice session is optional and separate from typing and hold to talk. The app e
 
 | Service | What for | Where |
 |---------|----------|-------|
-| Anthropic (Anthropic, PBC, San Francisco) | Writes client replies and supervision reports. Receives the conversation, the case text and the interface language. Under [its own rules](https://privacy.claude.com/en/articles/7996866-how-long-do-you-store-my-organization-s-data), commercial API inputs and outputs are deleted within 30 days; content flagged by automated systems as a violation may be kept up to 2 years, and longer where the law requires. Please don't enter anything that could identify a person. | United States. For EU users this is a transfer outside the EU. |
-| ElevenLabs (Eleven Labs Inc., New York) | Voice sessions: turns voice into text, makes the client's voice | United States. For EU users this is a transfer outside the EU. ElevenLabs' privacy policy says data is transferred to the US for storage; for the EU, UK and Switzerland the entity is ElevenLabs Poland sp. z o.o. |
+| Anthropic (Anthropic, PBC, San Francisco) | Writes client replies and supervision reports. Receives the conversation, the case text and the interface language. Under [its own rules](https://privacy.claude.com/en/articles/7996866-how-long-do-you-store-my-organization-s-data), commercial API inputs and outputs are deleted within 30 days; content flagged by automated systems as a violation may be kept up to 2 years, and longer where the law requires. Please don't enter anything that could identify a person. | United States. For EU users this is a transfer outside the EU, based on the standard contractual clauses (SCCs) in Anthropic's data processing addendum. |
+| ElevenLabs (Eleven Labs Inc., New York) | Voice sessions: turns voice into text, makes the client's voice | United States. For EU users this is a transfer outside the EU, based on the EU-US Data Privacy Framework (ElevenLabs is certified); where it doesn't apply, on the standard contractual clauses (SCCs) in its data processing addendum. ElevenLabs' privacy policy says data is transferred to the US for storage; for the EU, UK and Switzerland the entity is ElevenLabs Poland sp. z o.o. |
 | Vercel | Hosts our server | EU (Frankfurt) |
 | Neon | Database for accounts (email, sign-up date, batch, session hashes) and counts | EU (Frankfurt) |
 | Resend | Sends sign-in code emails (recipient address, email text) | Resend is a US company; we send through its EU region. As a US company, data may go to the US or fall under US law, which is a transfer outside the EU, based on its standard contractual clauses. Its sending logs are kept under its policy. |
@@ -156,12 +156,13 @@ When this policy changes in substance, we update the date and ask you to confirm
 
 ## 正式上架前要解决（不进正式文本）
 
-- **运营者主体和地址。** 现在写 Novawerk（用户 2026-10-30 定）。App Store 卖家是个人账号，两者不一致；GDPR 还要求写明控制者的地址。
-- **AI 模型服务（Anthropic）。** 对话传到美国，对欧盟用户是 GDPR 第五章说的跨境传输。公司和 Anthropic 的 DPA 状态、传输依据（DPF 或 SCC）**待确认**，确认后写进正文并升版本。现在靠 App 里单独勾选的明确同意。
+- **运营者（2026-11-03 定）。** 控制者是项目方 Jinghao Feng 本人（个人，住在欧盟）。App Store 开发者账号、ElevenLabs workspace 和以后的 Anthropic key 都在他名下，卖家和控制者一致。Novawerk 是处理者：上架前要和他签一份 GDPR 第 28 条的处理协议。正文不写地址：GDPR 第 13 条只要求联系方式；如果 App 收费或有商业性质，或者在 App Store 选了 Trader，再补可送达的地址。个人提交心理健康相关 App 仍有 Apple 5.1.1(ix) 的风险，见 [README](./README.md)。
+- **运营者改了，要请用户重新确认。** 按「改动」一节，发版时升 `DISCLAIMER_VERSION`。
+- **AI 模型服务（Anthropic）。** Anthropic 不在 DPF 名单上（2026-11-03 查官方名单）。它的 DPA（2025-02-24 生效）随商业条款生效，跨境依据是 SCC（模块二，爱尔兰法），已写进正文。**过渡期**：线上暂时用 Haodong Ju 个人的 Anthropic key，签约方是他；项目方给自己的 key 后在 Vercel 换掉。
 - **切回 DeepSeek 时。** DeepSeek 的代码和配置保留作备选。真切回去，要同时改回同意页、这份政策和商店文案，升同意版本，请用户重新同意。不配置自动回退，否则数据会发给同意页没写的接收方（[ADR 0013](../decisions/0013-voice-elevenlabs.md)）。
 - **代码和这份政策是否一致**：登录版按 [login.md](../product/login.md) 和 [ADR 0008](../decisions/0008-sign-in.md) 写。发正式版前用当时的代码再核一遍，特别是：邀请码不入库只记批次、会话只存哈希、验证码用 HMAC、假名明细的删除时间。
 - **Resend 的发送日志保留期**：按 Resend 的政策核对后补具体天数。
-- **ElevenLabs（语音会谈打开前必须解决）：** 数据处理协议（DPA）用户说已签好（2026-10-30），**合同主体和日期待用户确认**，我们没看到文件。跨境传输的依据待确认：公开的 DPA（2026-04-08 版）同时列了 DPF 和 SCC，没说以哪个为准，要看签好的文件（确认后同意页和这份政策要写明，并升 `VOICE_CONSENT_VERSION`）。训练已关（用户，2026-10-30）。继续用 Creator 套餐，声音留在美国（用户，2026-10-30）。现在是 Creator 套餐，没有零保留模式；上面写的保留情况是 2026-10-30 实测的（见 [ADR 0013](../decisions/0013-voice-elevenlabs.md)）。声音算不算生物识别数据，要有人按 GDPR 第 9 条判断。
+- **ElevenLabs（语音会谈打开前必须解决）：** 数据处理协议（DPA）是公开的点击版（2026-04-08 版），以实体名义接受服务条款时随条款生效，不另签字。签约方是 workspace 的所有者：线上用的是项目方的 workspace（Creator，2026-11-03 在后台看到），Haodong Ju 是其中的普通成员。跨境依据：DPA 同时列了 DPF 和 SCC，没说先后；ElevenLabs 在官方 DPF 名单上，状态 Active（2026-11-03 查），所以正文写「DPF，不适用时 SCC」。同意页还没写传输依据；要写的话，升 `VOICE_CONSENT_VERSION`。训练已关（用户，2026-10-30）。继续用 Creator 套餐，声音留在美国（用户，2026-10-30）。现在是 Creator 套餐，没有零保留模式；上面写的保留情况是 2026-10-30 实测的（见 [ADR 0013](../decisions/0013-voice-elevenlabs.md)）。声音算不算生物识别数据，要有人按 GDPR 第 9 条判断。
 - **匿名统计和时长**（[admin.md](../product/admin.md)）：上线时核对代码只存汇总、`durationSec` 只是一个数字。
 - **邀请码搬进数据库以后**（后台 Epic 2）：数据库会存邀请码的哈希和批次名称。到时「邀请码批次」那一行补一句「数据库存邀请码的哈希，用来作废和管理」。英文一起改。
 - **隐私政策的正式地址**：`psygym.novawerk.io/privacy`（官网直接读这个文件，见 [landing.md](../product/landing.md)）。
