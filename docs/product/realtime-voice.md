@@ -66,8 +66,8 @@ adb shell run-as io.novawerk.psygym sh -c 'cat > files/voice-call-test.txt'   # 
 
 1. 确认 ElevenLabs DPA 的合同主体和日期（用户说已签好，2026-10-30），填上传输依据。
 2. 隐私政策、隐私标签、数据安全表、Review Notes 按 `docs/release/` 改好并提交。
-3. 建生产用的 agent，把 Custom LLM 指向生产环境的地址。
-4. 在生产环境配三个环境变量。配上的那一刻入口就会出现。
+3. 建生产用的 agent，把 Custom LLM 指向生产环境的地址。（2026-11-03 建好）
+4. 在生产环境配三个环境变量。配上的那一刻入口就会出现。（2026-11-03 配好，指向生产 agent）
 
 大陆可用性暂不考虑（用户，2026-10-30）。
 

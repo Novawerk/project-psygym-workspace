@@ -49,8 +49,8 @@ phone ──audio──▶ ElevenLabs agent ──OpenAI chat request──▶ o
   the way the client in the practice dialogues (0012) keeps talking while the counselor stays quiet.
 - Privacy: `record_voice` off, `retention_days` 0, **`delete_transcript_and_pii` on** (off, 0 days
   still keeps the transcript: see below), `delete_audio` on.
-- Limits: `max_duration_seconds` 1200. Agent limits today: 2 at once, 30 calls a day; raise them
-  before real users (the plan allows 10 at once).
+- Limits: `max_duration_seconds` 1200. Production agent: 5 at once, 100 calls a day (2026-11-03;
+  the plan allows 10 at once). The test agent stays at 2 and 30.
 - Authentication on (private agent).
 
 ## Why
@@ -235,8 +235,13 @@ Off by default until all of these hold: a real phone test has passed, the DeepSe
 1. Confirm the DPA's party and date, and fill in the transfer basis (plan: Creator; training: off, per the user).
 2. Merge and publish the privacy policy, labels, Data safety form and review notes (`docs/release/`).
 3. Create a production agent with the settings above, pointing at `https://psygym-api.novawerk.io/voice/llm`.
-   The agent used so far is a test agent on a laptop tunnel.
-4. Set the variables.
+   **Done 2026-11-03:** "PSYGYM AI client (production)", a copy of the test agent with its own
+   custom-LLM secret and no tunnel header; limits 5 at once, 100 calls a day. The test agent stays
+   for laptop tests.
+4. Set the variables. **Done 2026-11-03** (they had been set on 2026-10-30, for the test agent).
+   Checked the same day: `/voice/session` gives a token, and a spoken two-line call through the
+   production agent reached our backend (first audio 3.7 s and 1.8 s after the speaker stopped;
+   one interruption handled).
 
 ## What ran on a device (2026-10-30)
 
@@ -255,6 +260,13 @@ state, the clock, muting, leaving, and the report page. This found a real bug th
 Swift SDK's `startConversation` overwrites `onAgentReady` and `onDisconnect` from the config with nil
 unless they are passed to the call itself, so the clock stood still and a dropped call went unseen.
 Fixed. The simulator's turns had no spoken counselor.
+
+## On a real phone (2026-11-03)
+
+The client, Jinghao Feng, ran a voice session on his own phone with the internal build, against
+production. His verdict: natural enough, good for an MVP. One complaint: the Chinese voice has an
+accent (somewhere between Fujian and an American speaking Chinese). In English it sounds good. A
+native Mandarin voice (`voice_id`) is worth trying.
 
 ## Long turns and cost, measured (2026-10-30)
 
