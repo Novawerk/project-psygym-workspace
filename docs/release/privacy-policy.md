@@ -156,13 +156,13 @@ When this policy changes in substance, we update the date and ask you to confirm
 
 ## 正式上架前要解决（不进正式文本）
 
-- **运营者（2026-11-03 定）。** 控制者是项目方 Jinghao Feng 本人（个人，住在欧盟）。App Store 开发者账号、ElevenLabs workspace 和以后的 Anthropic key 都在他名下，卖家和控制者一致。Novawerk 是处理者：上架前要和他签一份 GDPR 第 28 条的处理协议。正文不写地址：GDPR 第 13 条只要求联系方式；如果 App 收费或有商业性质，或者在 App Store 选了 Trader，再补可送达的地址。个人提交心理健康相关 App 仍有 Apple 5.1.1(ix) 的风险，见 [README](./README.md)。
+- **运营者（2026-11-03 定）。** 控制者是项目方 Jinghao Feng 本人（个人，住在欧盟）。App Store 开发者账号、ElevenLabs workspace 和以后的 Anthropic key 都在他名下，卖家和控制者一致。Novawerk 是处理者，和他签了 GDPR 第 28 条的处理协议（用户，2026-11-03）。正文不写地址：GDPR 第 13 条只要求联系方式；如果 App 收费或有商业性质，或者在 App Store 选了 Trader，再补可送达的地址。个人提交心理健康相关 App 仍有 Apple 5.1.1(ix) 的风险；先用个人账号提交试试（用户，2026-11-03），见 [README](./README.md)。
 - **运营者改了，要请用户重新确认。** 按「改动」一节，发版时升 `DISCLAIMER_VERSION`。
 - **AI 模型服务（Anthropic）。** Anthropic 不在 DPF 名单上（2026-11-03 查官方名单）。它的 DPA（2025-02-24 生效）随商业条款生效，跨境依据是 SCC（模块二，爱尔兰法），已写进正文。**过渡期**：线上暂时用 Haodong Ju 个人的 Anthropic key，签约方是他；项目方给自己的 key 后在 Vercel 换掉。
 - **切回 DeepSeek 时。** DeepSeek 的代码和配置保留作备选。真切回去，要同时改回同意页、这份政策和商店文案，升同意版本，请用户重新同意。不配置自动回退，否则数据会发给同意页没写的接收方（[ADR 0013](../decisions/0013-voice-elevenlabs.md)）。
 - **代码和这份政策是否一致**：登录版按 [login.md](../product/login.md) 和 [ADR 0008](../decisions/0008-sign-in.md) 写。发正式版前用当时的代码再核一遍，特别是：邀请码不入库只记批次、会话只存哈希、验证码用 HMAC、假名明细的删除时间。
 - **Resend 的发送日志保留期**：按 Resend 的政策核对后补具体天数。
-- **ElevenLabs（语音会谈打开前必须解决）：** 数据处理协议（DPA）是公开的点击版（2026-04-08 版），以实体名义接受服务条款时随条款生效，不另签字。签约方是 workspace 的所有者：线上用的是项目方的 workspace（Creator，2026-11-03 在后台看到），Haodong Ju 是其中的普通成员。跨境依据：DPA 同时列了 DPF 和 SCC，没说先后；ElevenLabs 在官方 DPF 名单上，状态 Active（2026-11-03 查），所以正文写「DPF，不适用时 SCC」。同意页还没写传输依据；要写的话，升 `VOICE_CONSENT_VERSION`。训练已关（用户，2026-10-30）。继续用 Creator 套餐，声音留在美国（用户，2026-10-30）。现在是 Creator 套餐，没有零保留模式；上面写的保留情况是 2026-10-30 实测的（见 [ADR 0013](../decisions/0013-voice-elevenlabs.md)）。声音算不算生物识别数据，要有人按 GDPR 第 9 条判断。
+- **ElevenLabs（语音会谈打开前必须解决）：** 数据处理协议（DPA）是公开的点击版（2026-04-08 版），以实体名义接受服务条款时随条款生效，不另签字。签约方是 workspace 的所有者：线上用的是项目方的 workspace（Creator，2026-11-03 在后台看到），Haodong Ju 是其中的普通成员。跨境依据：DPA 同时列了 DPF 和 SCC，没说先后；ElevenLabs 在官方 DPF 名单上，状态 Active（2026-11-03 查），所以正文写「DPF，不适用时 SCC」。同意页还没写传输依据；要写的话，升 `VOICE_CONSENT_VERSION`。训练已关（用户，2026-10-30）。继续用 Creator 套餐，声音留在美国（用户，2026-10-30）。现在是 Creator 套餐，没有零保留模式；上面写的保留情况是 2026-10-30 实测的（见 [ADR 0013](../decisions/0013-voice-elevenlabs.md)）。声音算不算 GDPR 第 9 条的特殊类别数据：问过法律意见，不算（用户，2026-11-03）。
 - **匿名统计和时长**（[admin.md](../product/admin.md)）：上线时核对代码只存汇总、`durationSec` 只是一个数字。
 - **邀请码搬进数据库以后**（后台 Epic 2）：数据库会存邀请码的哈希和批次名称。到时「邀请码批次」那一行补一句「数据库存邀请码的哈希，用来作废和管理」。英文一起改。
 - **隐私政策的正式地址**：`psygym.novawerk.io/privacy`（官网直接读这个文件，见 [landing.md](../product/landing.md)）。
