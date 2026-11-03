@@ -53,12 +53,13 @@
 > · CBT 取向，抑郁、抑郁伴焦虑等病例
 > · 中英文界面；病例先有中文
 > · 会谈中可以按住说话，声音只在手机上转成文字。
+> · 语音会谈：和 AI 来访者实时通话。声音发给美国公司 ElevenLabs 转写，开始前要你单独同意。
 > · 练习记录只存在你的手机上，可以随时删除
 >
 > **说在前面**
 > · 这不是心理治疗，不给来访者用，不能在危机中提供帮助。
 > · 来访者由 AI 扮演，全部是虚构的。对话可能涉及抑郁、焦虑和消极念头。
-> · 对话会发给位于中国的第三方 AI 服务 DeepSeek 生成回复，App 里要你先同意。我们的服务器不保存对话。
+> · 对话经我们的服务器发给美国公司 Anthropic 的 AI 服务生成回复，App 里要你先同意。我们的服务器不保存对话。
 > · 请不要输入真实来访者的信息。
 > · 督导反馈由 AI 生成，只供练习参考，不是资质评估，也不是临床意见。
 >
@@ -79,12 +80,13 @@
 > · CBT, with cases on depression and depression with anxiety
 > · Chinese and English interface; cases in Chinese first
 > · Hold to talk in a session: your voice is turned into text on the phone.
+> · Voice sessions: talk with the AI client live. Your voice goes to ElevenLabs, a US company, to be transcribed. The app asks for separate consent first.
 > · Practice history stays on your phone, and you can delete it any time
 >
 > **Before you start**
 > · This is not therapy. It's not for clients, and it can't help in a crisis.
 > · An AI plays every client. All clients are fictional. Sessions may touch on depression, anxiety and dark thoughts.
-> · Your conversation is sent to DeepSeek, a third-party AI service in China, to write replies. The app asks for your consent first. Our servers don't store it.
+> · Your conversation goes through our server to Anthropic, a US AI company, to write replies. The app asks for your consent first. Our servers don't store it.
 > · Please don't enter real client information.
 > · The feedback is AI-generated, for practice only. It is not an assessment and not clinical advice.
 >

@@ -11,6 +11,8 @@
 
 不碰的：同一个 Google 账号下其他开发者账号里的 App；柏林中餐地图、YIMA 的任何设置。
 
+**2026-11-03：iOS 0.4.0（Build 22）提交了 App Store 审核**，状态 Waiting for Review。语音会谈开着；隐私标签加了 Audio Data；不上中国大陆；发布方式是手动，过审后要有人点发布。卖家是 Haodong Ju 的个人账号。
+
 ## 文件
 
 - [testing.md](./testing.md)：TestFlight 和 Play 内部测试怎么配，测试说明，demo 前的时间线。
