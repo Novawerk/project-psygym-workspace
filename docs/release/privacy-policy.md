@@ -157,7 +157,7 @@ When this policy changes in substance, we update the date and ask you to confirm
 ## 正式上架前要解决（不进正式文本）
 
 - **运营者（2026-11-03 定）。** 控制者是项目方 Jinghao Feng 本人（个人，住在欧盟）。App Store 开发者账号、ElevenLabs workspace 和以后的 Anthropic key 都在他名下，卖家和控制者一致。Novawerk 是处理者，和他签了 GDPR 第 28 条的处理协议（用户，2026-11-03）。正文不写地址：GDPR 第 13 条只要求联系方式；如果 App 收费或有商业性质，或者在 App Store 选了 Trader，再补可送达的地址。个人提交心理健康相关 App 仍有 Apple 5.1.1(ix) 的风险；先用个人账号提交试试（用户，2026-11-03），见 [README](./README.md)。
-- **运营者改了，要请用户重新确认。** 按「改动」一节，发版时升 `DISCLAIMER_VERSION`。
+- **运营者改了，要请用户重新确认。** 按「改动」一节，`DISCLAIMER_VERSION` 升到 `2026-11-v4`（2026-11-03），装上新版的人启动时会再看到一次 O2。
 - **AI 模型服务（Anthropic）。** Anthropic 不在 DPF 名单上（2026-11-03 查官方名单）。它的 DPA（2025-02-24 生效）随商业条款生效，跨境依据是 SCC（模块二，爱尔兰法），已写进正文。**过渡期**：线上暂时用 Haodong Ju 个人的 Anthropic key，签约方是他；项目方给自己的 key 后在 Vercel 换掉。
 - **切回 DeepSeek 时。** DeepSeek 的代码和配置保留作备选。真切回去，要同时改回同意页、这份政策和商店文案，升同意版本，请用户重新同意。不配置自动回退，否则数据会发给同意页没写的接收方（[ADR 0013](../decisions/0013-voice-elevenlabs.md)）。
 - **代码和这份政策是否一致**：登录版按 [login.md](../product/login.md) 和 [ADR 0008](../decisions/0008-sign-in.md) 写。发正式版前用当时的代码再核一遍，特别是：邀请码不入库只记批次、会话只存哈希、验证码用 HMAC、假名明细的删除时间。
