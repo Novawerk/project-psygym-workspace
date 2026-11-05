@@ -113,6 +113,17 @@ const PreviewBody = z
     source: Source.refine((s) => Buffer.byteLength(s, "utf8") <= MAX_SOURCE_BYTES, `source is longer than ${MAX_SOURCE_BYTES / 1024} KB`).optional(),
   })
   .refine((b) => b.messages.at(-1)?.role === "counselor", { message: "the last message must be the counselor's", path: ["messages"] });
+const NewPersonBody = z.object({
+  email: z
+    .string()
+    .transform((s) => s.trim().toLowerCase())
+    .pipe(z.email().max(254)),
+  role: z.enum(ROLES),
+  org: z.enum(ORGS),
+});
+const PersonPatchBody = z
+  .object({ role: z.enum(ROLES).optional(), org: z.enum(ORGS).optional(), enabled: z.boolean().optional() })
+  .refine((b) => Object.keys(b).length > 0, "nothing to change");
 const DashboardQuery = z.object({
   from: z.string().optional(),
   to: z.string().optional(),
@@ -256,7 +267,7 @@ export function createAdmin(deps: AdminDeps): Hono {
     c.set("admin", row.admin);
     return next();
   });
-  for (const path of ["/admin/me", "/admin/dashboard", "/admin/content", "/admin/content/*", "/admin/publish-log"]) app.use(path, signedIn);
+  for (const path of ["/admin/me", "/admin/dashboard", "/admin/content", "/admin/content/*", "/admin/publish-log", "/admin/people", "/admin/people/*"]) app.use(path, signedIn);
 
   /** editor and admin write; viewer only reads. */
   const canWrite = (c: Context<Env>) => c.get("admin").role === "admin" || c.get("admin").role === "editor";
@@ -620,6 +631,76 @@ export function createAdmin(deps: AdminDeps): Hono {
       entries: page.map((r) => ({ kind: r.kind, id: r.itemId, ...versionInfo(r, who) })),
       nextCursor: rows.length > limit ? Buffer.from(String(offset + limit)).toString("base64url") : null,
     });
+  });
+
+  // ── People (role admin only) ──
+  // An admin of novawerk manages everyone. An admin of another org (聆镜) sees and manages only
+  // its own org, and only adds people to it. Nobody changes or disables themself, so there is
+  // always at least one enabled admin. Adding an email is the invitation: the person signs in
+  // with that Google account. Nobody is deleted: disabled people keep their name in the log.
+
+  /** The admin's role and the org scope it manages; or the 403 to send. */
+  function peopleScope(c: Context<Env>): { org: string | null } | Response {
+    const a = c.get("admin");
+    if (a.role !== "admin") return fail(c, 403, "forbidden");
+    return { org: a.org === "novawerk" ? null : a.org };
+  }
+  const person = (a: Admin) => ({
+    id: a.id,
+    email: a.email,
+    role: a.role as Role,
+    org: a.org,
+    enabled: a.enabled,
+    signedInOnce: a.googleSub !== null,
+    createdAt: a.createdAt.toISOString(),
+    lastLoginAt: a.lastLoginAt?.toISOString() ?? null,
+  });
+
+  app.get("/admin/people", async (c) => {
+    const scope = peopleScope(c);
+    if (scope instanceof Response) return scope;
+    const rows = await db
+      .select()
+      .from(admins)
+      .where(scope.org ? eq(admins.org, scope.org) : undefined)
+      .orderBy(desc(admins.enabled), asc(admins.email));
+    return c.json({ people: rows.map(person) });
+  });
+
+  app.post("/admin/people", async (c) => {
+    const scope = peopleScope(c);
+    if (scope instanceof Response) return scope;
+    const b = await body(c, NewPersonBody);
+    if (b instanceof Response) return b;
+    if (scope.org && b.org !== scope.org) return fail(c, 403, "forbidden", {}, "You can only add people to your own organisation.");
+    const [exists] = await db.select({ id: admins.id }).from(admins).where(eq(admins.email, b.email)).limit(1);
+    if (exists) return fail(c, 409, "conflict", { reason: "exists" }, "This email is in the list already.");
+    let row: Admin | undefined;
+    try {
+      [row] = await db.insert(admins).values({ id: randomUUID(), email: b.email, role: b.role, org: b.org, enabled: true, createdAt: new Date(now()) }).returning();
+    } catch (err) {
+      if (isConflict(err)) return fail(c, 409, "conflict", { reason: "exists" }, "This email is in the list already.");
+      throw err;
+    }
+    logger.info({ msg: "admin person added", personId: row!.id, role: b.role, org: b.org, adminId: c.get("admin").id });
+    return c.json(person(row!), 201);
+  });
+
+  app.patch("/admin/people/:id", async (c) => {
+    const scope = peopleScope(c);
+    if (scope instanceof Response) return scope;
+    const id = c.req.param("id");
+    const [target] = await db.select().from(admins).where(eq(admins.id, id)).limit(1);
+    if (!target || (scope.org && target.org !== scope.org)) return fail(c, 404, "not_found");
+    const b = await body(c, PersonPatchBody);
+    if (b instanceof Response) return b;
+    if (target.id === c.get("admin").id) return fail(c, 403, "forbidden", {}, "You can't change your own access.");
+    if (scope.org && b.org !== undefined && b.org !== scope.org) return fail(c, 403, "forbidden", {}, "You can only add people to your own organisation.");
+    const [row] = await db.update(admins).set(b).where(eq(admins.id, id)).returning();
+    // Disabled: their sessions end now (every request checks `enabled` too).
+    if (b.enabled === false) await db.delete(adminSessions).where(eq(adminSessions.adminId, id));
+    logger.info({ msg: "admin person changed", personId: id, ...b, adminId: c.get("admin").id });
+    return c.json(person(row!));
   });
 
   // ── Preview chat ──

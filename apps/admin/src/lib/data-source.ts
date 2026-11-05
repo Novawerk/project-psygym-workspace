@@ -15,6 +15,9 @@ import type {
   DashboardQuery,
   Kind,
   Me,
+  NewPerson,
+  Person,
+  PersonPatch,
   PublishLogEntry,
   VersionInfo,
 } from "./types"
@@ -42,6 +45,8 @@ export interface AdminDataSource {
   contentList(kind: Kind): Promise<ContentItem[]>
   content(kind: Kind, id: string): Promise<ContentDetail>
   createCase(id: string, frontmatter: Record<string, unknown>, body: string): Promise<ContentDetail>
+  /** A new case from a whole .md file (frontmatter and body), e.g. one written outside the admin. */
+  createCaseFromSource(id: string, source: string): Promise<ContentDetail>
   saveDraft(kind: Kind, id: string, input: DraftInput): Promise<ContentDetail>
   discardDraft(kind: Kind, id: string, draftRevision: number): Promise<void>
   publish(kind: Kind, id: string, input: PublishInput): Promise<VersionInfo>
@@ -49,6 +54,11 @@ export interface AdminDataSource {
   versions(kind: Kind, id: string): Promise<VersionInfo[]>
   version(kind: Kind, id: string, version: number): Promise<ContentDoc & VersionInfo>
   publishLog(cursor?: string | null): Promise<{ entries: PublishLogEntry[]; nextCursor: string | null }>
+
+  /** Role admin only. */
+  people(): Promise<Person[]>
+  addPerson(input: NewPerson): Promise<Person>
+  updatePerson(id: string, patch: PersonPatch): Promise<Person>
 
   /** The /chat stream, with the draft (or `source`) as the role brief. Not counted, not stored. */
   previewChat(id: string, input: PreviewChatInput, signal?: AbortSignal): AsyncGenerator<ChatFrame>
@@ -73,6 +83,7 @@ const apiSource: AdminDataSource = {
   content: (kind, id) => call(path(kind, id)),
   createCase: (id, frontmatter, body) =>
     call("/admin/content", { method: "POST", json: { kind: "case", id, frontmatter, body } }),
+  createCaseFromSource: (id, source) => call("/admin/content", { method: "POST", json: { kind: "case", id, source } }),
   saveDraft: (kind, id, input) => call(`${path(kind, id)}/draft`, { method: "PUT", json: input }),
   discardDraft: (kind, id, draftRevision) =>
     call(`${path(kind, id)}/draft`, { method: "DELETE", json: { draftRevision } }),
@@ -81,6 +92,10 @@ const apiSource: AdminDataSource = {
   versions: async (kind, id) => (await call<{ versions: VersionInfo[] }>(`${path(kind, id)}/versions`)).versions,
   version: (kind, id, v) => call(`${path(kind, id)}/versions/${v}`),
   publishLog: (cursor) => call(`/admin/publish-log?limit=50${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`),
+
+  people: async () => (await call<{ people: Person[] }>("/admin/people")).people,
+  addPerson: (input) => call("/admin/people", { method: "POST", json: input }),
+  updatePerson: (id, patch) => call(`/admin/people/${encodeURIComponent(id)}`, { method: "PATCH", json: patch }),
 
   async *previewChat(id, input, signal) {
     const res = await fetch(`${API_BASE}${path("case", id)}/preview-chat`, {

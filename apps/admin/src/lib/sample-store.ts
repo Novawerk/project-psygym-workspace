@@ -16,6 +16,7 @@ import type {
   Kind,
   Localized,
   Me,
+  Person,
   Problem,
   Publisher,
   PublishLogEntry,
@@ -289,6 +290,32 @@ function sampleDashboard(q: Parameters<AdminDataSource["dashboard"]>[0]): Dashbo
   }
 }
 
+// --- People: the sample admin manages a few made-up members. ---
+
+const people: Person[] = [
+  { id: "p-admin", email: "admin@example.com", role: "admin", org: "lingjing", enabled: true, signedInOnce: true, createdAt: "2026-10-15T09:00:00Z", lastLoginAt: "2026-11-04T08:12:00Z" },
+  { id: "p-editor", email: "editor@example.com", role: "editor", org: "lingjing", enabled: true, signedInOnce: true, createdAt: "2026-10-15T09:00:00Z", lastLoginAt: "2026-11-03T15:40:00Z" },
+  { id: "p-viewer", email: "viewer@example.com", role: "viewer", org: "novawerk", enabled: true, signedInOnce: false, createdAt: "2026-10-20T11:00:00Z", lastLoginAt: null },
+  { id: "p-old", email: "former@example.com", role: "editor", org: "lingjing", enabled: false, signedInOnce: true, createdAt: "2026-10-16T10:00:00Z", lastLoginAt: "2026-10-18T10:00:00Z" },
+]
+
+function requireAdmin() {
+  if (sampleRole() !== "admin") throw new ApiError(403, "forbidden", "forbidden")
+}
+
+/** Like the backend: the sample admin is of 聆镜, so only 聆镜's people show. */
+const sortedPeople = () =>
+  people.filter((p) => p.org === me().org).sort((a, b) => (a.enabled === b.enabled ? a.email.localeCompare(b.email) : a.enabled ? -1 : 1))
+
+/** The frontmatter's `id:` line and the body after it: enough for sample mode (no YAML parser here). */
+function splitSource(source: string): { fm: Record<string, unknown>; body: string } | null {
+  const m = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/.exec(source)
+  if (!m) return null
+  const id = /^id:\s*["']?([^"'\s]+)/m.exec(m[1])?.[1]
+  const zh = /^title:\s*\n\s+zh:\s*(.+)$/m.exec(m[1])?.[1]?.trim()
+  return { fm: { id, school: "cbt", title: { zh: zh ?? "" } }, body: m[2] }
+}
+
 // --- Preview chat: a canned client so the panel can be tried. ---
 
 const CANNED = [
@@ -344,6 +371,20 @@ export const sampleSource: AdminDataSource = {
     if (!/^[a-z0-9-]{3,64}$/.test(id)) throw new ApiError(400, "invalid_request", "id")
     if (store.some((e) => e.id === id)) throw new ApiError(409, "conflict", "这个 id 已经有了。")
     const e: Entry = { kind: "case", id, versions: [], draft: makeDraft("case", frontmatter, body, 1, null, by()) }
+    e.draft!.updatedAt = new Date().toISOString()
+    store.push(e)
+    return delay(detail(e))
+  },
+
+  createCaseFromSource: async (id, source) => {
+    requireWriter()
+    if (!/^[a-z0-9-]{3,64}$/.test(id)) throw new ApiError(400, "invalid_request", "id")
+    const parsed = splitSource(source)
+    if (!parsed || parsed.fm.id !== id)
+      throw new ApiError(422, "invalid_content", "id", [{ path: "frontmatter.id", message: `must be "${id}"` }])
+    if (store.some((e) => e.id === id)) throw new ApiError(409, "conflict", "这个 id 已经有了。")
+    const e: Entry = { kind: "case", id, versions: [], draft: makeDraft("case", parsed.fm, parsed.body, 1, null, by()) }
+    e.draft!.source = source
     e.draft!.updatedAt = new Date().toISOString()
     store.push(e)
     return delay(detail(e))
@@ -407,6 +448,29 @@ export const sampleSource: AdminDataSource = {
       .flatMap((e) => e.versions.map((x) => ({ ...info(x), kind: e.kind, id: e.id })))
       .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt))
     return delay({ entries, nextCursor: null })
+  },
+
+  people: async () => {
+    requireAdmin()
+    return delay(sortedPeople())
+  },
+
+  addPerson: async (input) => {
+    requireAdmin()
+    const email = input.email.trim().toLowerCase()
+    if (people.some((p) => p.email === email)) throw new ApiError(409, "conflict", "exists", [], "exists")
+    const p: Person = { id: `p-${Date.now()}`, email, role: input.role, org: input.org, enabled: true, signedInOnce: false, createdAt: new Date().toISOString(), lastLoginAt: null }
+    people.push(p)
+    return delay(p)
+  },
+
+  updatePerson: async (id, patch) => {
+    requireAdmin()
+    const p = people.find((x) => x.id === id)
+    if (!p) throw new ApiError(404, "not_found", "not found")
+    if (p.email === me().email) throw new ApiError(403, "forbidden", "self")
+    Object.assign(p, patch)
+    return delay(p)
   },
 
   async *previewChat(_id, input, signal) {

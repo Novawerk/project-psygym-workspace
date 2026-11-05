@@ -102,3 +102,19 @@ export type ChatFrame =
   | { type: "session_end" }
   | { type: "turn_end" }
   | { type: "error"; code: string; message: string }
+
+/** Someone with access to the admin (GET /admin/people; role admin only). */
+export type Person = {
+  id: string
+  email: string
+  role: Role
+  org: Org
+  enabled: boolean
+  /** Has signed in at least once (their Google account is bound). */
+  signedInOnce: boolean
+  createdAt: string
+  lastLoginAt: string | null
+}
+
+export type NewPerson = { email: string; role: Role; org: Org }
+export type PersonPatch = Partial<{ role: Role; org: Org; enabled: boolean }>

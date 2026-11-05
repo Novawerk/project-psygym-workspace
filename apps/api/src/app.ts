@@ -97,7 +97,7 @@ function sameToken(given: string, expected: string): boolean {
 }
 
 /** The routes of docs/admin-api.md. */
-const ADMIN_PATHS = /^\/admin\/(?:auth\/(?:google|logout)|me|dashboard|content(?:\/.*)?|publish-log)$/;
+const ADMIN_PATHS = /^\/admin\/(?:auth\/(?:google|logout)|me|dashboard|content(?:\/.*)?|publish-log|people(?:\/[^/]+)?)$/;
 
 /** The model finished without any text to show. */
 class EmptyReplyError extends Error {

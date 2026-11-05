@@ -230,12 +230,25 @@ filters or ranges can still reveal a hidden cell; only admins see the dashboard.
 |---|---|---|---|
 | dashboard, read cases and rubrics, versions, publish log | ✓ | ✓ | ✓ |
 | save / discard drafts, create cases, preview chat, publish, roll back | | ✓ | ✓ |
-| manage admins | command only (phase 1) | | |
+| manage people (the people page) | | | ✓ |
 
-`admin` and `editor` can do the same in the API in phase 1; `admin` is there for phase 2
-(people and invite codes). 聆镜's psychologists are `editor`.
+`admin` can do everything `editor` can, and manages people. 聆镜's psychologists are `editor`;
+聆镜's lead can be `admin` of org `lingjing`.
 
-**Adding admins** (the lead, with the production env, like the migration):
+**People page (2026-11-05).** We add people from the admin instead of only by command, so 聆镜
+can bring in their own team. Rules:
+
+- An admin of `novawerk` manages everyone. An admin of `lingjing` sees and manages only
+  `lingjing`: they can't add, change or see our own people, and can't move anyone to `novawerk`.
+- Nobody changes or disables themself. So there is always one enabled admin, and nobody locks
+  themself out by mistake.
+- Adding the email is the invitation. We send no email: the page shows a line to copy and send.
+  The first Google sign-in binds the account, as before.
+- Disable, never delete: the publish log keeps the name. Disabling ends the sessions at once.
+- Logs carry the admin's and the person's ids, never emails.
+
+**The first admin** (the lead, with the production env, like the migration); after that, the
+people page:
 
 ```bash
 pnpm --filter api admin:add --email <email> --role admin --org novawerk
@@ -257,6 +270,6 @@ is in the code, a migration or the repo.
 
 ## Not in phase 1
 
-Invite codes in the database, a people page, GitHub sync and the CI lock on `content/`,
+Invite codes in the database, GitHub sync and the CI lock on `content/`,
 taking a case down, the reviewer state, email-code login for the admin (if 聆镜 can't reach
 Google, `admin.md` §4).

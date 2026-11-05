@@ -12,6 +12,7 @@ export const queryKeys = {
   versions: (kind: Kind, id: string) => ["content", "versions", kind, id] as const,
   version: (kind: Kind, id: string, v: number) => ["content", "version", kind, id, v] as const,
   publishLog: ["content", "publish-log"] as const,
+  people: ["people"] as const,
 }
 
 export const meQueryOptions = queryOptions({ queryKey: queryKeys.me, queryFn: () => dataSource.me(), retry: false })
@@ -39,3 +40,5 @@ export const publishLogQueryOptions = queryOptions({
   queryKey: queryKeys.publishLog,
   queryFn: () => dataSource.publishLog(),
 })
+
+export const peopleQueryOptions = queryOptions({ queryKey: queryKeys.people, queryFn: () => dataSource.people() })

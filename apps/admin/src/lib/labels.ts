@@ -9,6 +9,15 @@ export const KIND_LABEL: Record<Kind, string> = { case: "病例", rubric: "督�
 /** Viewers see no new, save, publish or restore controls at all: hidden, not disabled. */
 export const canWrite = (role: Role) => role !== "viewer"
 
+/** Only role admin sees the people page. */
+export const canManagePeople = (role: Role) => role === "admin"
+
+export const ROLE_HINT: Record<Role, string> = {
+  admin: "能改内容，也能管理成员",
+  editor: "能改病例、试聊、发布",
+  viewer: "只能看",
+}
+
 export const DIFFICULTY_LABEL = { intro: "入门", medium: "中等", hard: "较难" } as const
 
 export function actionLabel(v: Pick<VersionInfo, "action" | "fromVersion">) {
