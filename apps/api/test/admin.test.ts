@@ -424,3 +424,67 @@ describe("dashboard", () => {
     expect(byDay.cases.map((c: { id: string }) => c.id)).toContain(CASE);
   });
 });
+
+describe("people", () => {
+  it("only role admin; editor and viewer get 403", async () => {
+    const t = await setup();
+    for (const email of ["ed@example.com", "vi@example.com"]) {
+      const { cookie } = await t.signIn(email);
+      expect((await t.call(cookie, "GET", "/admin/people")).status).toBe(403);
+      expect((await t.call(cookie, "POST", "/admin/people", { email: "x@example.com", role: "viewer", org: "lingjing" })).status).toBe(403);
+    }
+  });
+
+  it("add someone; they sign in with that Google account; change role; disable ends their session", async () => {
+    const t = await setup();
+    const { cookie } = await t.signIn("boss@example.com");
+    const list = await (await t.call(cookie, "GET", "/admin/people")).json();
+    expect(list.people.map((p: { email: string }) => p.email)).toEqual(["boss@example.com", "ed@example.com", "vi@example.com"]);
+
+    const added = await t.call(cookie, "POST", "/admin/people", { email: "  New@Example.com ", role: "editor", org: "lingjing" });
+    expect(added.status).toBe(201);
+    const p = await added.json();
+    expect(p).toMatchObject({ email: "new@example.com", role: "editor", org: "lingjing", enabled: true, signedInOnce: false, lastLoginAt: null });
+    expect((await t.call(cookie, "POST", "/admin/people", { email: "new@example.com", role: "viewer", org: "lingjing" })).status).toBe(409);
+    expect((await t.call(cookie, "POST", "/admin/people", { email: "nope", role: "viewer", org: "lingjing" })).status).toBe(400);
+
+    const theirs = await t.signIn("new@example.com");
+    expect(theirs.res.status).toBe(200);
+    expect((await t.call(theirs.cookie, "PUT", `/admin/content/case/${CASE}/draft`, { draftRevision: null, source: "x" })).status).toBe(200);
+
+    const changed = await t.call(cookie, "PATCH", `/admin/people/${p.id}`, { role: "viewer" });
+    expect(await changed.json()).toMatchObject({ role: "viewer", signedInOnce: true });
+    expect((await t.call(theirs.cookie, "GET", "/admin/me")).status).toBe(200);
+
+    expect((await (await t.call(cookie, "PATCH", `/admin/people/${p.id}`, { enabled: false })).json()).enabled).toBe(false);
+    expect((await t.call(theirs.cookie, "GET", "/admin/me")).status).toBe(401);
+    expect((await t.signIn("new@example.com")).res.status).toBe(403);
+    expect((await t.call(cookie, "PATCH", `/admin/people/${p.id}`, { enabled: true })).status).toBe(200);
+    expect((await t.signIn("new@example.com")).res.status).toBe(200);
+    // Logs carry ids, never emails.
+    expect(JSON.stringify(t.lines)).not.toContain("new@example.com");
+  });
+
+  it("nobody changes or disables themself", async () => {
+    const t = await setup();
+    const { cookie } = await t.signIn("boss@example.com");
+    const me = (await (await t.call(cookie, "GET", "/admin/people")).json()).people.find((p: { email: string }) => p.email === "boss@example.com");
+    expect((await t.call(cookie, "PATCH", `/admin/people/${me.id}`, { enabled: false })).status).toBe(403);
+    expect((await t.call(cookie, "PATCH", `/admin/people/${me.id}`, { role: "viewer" })).status).toBe(403);
+    expect((await t.call(cookie, "PATCH", `/admin/people/${me.id}`, {})).status).toBe(400);
+  });
+
+  it("an admin of 聆镜 sees and manages only 聆镜", async () => {
+    const t = await setup();
+    await addAdmin(t.db, { email: "lead@example.com", role: "admin", org: "lingjing" });
+    const { cookie } = await t.signIn("lead@example.com");
+    const list = (await (await t.call(cookie, "GET", "/admin/people")).json()).people;
+    expect(list.map((p: { email: string }) => p.email)).toEqual(["ed@example.com", "lead@example.com"]);
+    expect((await t.call(cookie, "POST", "/admin/people", { email: "x@example.com", role: "admin", org: "novawerk" })).status).toBe(403);
+    expect((await t.call(cookie, "POST", "/admin/people", { email: "x@example.com", role: "editor", org: "lingjing" })).status).toBe(201);
+    const [boss] = await t.db.select().from(admins).where(eq(admins.email, "boss@example.com"));
+    expect((await t.call(cookie, "PATCH", `/admin/people/${boss!.id}`, { enabled: false })).status).toBe(404);
+    const ed = list.find((p: { email: string }) => p.email === "ed@example.com");
+    expect((await t.call(cookie, "PATCH", `/admin/people/${ed.id}`, { org: "novawerk" })).status).toBe(403);
+  });
+});

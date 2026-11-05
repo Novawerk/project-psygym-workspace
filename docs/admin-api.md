@@ -240,11 +240,47 @@ invalid_content` if that source doesn't parse as a case. The stream is exactly `
 Not counted, not stored, no Slack. 60 turns an hour per admin. Rubrics have no preview in
 phase 1.
 
+## People (admin)
+
+Who can sign in to the admin. Role `admin` only; `editor` and `viewer` get `403 forbidden`.
+An admin of `novawerk` sees and manages everyone. An admin of another org (`lingjing`) sees and
+manages only people of its own org, and adds people only to it (`403` otherwise; someone of
+another org is `404`). Nobody changes or disables themself (`403`), so one enabled admin is
+always left. Adding an email is the invitation: the backend sends no email; the person signs in
+with the Google account of that address. Nobody is deleted: disabled people keep their name in
+the publish log.
+
+```ts
+type Person = {
+  id: string;                        // random, stable
+  email: string;
+  role: Role; org: Org;
+  enabled: boolean;
+  signedInOnce: boolean;             // a Google account is bound to the email
+  createdAt: string;
+  lastLoginAt: string | null;
+};
+```
+
+### `GET /admin/people` → `200 { people: Person[] }`
+
+Enabled first, then by email.
+
+### `POST /admin/people` → `201 Person`
+
+Body `{ email, role, org }`. The email is trimmed and lower-cased. `409 conflict` with
+`reason: "exists"` if the email is in the list (enabled or not): change it with `PATCH`.
+
+### `PATCH /admin/people/:id` → `200 Person`
+
+Body: any of `{ role, org, enabled }`, at least one. `enabled: false` ends their sessions at
+once. Turning someone back on keeps the Google account bound to the email.
+
 ## Commands (the lead, with the production env)
 
 | Command | What |
 |---|---|
-| `pnpm --filter api admin:add --email <e> --role <admin\|editor\|viewer> --org <novawerk\|lingjing>` | add an admin, or change role/org and enable |
+| `pnpm --filter api admin:add --email <e> --role <admin\|editor\|viewer> --org <novawerk\|lingjing>` | add an admin, or change role/org and enable (the first admin; later, the people page) |
 | `pnpm --filter api admin:disable --email <e>` | disable, and end their sessions |
 | `pnpm --filter api content:import` | switch-over day: `content/` → version 1 (skips items that have versions) |
 | `pnpm --filter api content:export` | current versions → `content/`, for a PR |
@@ -261,6 +297,10 @@ phase 1.
 | `DATABASE_URL` | as today |
 
 ## Changes
+
+- **people and upload** — `GET/POST /admin/people`, `PATCH /admin/people/:id` (role `admin`).
+  The admin page now also creates a case from an uploaded `.md` file, with the existing
+  `POST /admin/content` `{ source }` body. ADR 0009 updated.
 
 - **implementation (this PR)** — built as written, behind `ADMIN_MODE` (off by default). Agreed
   with the admin page (#106): optional `note` on publish and rollback, `VersionInfo.note`; `reason`

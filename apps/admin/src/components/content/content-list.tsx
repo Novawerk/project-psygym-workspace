@@ -4,6 +4,7 @@ import { Link, useNavigate } from "@tanstack/react-router"
 import { ChevronRightIcon, PlusIcon } from "lucide-react"
 
 import { Page } from "@/components/page"
+import { Segmented } from "@/components/segmented"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -131,15 +132,26 @@ function Row({ item }: { item: ContentItem }) {
   )
 }
 
+/** The `id:` in a .md file's frontmatter, to fill the id field. The backend parses the YAML for real. */
+function idInSource(source: string): string | null {
+  const fm = /^\uFEFF?---\r?\n([\s\S]*?)\r?\n---/.exec(source)?.[1]
+  return fm ? (/^id:\s*["']?([a-z0-9-]+)["']?\s*$/m.exec(fm)?.[1] ?? null) : null
+}
+
+const MAX_FILE_BYTES = 200 * 1024
+
 function NewCaseDialog({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const [mode, setMode] = React.useState<"template" | "file">("template")
   const [id, setId] = React.useState("")
+  const [file, setFile] = React.useState<{ name: string; source: string } | null>(null)
   const [error, setError] = React.useState<string | null>(null)
-  const valid = /^[a-z0-9-]{3,64}$/.test(id)
+  const valid = /^[a-z0-9-]{3,64}$/.test(id) && (mode === "template" || file !== null)
 
   const create = useMutation({
     mutationFn: () => {
+      if (mode === "file" && file) return dataSource.createCaseFromSource(id, file.source)
       const t = newCaseTemplate(id)
       return dataSource.createCase(id, t.frontmatter, t.body)
     },
@@ -148,8 +160,30 @@ function NewCaseDialog({ onClose }: { onClose: () => void }) {
       onClose()
       await navigate({ to: "/cases/$caseId", params: { caseId: id } })
     },
-    onError: (e) => setError(isConflict(e) ? "这个 id 已经有了。" : e instanceof ApiError && e.status === 400 ? "id 格式不对。" : COPY.error),
+    onError: (e) =>
+      setError(
+        isConflict(e)
+          ? "这个 id 已经有了。"
+          : e instanceof ApiError && e.status === 422
+            ? `文件里的 id 要和上面的一样（${id}）。`
+            : e instanceof ApiError && e.status === 400
+              ? mode === "file" ? `文件不对：${e.message}` : "id 格式不对。"
+              : COPY.error,
+      ),
   })
+
+  const pick = async (f: File | undefined) => {
+    setError(null)
+    setFile(null)
+    if (!f) return
+    if (f.size > MAX_FILE_BYTES) return setError("文件太大了，最多 200 KB。")
+    const source = await f.text()
+    if (!/^\uFEFF?---\r?\n/.test(source)) return setError("这个文件开头没有 --- 包着的字段（frontmatter）。格式见 content/README.md。")
+    setFile({ name: f.name, source: source.replace(/^\uFEFF/, "") })
+    const found = idInSource(source)
+    if (found) setId(found)
+    else setError("文件里没找到 id，请在上面填，并在文件里加上同样的 id。")
+  }
 
   return (
     <AlertDialog open onOpenChange={(o) => !o && onClose()}>
@@ -164,11 +198,38 @@ function NewCaseDialog({ onClose }: { onClose: () => void }) {
           <AlertDialogHeader>
             <AlertDialogTitle>新建病例</AlertDialogTitle>
           </AlertDialogHeader>
+          <Segmented
+            label="新建方式"
+            value={mode}
+            onChange={(m) => {
+              setMode(m)
+              setError(null)
+            }}
+            options={[
+              { value: "template", label: "从模板开始" },
+              { value: "file", label: "上传 .md 文件" },
+            ]}
+            className="self-start"
+          />
+          {mode === "file" && (
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="new-case-file">文件</Label>
+              <Input
+                id="new-case-file"
+                type="file"
+                accept=".md,.markdown,text/markdown,text/plain"
+                onChange={(e) => void pick(e.target.files?.[0])}
+              />
+              <p className="text-xs text-muted-foreground">
+                和 content/cases/ 里的文件一样：开头是字段，后面是正文。上传后是一份草稿，检查、试聊之后再发布。
+              </p>
+            </div>
+          )}
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="new-case-id">id</Label>
             <Input
               id="new-case-id"
-              autoFocus
+              autoFocus={mode === "template"}
               value={id}
               onChange={(e) => {
                 setId(e.target.value.trim())
@@ -178,13 +239,17 @@ function NewCaseDialog({ onClose }: { onClose: () => void }) {
               className="font-mono text-sm"
               aria-invalid={Boolean(error)}
             />
-            <p className="text-xs text-muted-foreground">小写英文、数字、连字符，定了不改。例：cbt-depression-02</p>
+            <p className="text-xs text-muted-foreground">
+              {mode === "file" ? "从文件里读出来；要和文件里的 id 一样。" : "小写英文、数字、连字符，定了不改。例：cbt-depression-02"}
+            </p>
             {error && <p className="text-xs text-destructive">{error}</p>}
           </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="new-case-school">流派</Label>
-            <Input id="new-case-school" value="CBT" readOnly />
-          </div>
+          {mode === "template" && (
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="new-case-school">流派</Label>
+              <Input id="new-case-school" value="CBT" readOnly />
+            </div>
+          )}
           <AlertDialogFooter>
             <AlertDialogCancel type="button">取消</AlertDialogCancel>
             <Button type="submit" disabled={!valid || create.isPending}>

@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as AppPeopleRouteImport } from './routes/_app/people'
 import { Route as AppReleasesRouteImport } from './routes/_app/releases'
 import { Route as AppCasesIndexRouteImport } from './routes/_app/cases/index'
 import { Route as AppCasesCaseIdRouteImport } from './routes/_app/cases/$caseId'
@@ -30,6 +31,11 @@ const LoginRoute = LoginRouteImport.update({
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPeopleRoute = AppPeopleRouteImport.update({
+  id: '/people',
+  path: '/people',
   getParentRoute: () => AppRoute,
 } as any)
 const AppReleasesRoute = AppReleasesRouteImport.update({
@@ -61,6 +67,7 @@ const AppRubricsRubricIdRoute = AppRubricsRubricIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
+  '/people': typeof AppPeopleRoute
   '/releases': typeof AppReleasesRoute
   '/cases/$caseId': typeof AppCasesCaseIdRoute
   '/rubrics/$rubricId': typeof AppRubricsRubricIdRoute
@@ -69,6 +76,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
+  '/people': typeof AppPeopleRoute
   '/releases': typeof AppReleasesRoute
   '/': typeof AppIndexRoute
   '/cases/$caseId': typeof AppCasesCaseIdRoute
@@ -80,6 +88,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/_app/people': typeof AppPeopleRoute
   '/_app/releases': typeof AppReleasesRoute
   '/_app/': typeof AppIndexRoute
   '/_app/cases/$caseId': typeof AppCasesCaseIdRoute
@@ -92,6 +101,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/people'
     | '/releases'
     | '/cases/$caseId'
     | '/rubrics/$rubricId'
@@ -100,6 +110,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
+    | '/people'
     | '/releases'
     | '/'
     | '/cases/$caseId'
@@ -110,6 +121,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_app'
     | '/login'
+    | '/_app/people'
     | '/_app/releases'
     | '/_app/'
     | '/_app/cases/$caseId'
@@ -144,6 +156,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/people': {
+      id: '/_app/people'
+      path: '/people'
+      fullPath: '/people'
+      preLoaderRoute: typeof AppPeopleRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/releases': {
@@ -185,6 +204,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
+  AppPeopleRoute: typeof AppPeopleRoute
   AppReleasesRoute: typeof AppReleasesRoute
   AppIndexRoute: typeof AppIndexRoute
   AppCasesCaseIdRoute: typeof AppCasesCaseIdRoute
@@ -194,6 +214,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppPeopleRoute: AppPeopleRoute,
   AppReleasesRoute: AppReleasesRoute,
   AppIndexRoute: AppIndexRoute,
   AppCasesCaseIdRoute: AppCasesCaseIdRoute,

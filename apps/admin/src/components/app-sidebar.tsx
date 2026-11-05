@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/sidebar"
 import { dataSource } from "@/lib/data-source"
 import { ORG_LABEL, ROLE_LABEL } from "@/lib/labels"
-import { NAV, isActive } from "@/lib/nav"
+import { isActive, navFor } from "@/lib/nav"
 import { queryKeys } from "@/lib/queries"
 import { setSampleRole } from "@/lib/sample-store"
 import type { Me, Role } from "@/lib/types"
@@ -52,7 +52,7 @@ export function AppSidebar({ me }: { me: Me }) {
       <SidebarContent>
         <SidebarGroup>
           <SidebarMenu>
-            {NAV.map((item) => (
+            {navFor(me.role).map((item) => (
               <SidebarMenuItem key={item.to}>
                 <SidebarMenuButton
                   tooltip={item.title}
