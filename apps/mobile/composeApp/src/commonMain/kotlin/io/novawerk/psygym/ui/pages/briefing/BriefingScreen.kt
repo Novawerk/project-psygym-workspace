@@ -33,6 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.novawerk.psygym.domain.model.CaseSummary
+import io.novawerk.psygym.domain.practice.SessionPlan
 import io.novawerk.psygym.domain.voice.VoiceCall
 import io.novawerk.psygym.resources.Res
 import io.novawerk.psygym.resources.back
@@ -49,6 +50,14 @@ import io.novawerk.psygym.resources.brief_mode_text
 import io.novawerk.psygym.resources.brief_mode_voice
 import io.novawerk.psygym.resources.brief_start_voice
 import io.novawerk.psygym.resources.brief_voice_note
+import io.novawerk.psygym.resources.brief_history_off
+import io.novawerk.psygym.resources.brief_last_time
+import io.novawerk.psygym.resources.brief_last_time_none
+import io.novawerk.psygym.resources.brief_session_choice
+import io.novawerk.psygym.resources.brief_session_choice_first
+import io.novawerk.psygym.resources.brief_session_choice_next
+import io.novawerk.psygym.resources.brief_session_followup_note
+import io.novawerk.psygym.resources.brief_setup_body_followup
 import io.novawerk.psygym.ui.components.BorderedCard
 import io.novawerk.psygym.ui.components.BottomActions
 import io.novawerk.psygym.ui.components.CaseAvatar
@@ -72,6 +81,8 @@ import org.jetbrains.compose.resources.stringResource
 fun BriefingScreen(
     case: CaseSummary?,
     caseIndex: Int,
+    /** Which sessions the trainee can practise now (docs/decisions/0014). */
+    sessions: BriefingSessions,
     onStart: () -> Unit,
     /** Null: the server has no voice sessions (docs/decisions/0013). */
     voice: BriefingVoice?,
@@ -81,6 +92,7 @@ fun BriefingScreen(
 ) {
     LaunchedEffect(Unit) { if (case == null) onSessionLost() }
     if (case == null) return
+    val plan = sessions.chosen
     val locale = rememberApiLocale()
     val scroll = rememberScrollState()
     // The title appears in the top bar once the header has scrolled away.
@@ -125,21 +137,29 @@ fun BriefingScreen(
                 CaseAvatar(case, caseIndex, locale, size = 52.dp)
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(case.displayTitle(locale), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                    CaseTags(case, locale, firstSession = true)
+                    CaseTags(case, locale, session = plan.number)
                 }
             }
-            Section(stringResource(Res.string.brief_client), (case.clientIntro ?: case.summary).get(locale))
-            // What a first session is for, above "What to practise" (S-1, copy.md).
+            sessions.next?.let { next -> SessionChoice(next.number, plan.isFollowUp) { sessions.onChoose(if (it) next else SessionPlan.FIRST) } }
+            val followUp = case.followUp(plan.number).takeIf { plan.isFollowUp }
+            Section(stringResource(Res.string.brief_client), (followUp?.clientIntro ?: case.clientIntro ?: case.summary).get(locale))
+            if (plan.isFollowUp) {
+                val last = plan.previous.lastOrNull { it.number == plan.number - 1 }
+                Section(stringResource(Res.string.brief_last_time), last?.summary?.toPlainNote() ?: stringResource(Res.string.brief_last_time_none))
+            }
+            // What this session is for, above "What to practise" (S-1, copy.md).
             Text(
-                stringResource(Res.string.brief_session_first_note),
+                stringResource(if (plan.isFollowUp) Res.string.brief_session_followup_note else Res.string.brief_session_first_note),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            if (case.practiceFocus.isNotEmpty()) {
+            // A follow-up's own focus when the case has one; never the first session's (risk, intake).
+            val focusList = if (plan.isFollowUp) followUp?.practiceFocus.orEmpty() else case.practiceFocus
+            if (focusList.isNotEmpty()) {
                 BorderedCard(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(stringResource(Res.string.brief_focus), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        case.practiceFocus.forEach { focus ->
+                        focusList.forEach { focus ->
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Outlined.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Text(focus.get(locale), style = MaterialTheme.typography.bodyLarge)
@@ -148,7 +168,17 @@ fun BriefingScreen(
                     }
                 }
             }
-            Section(stringResource(Res.string.brief_setup), stringResource(Res.string.brief_setup_body))
+            Section(
+                stringResource(Res.string.brief_setup),
+                if (plan.isFollowUp) stringResource(Res.string.brief_setup_body_followup, plan.number) else stringResource(Res.string.brief_setup_body),
+            )
+            if (sessions.historyOff && case.sessions > 1) {
+                Text(
+                    stringResource(Res.string.brief_history_off),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             SafetyNote {
                 Text(
                     // Each time, in the words of the brief: where the voice goes (V0).
@@ -164,6 +194,43 @@ fun BriefingScreen(
         }
     }
 }
+
+/**
+ * The sessions on offer: [next] continues the most recent course of this case (null: only a
+ * first session); [chosen] is what starts.
+ */
+class BriefingSessions(
+    val next: SessionPlan?,
+    val chosen: SessionPlan,
+    val onChoose: (SessionPlan) -> Unit,
+    /** History is off: no course can go on, so say how to keep one. */
+    val historyOff: Boolean,
+) {
+    companion object {
+        val FIRST_ONLY = BriefingSessions(null, SessionPlan.FIRST, {}, historyOff = false)
+    }
+}
+
+/** "This time": start over with a first session, or pick up the course. */
+@Composable
+private fun SessionChoice(next: Int, followUp: Boolean, onChoose: (Boolean) -> Unit) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(stringResource(Res.string.brief_session_choice), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        PillToggle(
+            options = listOf(
+                true to stringResource(Res.string.brief_session_choice_next, next),
+                false to stringResource(Res.string.brief_session_choice_first),
+            ),
+            selected = followUp,
+            onSelect = onChoose,
+            fill = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+/** A summary's "- " lines as plain text for a card. */
+private fun String.toPlainNote(): String = lines().joinToString("\n") { it.trim().removePrefix("- ").trim() }.trim()
 
 /** The "type or talk" choice. Null on [BriefingScreen] when the server has no voice sessions. */
 class BriefingVoice(

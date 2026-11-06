@@ -4,13 +4,13 @@ import type { Context, Hono } from "hono";
 
 import type { Case } from "../content.js";
 import type { ContentSource } from "../content-source.js";
-import type { Locale, Message } from "../schema.js";
+import type { Locale, Message, SessionInfo } from "../schema.js";
 
 /** What the app gives the admin when it loads it. */
 export interface AdminHooks {
   content: ContentSource;
   /** One /chat turn for a case that isn't published (preview): the same stream, not counted. */
-  previewTurn(c: Context, theCase: Case, locale: Locale, messages: Message[]): Response | Promise<Response>;
+  previewTurn(c: Context, theCase: Case, locale: Locale, messages: Message[], session?: SessionInfo): Response | Promise<Response>;
 }
 
 /** Builds the admin routes (paths start with /admin). Called once per instance. */

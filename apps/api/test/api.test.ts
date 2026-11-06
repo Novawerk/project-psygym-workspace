@@ -56,9 +56,9 @@ describe("GET /health and /cases", () => {
     const json = (await res.json()) as { cases: Record<string, unknown>[] };
     expect(json.cases.length).toBeGreaterThanOrEqual(2);
     for (const c of json.cases) {
-      const allowed = ["id", "school", "title", "summary", ...OPTIONAL_FIELDS];
+      const allowed = ["id", "school", "title", "summary", ...OPTIONAL_FIELDS, "sessions", "followUps"];
       for (const key of Object.keys(c)) expect(allowed).toContain(key);
-      for (const key of ["id", "school", "title", "summary"]) expect(c).toHaveProperty(key);
+      for (const key of ["id", "school", "title", "summary", "sessions"]) expect(c).toHaveProperty(key);
       expect(c.school).toBe("cbt");
     }
     expect(JSON.stringify(json)).not.toContain("核心信念");
@@ -352,7 +352,9 @@ describe("public case fields", () => {
 
   it("missing fields are left out of the response", () => {
     const { c, warnings } = parse("");
-    expect(Object.keys(c).sort()).toEqual(["brief", "id", "school", "summary", "title"]);
+    expect(Object.keys(c).sort()).toEqual(["brief", "id", "school", "sessionBriefs", "sessions", "summary", "title"]);
+    expect(c.sessions).toBe(3);
+    expect(c.sessionBriefs).toEqual({});
     expect(warnings).toEqual([]);
   });
 

@@ -13,10 +13,34 @@ export const MessageSchema = z.object({
 });
 export type Message = z.infer<typeof MessageSchema>;
 
+/** A note on one earlier session, written by POST /session-summary and kept on the phone. */
+export const MAX_SUMMARY_CHARS = 1200;
+export const MAX_PREVIOUS = 5;
+export const PreviousSession = z.object({
+  number: z.number().int().min(1).max(5),
+  summary: z.string().trim().min(1).max(MAX_SUMMARY_CHARS),
+});
+export type PreviousSession = z.infer<typeof PreviousSession>;
+
+/**
+ * Which session this is (docs/decisions/0014-follow-up-sessions.md). Missing: the first session,
+ * exactly as before. `previous`: notes on the earlier ones, oldest first, each before `number`.
+ */
+export const SessionInfo = z
+  .object({
+    number: z.number().int().min(1).max(6),
+    previous: z.array(PreviousSession).max(MAX_PREVIOUS).optional().default([]),
+  })
+  .refine((s) => s.previous.every((p) => p.number < s.number), { message: "previous sessions must come before this one", path: ["previous"] })
+  .refine((s) => new Set(s.previous.map((p) => p.number)).size === s.previous.length, { message: "a previous session appears twice", path: ["previous"] });
+export type SessionInfo = z.infer<typeof SessionInfo>;
+export const FIRST_SESSION: SessionInfo = { number: 1, previous: [] };
+
 const base = z.object({
   caseId: z.string().min(1).max(100),
   locale: LocaleSchema,
   messages: z.array(MessageSchema).min(1).max(MAX_MESSAGES),
+  session: SessionInfo.optional(),
 });
 
 export const ChatBody = base.refine((b) => b.messages.at(-1)?.role === "counselor", {
@@ -55,3 +79,6 @@ export type StreamEvent =
   | { type: "session_end" }
   | { type: "turn_end"; usage?: { inputTokens: number; outputTokens: number } }
   | { type: "error"; code: string; message: string };
+
+/** POST /session-summary: the transcript of a session that just ended, for the next one. */
+export const SummaryBody = base;

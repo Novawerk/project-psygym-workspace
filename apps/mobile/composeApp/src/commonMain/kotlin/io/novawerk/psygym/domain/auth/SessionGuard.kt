@@ -4,6 +4,7 @@ import io.novawerk.psygym.data.api.ApiException
 import io.novawerk.psygym.data.api.Backend
 import io.novawerk.psygym.data.api.needsSignIn
 import io.novawerk.psygym.domain.model.ApiLocale
+import io.novawerk.psygym.domain.model.SessionInfo
 import io.novawerk.psygym.domain.model.TurnRequest
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -22,7 +23,9 @@ class SessionGuard(private val inner: Backend, private val sessions: SessionStor
 
     override suspend fun voiceAvailable() = inner.voiceAvailable()
 
-    override suspend fun voiceSession(caseId: String, locale: ApiLocale) = guard { inner.voiceSession(caseId, locale) }
+    override suspend fun voiceSession(caseId: String, locale: ApiLocale, session: SessionInfo?) = guard { inner.voiceSession(caseId, locale, session) }
+
+    override suspend fun sessionSummary(request: TurnRequest) = guard { inner.sessionSummary(request) }
 
     override suspend fun startSignIn(email: String, locale: ApiLocale) = inner.startSignIn(email, locale)
 

@@ -369,4 +369,21 @@
     <string name="privacy_a_voice_session">To ElevenLabs, which turns it into text as you speak and reads out the client’s words. It goes to the United States and doesn’t pass through our servers. The text then goes through our server to %1$s in the US, like typed text.</string>
     <string name="privacy_q_voice_store">Is my voice stored?</string>
     <string name="privacy_a_voice_store">We don’t store it, and neither does your phone. We’ve told ElevenLabs not to record. It deletes the text after the call; in our tests that took under an hour. Its debugging and moderation logs may still hold content, and we don’t yet know for how long. Its backups last up to 30 days.</string>
+    <!-- Follow-up sessions (docs/decisions/0014) -->
+    <string name="brief_session_n">Session %1$d</string>
+    <string name="brief_session_choice">This time</string>
+    <string name="brief_session_choice_first">Start over · first session</string>
+    <string name="brief_session_choice_next">Pick up · session %1$d</string>
+    <string name="brief_session_followup_note">A follow-up session: look back at last time and the homework you agreed, then set this session’s agenda together.</string>
+    <string name="brief_setup_body_followup">Session %1$d · 15–30 turns suggested · about 15 min · end any time.</string>
+    <string name="brief_last_time">Last time</string>
+    <string name="brief_last_time_none">No note was kept from last time. The client remembers only roughly.</string>
+    <string name="brief_history_off">Turn on saving practice history in Me, and you can pick up from here next time.</string>
+    <string name="practice_empty_followup">You are the counselor. This is session %1$d with this client. Open when you’re ready.</string>
+    <string name="history_session_n">Session %1$d</string>
+    <string name="history_detail_summary">Summary</string>
+    <string name="history_course">Sessions with this client</string>
+    <string name="history_continue">Go on to session %1$d</string>
+    <string name="history_summary_none">No summary for this session.</string>
+    <string name="history_summary_note">The AI wrote this summary from the conversation. The AI client and supervisor read it in the next session.</string>
 </resources>

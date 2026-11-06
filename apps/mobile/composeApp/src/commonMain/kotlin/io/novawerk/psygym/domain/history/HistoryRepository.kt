@@ -33,6 +33,12 @@ data class SavedSession(
     val owner: String? = null,
     /** A voice session: the words are automatic transcription. */
     val voice: Boolean = false,
+    /** Which session of the case (docs/decisions/0014). Saved before it: 1. */
+    val sessionNumber: Int = 1,
+    /** The first session's id when this one follows on from it; null for a first session. */
+    val courseId: String? = null,
+    /** `POST /session-summary`'s note, sent with the next session. Empty when there is none. */
+    val summary: String = "",
 ) {
     val turns: Int get() = messages.count { it.role == io.novawerk.psygym.domain.model.Role.Counselor }
     val durationMillis: Long get() = (endedAtMillis - startedAtMillis).coerceAtLeast(0)

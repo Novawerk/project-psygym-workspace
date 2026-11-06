@@ -42,6 +42,21 @@ type CaseSummary = {
   clientIntro?: LocalizedText;                  // pseudonym, age, role, why they came; no spoilers
   practiceFocus?: LocalizedText[];              // 1–3 things to practise
   contentNotes?: LocalizedText;                 // content note; the app has a generic fallback
+  // Follow-up sessions (ADR 0014). Servers before it leave sessions out: read that as 1.
+  sessions: number;                             // how many sessions the case offers, 1–6
+  followUps?: FollowUp[];                       // public notes per follow-up session, ordered
+};
+type FollowUp = {
+  session: number;                              // 2…sessions
+  clientIntro?: LocalizedText;                  // the client as they come this time; no spoilers
+  practiceFocus?: LocalizedText[];              // 1–3 things to practise this time
+};
+// Which session a request belongs to. Left out: the first session, exactly as before.
+type SessionInfo = {
+  number: number;                               // 1–6, at most the case's sessions (else 400)
+  previous?: { number: number; summary: string }[];  // notes on earlier sessions, oldest first:
+                                                // ≤ 5, each number < this one and unique,
+                                                // each summary 1–1200 characters
 };
 ```
 
@@ -60,8 +75,10 @@ server. None of these fields is sent to the AI supervisor.
 
 ### `POST /chat` → `text/event-stream`
 
-Body: `{ caseId: string, locale: Locale, messages: Message[] }`. The last message must be
-the counselor's (else 400). The server answers as the client, in character.
+Body: `{ caseId: string, locale: Locale, messages: Message[], session?: SessionInfo }`. The last
+message must be the counselor's (else 400). The server answers as the client, in character. In a
+follow-up session the client knows it has been before, gets that session's setting from the case,
+and remembers only what the `previous` notes say.
 
 The stream may carry a `session_end` frame (see below): the client ended the session in
 character. The app then locks the input and leaves only "End and see supervision". The server
@@ -71,7 +88,9 @@ one short line and that stream should carry `session_end` again. That repeat is 
 
 ### `POST /supervision` → `text/event-stream`
 
-Body: `{ caseId: string, locale: Locale, messages: Message[], mode?: "final" | "live", durationSec?: number }`.
+Body: `{ caseId: string, locale: Locale, messages: Message[], mode?: "final" | "live", durationSec?: number, session?: SessionInfo }`.
+In a follow-up session (both modes) the supervisor uses the rubric's follow-up pick and reads the
+`previous` notes as earlier records, to see whether this session picks up from the last one.
 Any message may come last, and a very short session still gets an answer. Same frames either
 way.
 
@@ -93,6 +112,16 @@ way.
 the anonymous daily counts (the sum and the number of sessions that sent it); it never changes
 the report. A value that isn't a whole number in that range is ignored, never a 400. An app
 that doesn't send it works as before.
+
+### `POST /session-summary` → `200 { summary: string }`
+
+Body: `{ caseId: string, locale: Locale, messages: Message[], session?: SessionInfo }`. A short
+note on a session that just ended (ADR 0014): what was discussed, what was new, safety, what was
+agreed, how the relationship went; `- ` lines, about 300 characters (zh) or 200 words (en), never
+more than 1,200 characters. The app keeps it with the session in its local history and sends it
+as `previous` in the next session. The server stores nothing. Same gate and rate limit as
+`/supervision`. Errors: `400 invalid_request`, `401`, `404 case_not_found`, `429 rate_limited`,
+`503 model_unavailable` (the model failed or wrote nothing).
 
 ### `POST /feedback` → `204` (no body)
 
@@ -144,7 +173,7 @@ Voice sessions through an ElevenLabs agent ([`decisions/0013`](./decisions/0013-
 Off unless the server has `ELEVENLABS_API_KEY`, `ELEVENLABS_AGENT_ID` and `VOICE_LLM_SECRET`:
 then `404 not_found`.
 
-Body: `{ caseId: string, locale: Locale }`. Answer:
+Body: `{ caseId: string, locale: Locale, session?: SessionInfo }`. Answer:
 
 ```ts
 {
@@ -153,6 +182,10 @@ Body: `{ caseId: string, locale: Locale }`. Answer:
   extraBody: { caseId: string; locale: Locale };  // pass as custom-LLM extra body, if the SDK can
 }
 ```
+
+For a follow-up session, `psygym` also carries the session (` session=<base64url JSON>`), so the
+ElevenLabs agent's prompt brings it to `/voice/llm` with no agent change. `extraBody` stays strings
+only.
 
 The app starts the call with the SDK, passing `dynamicVariables`, `extraBody` as the custom-LLM
 extra body, and the agent language override (`zh` or `en`). It keeps the transcript the SDK reports
@@ -329,6 +362,11 @@ In a stream, `error` with `model_unavailable` also covers a model that returned 
 The app shows a friendly message for each code, in the current language.
 
 ## Changes
+
+- **follow-up sessions (this PR)** — `CaseSummary.sessions` and `followUps`; an optional
+  `session` on `/chat`, `/supervision` and `/voice/session`; new `POST /session-summary`
+  (ADR 0014). Both sides in one PR. Old apps send no `session` and get first sessions, exactly
+  as before; they ignore the new case fields.
 
 - **voice (this PR)** — `GET /voice/status`, `POST /voice/session` and
   `POST /voice/llm/chat/completions`, behind three environment variables (off by default: no

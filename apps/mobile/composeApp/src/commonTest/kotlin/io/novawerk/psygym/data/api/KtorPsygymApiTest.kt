@@ -7,10 +7,17 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import io.novawerk.psygym.domain.model.ApiLocale
+import io.novawerk.psygym.domain.model.Message
+import io.novawerk.psygym.domain.model.PreviousSession
+import io.novawerk.psygym.domain.model.Role
+import io.novawerk.psygym.domain.model.SessionInfo
+import io.novawerk.psygym.domain.model.TurnRequest
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 // Streaming is tested against a real server in androidUnitTest: MockEngine has no SSE support.
 class KtorPsygymApiTest {
@@ -158,5 +165,50 @@ class KtorPsygymApiTest {
             api(auth(HttpStatusCode.Unauthorized, """{"error":{"code":"session_expired","message":"x"}}""")).deleteAccount()
         }
         assertEquals(ApiErrorCode.SessionExpired, e.code)
+    }
+
+    @Test
+    fun parsesSessionsAndFollowUpsAndDefaultsToOne() = runTest {
+        val body = """{"cases":[
+            {"id":"a","school":"cbt","title":{"zh":"甲","en":"A"},"summary":{"zh":"s","en":"s"},"sessions":3,
+             "followUps":[{"session":2,"clientIntro":{"zh":"两周后","en":"Two weeks on"},"practiceFocus":[{"zh":"作业","en":"Homework"}]}]},
+            {"id":"b","school":"cbt","title":{"zh":"乙","en":"B"},"summary":{"zh":"s","en":"s"}}
+        ]}"""
+        val (a, b) = api(json(body)).cases()
+        assertEquals(3, a.sessions)
+        assertEquals("Two weeks on", a.followUp(2)?.clientIntro?.get(ApiLocale.En))
+        assertEquals(null, a.followUp(3))
+        assertEquals(1, b.sessions)
+    }
+
+    @Test
+    fun asksForASessionSummaryWithTheSession() = runTest {
+        var sent = ""
+        val engine = MockEngine { req ->
+            assertEquals("/session-summary", req.url.encodedPath)
+            sent = (req.body as io.ktor.http.content.TextContent).text
+            respond("""{"summary":"- 谈了什么：找工作。"}""", HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "application/json"))
+        }
+        val request = TurnRequest(
+            "a",
+            ApiLocale.Zh,
+            listOf(Message(Role.Counselor, "你好")),
+            session = SessionInfo(2, listOf(PreviousSession(1, "一"))),
+        )
+        assertEquals("- 谈了什么：找工作。", api(engine).sessionSummary(request))
+        assertTrue(sent.contains(""""session":{"number":2,"previous":[{"number":1,"summary":"一"}]}"""), sent)
+    }
+
+    @Test
+    fun aFirstSessionSendsNoSessionField() = runTest {
+        var sent = ""
+        val engine = MockEngine { req ->
+            sent = (req.body as io.ktor.http.content.TextContent).text
+            respond("""{"conversationToken":"t","dynamicVariables":{},"extraBody":{}}""", HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "application/json"))
+        }
+        api(engine).voiceSession("a", ApiLocale.Zh, SessionInfo(1))
+        assertFalse(sent.contains("session"), sent)
+        api(engine).voiceSession("a", ApiLocale.Zh, SessionInfo(2))
+        assertTrue(sent.contains(""""session":{"number":2}"""), sent)
     }
 }

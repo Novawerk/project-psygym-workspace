@@ -87,7 +87,8 @@ export function checkCase(id: string, source: string): Checked & { value?: Case 
   const warnings: Problem[] = [];
   const value = parseCase("frontmatter", source, (m) => {
     const key = /^frontmatter: (\w+)/.exec(m)?.[1];
-    warnings.push({ path: key ? `frontmatter.${key}` : "frontmatter", message: m.replace(/^frontmatter: /, "") });
+    const path = key === "body" ? "body" : key ? `frontmatter.${key}` : "frontmatter";
+    warnings.push({ path, message: m.replace(/^frontmatter: (body: )?/, "") });
   });
   return { errors, warnings, value };
 }

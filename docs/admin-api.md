@@ -231,8 +231,11 @@ Every import, publish and rollback, newest first. `limit` 1–100, default 50. `
 Try a case before publishing it. Body:
 
 ```ts
-{ locale: "zh" | "en"; messages: Message[]; source?: string }
+{ locale: "zh" | "en"; messages: Message[]; source?: string; session?: number }
 ```
+
+`session` (optional, 1–6, default 1): which session to try (ADR 0014). The client plays that
+session's setting with no notes from earlier sessions. Past the case's `sessions`: `400`.
 
 `messages` as in `POST /chat`. `source` is the case to play (unsaved edits); without it, the
 saved draft, else the published version. `source` at most 200 KB (`400`). `422

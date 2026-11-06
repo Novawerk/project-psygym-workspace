@@ -10,6 +10,7 @@ import io.novawerk.psygym.data.api.PsygymApi
 import io.novawerk.psygym.data.api.toError
 import io.novawerk.psygym.domain.model.ApiLocale
 import io.novawerk.psygym.domain.model.Message
+import io.novawerk.psygym.domain.model.SessionInfo
 import io.novawerk.psygym.domain.model.TurnRequest
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -24,7 +25,12 @@ import kotlinx.coroutines.launch
  *   which replace the old.
  * - Closing the sheet doesn't stop a note being written: it runs in [scope].
  */
-class LiveNotes(private val api: PsygymApi, private val scope: CoroutineScope) {
+class LiveNotes(
+    private val api: PsygymApi,
+    private val scope: CoroutineScope,
+    /** A follow-up session's number and notes (docs/decisions/0014); null for a first session. */
+    private val session: SessionInfo? = null,
+) {
 
     /** The latest notes that came back whole, Markdown "- " items. Empty until then. */
     var text by mutableStateOf("")
@@ -85,7 +91,7 @@ class LiveNotes(private val api: PsygymApi, private val scope: CoroutineScope) {
     }
 
     private fun write(caseId: String, locale: ApiLocale, transcript: List<Message>, turns: Int) {
-        val request = TurnRequest(caseId, locale, transcript, mode = MODE)
+        val request = TurnRequest(caseId, locale, transcript, mode = MODE, session = session)
         error = null
         // The sheet shows "reading…" until the new notes start to arrive; the old ones (and the
         // chip's turn and dot) stay until the new ones are whole.

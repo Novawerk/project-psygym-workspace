@@ -46,6 +46,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.novawerk.psygym.domain.history.SavedSession
+import io.novawerk.psygym.domain.history.courses
 import io.novawerk.psygym.domain.model.ApiLocale
 import io.novawerk.psygym.resources.Res
 import io.novawerk.psygym.resources.history_cancel
@@ -58,6 +59,7 @@ import io.novawerk.psygym.resources.history_group_today
 import io.novawerk.psygym.resources.history_group_week
 import io.novawerk.psygym.resources.history_local_note
 import io.novawerk.psygym.resources.history_next
+import io.novawerk.psygym.resources.history_session_n
 import io.novawerk.psygym.resources.history_report_unfinished
 import io.novawerk.psygym.resources.history_title
 import io.novawerk.psygym.ui.components.BottomBar
@@ -123,6 +125,8 @@ fun HistoryScreen(
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
                     )
                 }
+                // Sessions that follow on from each other carry their number (docs/decisions/0014).
+                val numbered = sessions.courses().filter { it.sessions.size > 1 }.flatMap { c -> c.sessions.map { it.id } }.toSet()
                 groupByDay(sessions).forEach { (group, items) ->
                     item(key = group.name) {
                         Text(
@@ -133,7 +137,7 @@ fun HistoryScreen(
                         )
                     }
                     items(items, key = { it.id }) { session ->
-                        SwipeRow(session, locale, onOpen = { onOpen(session) }, onSwiped = { pendingDelete = session.id })
+                        SwipeRow(session, locale, numbered = session.id in numbered || session.sessionNumber > 1, onOpen = { onOpen(session) }, onSwiped = { pendingDelete = session.id })
                     }
                 }
             }
@@ -158,7 +162,7 @@ fun HistoryScreen(
 /** Swipe left to delete (with a confirm). The row snaps back until the user confirms. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SwipeRow(session: SavedSession, locale: ApiLocale, onOpen: () -> Unit, onSwiped: () -> Unit) {
+private fun SwipeRow(session: SavedSession, locale: ApiLocale, numbered: Boolean, onOpen: () -> Unit, onSwiped: () -> Unit) {
     val state = rememberSwipeToDismissBoxState()
     LaunchedEffect(state.currentValue) {
         if (state.currentValue == SwipeToDismissBoxValue.EndToStart) {
@@ -178,18 +182,18 @@ private fun SwipeRow(session: SavedSession, locale: ApiLocale, onOpen: () -> Uni
             }
         },
     ) {
-        HistoryRow(session, locale, onOpen)
+        HistoryRow(session, locale, numbered, onOpen)
     }
 }
 
 @Composable
-private fun HistoryRow(session: SavedSession, locale: ApiLocale, onClick: () -> Unit) {
+private fun HistoryRow(session: SavedSession, locale: ApiLocale, numbered: Boolean, onClick: () -> Unit) {
     androidx.compose.material3.Surface(onClick = onClick, color = MaterialTheme.colorScheme.background) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp), verticalAlignment = Alignment.Top) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(session.case.displayTitle(locale), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(
-                    sessionMeta(session, locale),
+                    if (numbered) "${stringResource(Res.string.history_session_n, session.sessionNumber)} · ${sessionMeta(session, locale)}" else sessionMeta(session, locale),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

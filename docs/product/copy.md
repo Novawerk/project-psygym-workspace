@@ -69,8 +69,29 @@ key 沿用 App 现有命名（`home_*`、`cases_*`、`practice_*`、`supervision
 | brief_setup_body | 改 | 初次会谈 · 建议 15–30 轮 · 约 15 分钟 · 你随时可以结束。 | First session · 15–30 turns suggested · about 15 min · end any time. |
 | brief_session_first | 新 | 初次会谈 | First session |
 | brief_session_first_note | 新 | 初次会谈的主要任务：做风险筛查，判断能不能承接这位来访者。 | The main tasks of a first session: screen for risk, and decide whether you can take this client on. |
-| brief_content_note | 新 | 这场会谈可能涉及抑郁、焦虑和消极念头。来访者是虚构的。对话会发给美国的 Anthropic 生成回复，我们的服务器不保存。 | This session may touch on depression, anxiety and dark thoughts. The client is fictional. Your conversation is sent to Anthropic in China to write the replies; our servers don't store it. |
+| brief_content_note | 新 | 这场会谈可能涉及抑郁、焦虑和消极念头。来访者是虚构的。对话会发给美国的 Anthropic 生成回复，我们的服务器不保存。 | This session may touch on depression, anxiety and dark thoughts. The client is fictional. Your conversation is sent to Anthropic in the US to write the replies; our servers don't store it. |
 | brief_start | 新 | 开始会谈 | Start session |
+
+**后续会谈**（[ADR 0014](../decisions/0014-follow-up-sessions.md)，2026-11-06）
+
+| key | 状态 | 中文 | English |
+|-----|------|------|---------|
+| brief_session_n | 新 | 第 %1$d 次会谈 | Session %1$d |
+| brief_session_choice | 新 | 这次练 | This time |
+| brief_session_choice_next | 新 | 接着上次 · 第 %1$d 次 | Pick up · session %1$d |
+| brief_session_choice_first | 新 | 重新开始 · 初次会谈 | Start over · first session |
+| brief_session_followup_note | 新 | 后续会谈：先回顾上次和约好的作业，再和来访者一起定这次谈什么。 | A follow-up session: look back at last time and the homework you agreed, then set this session’s agenda together. |
+| brief_setup_body_followup | 新 | 第 %1$d 次会谈 · 建议 15–30 轮 · 约 15 分钟 · 你随时可以结束。 | Session %1$d · 15–30 turns suggested · about 15 min · end any time. |
+| brief_last_time | 新 | 上次的小结 | Last time |
+| brief_last_time_none | 新 | 上次没有留下小结。来访者只记得个大概。 | No note was kept from last time. The client remembers only roughly. |
+| brief_history_off | 新 | 在「我的」里打开「在本机保存练习记录」，练完以后就能接着练下一次。 | Turn on saving practice history in Me, and you can pick up from here next time. |
+| practice_empty_followup | 新 | 你是咨询师。这是你和这位来访者的第 %1$d 次会谈，准备好了就先开口。 | You are the counselor. This is session %1$d with this client. Open when you’re ready. |
+| history_session_n | 新 | 第 %1$d 次 | Session %1$d |
+| history_detail_summary | 新 | 小结 | Summary |
+| history_course | 新 | 和这位来访者的会谈 | Sessions with this client |
+| history_continue | 新 | 接着练第 %1$d 次 | Go on to session %1$d |
+| history_summary_none | 新 | 这场没有小结。 | No summary for this session. |
+| history_summary_note | 新 | 小结由 AI 根据对话写成，下一次会谈时 AI 来访者和督导会读到它。 | The AI wrote this summary from the conversation. The AI client and supervisor read it in the next session. |
 
 ### 会谈
 

@@ -31,6 +31,27 @@ practiceFocus:
 contentNotes:
   zh: 涉及抑郁情绪和消极念头。
   en: Touches on low mood and thoughts of death.
+# 能练几次（第一次 + 后续）。下面「第二次会谈」「第三次会谈」两节是每一次的设定，也是占位。
+sessions: 3
+followUps:
+  - session: 2
+    clientIntro:
+      zh: 两周后，小林第二次来。睡得好一点了，上次约好的事只做了一部分。
+      en: Two weeks later, Lin is back. Sleeping a little better; did part of what you agreed last time.
+    practiceFocus:
+      - zh: 回顾上次的作业
+        en: Reviewing last time's homework
+      - zh: 一起定这次谈什么
+        en: Setting the agenda together
+  - session: 3
+    clientIntro:
+      zh: 又过了两周，小林第三次来。
+      en: Two more weeks on, Lin's third session.
+    practiceFocus:
+      - zh: 识别自动思维
+        en: Spotting automatic thoughts
+      - zh: 总结和约好下次
+        en: Summing up and agreeing next steps
 ---
 
 <!-- 占位病例：开发团队写的，只为跑通流程，不是临床内容。聆镜团队的正式病例到了以后替换（GitHub issue #1）。 -->
@@ -85,3 +106,16 @@ contentNotes:
 
 ## 备注
 主要练：建立关系、识别自动思维、苏格拉底式提问、行为激活的起步。
+
+## 第二次会谈
+<!-- 占位：开发团队写的，只为跑通流程。 -->
+- 和上次隔了两周。睡眠好一点，四五点醒的次数少了；心情还是低，但「没那么沉了」。
+- 上次如果约了作业（比如每天出门走一走），只做了两三天，后面就忘了，有点不好意思说。咨询师不问，她不会主动提。
+- 这两周又投了几份简历，一家没回音，她觉得「果然还是不行」。
+- 对咨询师比上次放松一点，会多说几句；被问到父母还是会转开。
+
+## 第三次会谈
+<!-- 占位：开发团队写的，只为跑通流程。 -->
+- 又过了两周。有一家公司约了面试，她很紧张，反复想「面试又搞砸怎么办」。
+- 开始能说出一点父母的事：妈妈问工作的时候，她觉得是在嫌她。
+- 消极念头比第一次少了，被问到时说「最近没怎么想」。

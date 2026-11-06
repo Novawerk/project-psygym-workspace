@@ -67,7 +67,11 @@ import io.novawerk.psygym.ui.navigation.SupervisionRoute
 import io.novawerk.psygym.ui.navigation.VoiceConsentRoute
 import io.novawerk.psygym.ui.navigation.VoiceRoute
 import io.novawerk.psygym.ui.navigation.WelcomeRoute
+import io.novawerk.psygym.domain.history.courseOf
+import io.novawerk.psygym.domain.history.nextSessionOf
+import io.novawerk.psygym.domain.practice.SessionPlan
 import io.novawerk.psygym.ui.pages.briefing.BriefingScreen
+import io.novawerk.psygym.ui.pages.briefing.BriefingSessions
 import io.novawerk.psygym.ui.pages.briefing.BriefingVoice
 import io.novawerk.psygym.ui.pages.cases.CasesScreen
 import io.novawerk.psygym.ui.pages.help.HelpScreen
@@ -124,6 +128,8 @@ fun App(component: AppComponent) {
     // "We couldn't keep your last session", shown once on Home (audit O).
     var practiceLost by remember { mutableStateOf(false) }
     var historyDeleted by remember { mutableStateOf(false) }
+    // A course picked in History ("Go on to session N"): the brief offers that one, not the latest.
+    var pinnedPlan by remember { mutableStateOf<SessionPlan?>(null) }
 
     // Cases come from whichever backend is active, for the signed-in account: reload when either
     // changes. Never without a session: the server would refuse, and that reads as "expired".
@@ -156,9 +162,12 @@ fun App(component: AppComponent) {
                 val openHelp = { nav.navigate(HelpRoute) { launchSingleTop = true } }
                 val goHome = { nav.goHome() }
                 val openCase = { case: CaseSummary ->
+                    pinnedPlan = null
                     session.select(case)
                     nav.navigate(BriefingRoute)
                 }
+                // The case as the server has it now: saved records keep the case from back then.
+                val freshCase = { case: CaseSummary -> caseStore.cases?.firstOrNull { it.id == case.id } ?: case }
                 // The app was restarted mid-practice; the in-memory session is gone (D8).
                 val sessionLost = {
                     practiceLost = true
@@ -374,6 +383,8 @@ fun App(component: AppComponent) {
                         // Pop only while this page is on top: after a delete the record turns null and
                         // the screen asks to go back again, which used to pop History too (audit B).
                         val back = { if (nav.currentBackStackEntry?.destination?.hasRoute<HistoryDetailRoute>() == true) nav.popBackStack() }
+                        val course = saved?.let { s -> savedSessions?.courseOf(s) }
+                        LaunchedEffect(Unit) { caseStore.load() }
                         HistoryDetailScreen(
                             session = saved,
                             onBack = { back() },
@@ -382,7 +393,17 @@ fun App(component: AppComponent) {
                                 historyDeleted = true
                                 back()
                             },
-                            onPracticeAgain = { saved?.let { openCase(it.case) } },
+                            onPracticeAgain = { saved?.let { openCase(freshCase(it.case)) } },
+                            course = course,
+                            // Only from the course's latest session, and only while history is kept.
+                            next = course?.takeIf { saveHistory && it.last.id == saved.id }?.next(freshCase(saved.case).sessions),
+                            onContinue = { plan ->
+                                saved?.let {
+                                    openCase(freshCase(it.case))
+                                    pinnedPlan = plan
+                                }
+                            },
+                            onOpen = { other -> nav.navigate(HistoryDetailRoute(other)) { popUpTo<HistoryDetailRoute> { inclusive = true } } },
                         )
                     }
                     composable<CasesRoute> {
@@ -400,9 +421,23 @@ fun App(component: AppComponent) {
                         // Off unless the server has voice keys. Asked each time: a failed check
                         // only hides the entry for this page.
                         val voiceAvailable by produceState(false) { value = stored != null && component.api.voiceAvailable() }
+                        // Follow-up sessions (docs/decisions/0014): the latest course of this case
+                        // goes on, unless History picked one. Only while history is kept.
+                        val briefCase = session.case?.let(freshCase)
+                        val next = briefCase?.takeIf { saveHistory && shot == null }?.let { c ->
+                            pinnedPlan?.takeIf { it.number <= c.sessions } ?: savedSessions?.nextSessionOf(c)
+                        }
+                        var chosen by remember(next) { mutableStateOf(next ?: SessionPlan.FIRST) }
+                        LaunchedEffect(chosen) { session.choose(chosen) }
                         BriefingScreen(
-                            case = session.case,
+                            case = briefCase,
                             caseIndex = caseIndex(session.case),
+                            sessions = BriefingSessions(
+                                next = next,
+                                chosen = chosen,
+                                onChoose = { chosen = it },
+                                historyOff = !saveHistory,
+                            ),
                             onStart = {
                                 // Screenshot mode opens on a written session instead of an empty one.
                                 session.case?.let { case -> shot?.seed?.invoke(case.id, apiLocale) }

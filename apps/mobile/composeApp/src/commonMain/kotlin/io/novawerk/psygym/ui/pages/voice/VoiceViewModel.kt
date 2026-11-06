@@ -66,7 +66,9 @@ class VoiceViewModel(
         private set
 
     /** Mid-session supervisor notes, as in a typed session. Live as long as this screen. */
-    val live = LiveNotes(api, viewModelScope)
+    /** Which session of the case (docs/decisions/0014); fixed for this screen. */
+    val plan = session.plan
+    val live = LiveNotes(api, viewModelScope, plan.wire)
 
     private var started = false
     private var timeout: Job? = null
@@ -107,7 +109,7 @@ class VoiceViewModel(
         phase = VoicePhase.Connecting
         viewModelScope.launch {
             try {
-                val ticket = api.voiceSession(caseId, locale)
+                val ticket = api.voiceSession(caseId, locale, plan.wire)
                 call.start(
                     VoiceCallSetup(ticket.conversationToken, ticket.dynamicVariables, ticket.extraBody, if (locale == ApiLocale.Zh) "zh" else "en"),
                     this@VoiceViewModel,

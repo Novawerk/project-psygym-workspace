@@ -13,7 +13,9 @@ import io.novawerk.psygym.domain.model.LocalizedText
 import io.novawerk.psygym.domain.model.Message
 import io.novawerk.psygym.domain.model.Role
 import io.novawerk.psygym.domain.model.TurnRequest
+import io.novawerk.psygym.domain.model.PreviousSession
 import io.novawerk.psygym.domain.practice.PracticeSession
+import io.novawerk.psygym.domain.practice.SessionPlan
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -104,5 +106,56 @@ class SupervisionViewModelTest {
         history.setOwner(a)
         assertEquals(1, history.sessions.value!!.size)
         assertTrue(history.sessions.value!!.single().reportComplete)
+    }
+
+    @Test
+    fun aFollowUpSendsItsSessionAndKeepsTheNoteForTheNextOne() = runTest {
+        val fs = FakeFileSystem()
+        val history = HistoryRepository("/h".toPath(), fs)
+        history.setOwner(accountKey("a@example.com"))
+        val seen = mutableListOf<TurnRequest>()
+        val followApi = object : PsygymApi {
+            override suspend fun cases() = listOf(demoCase)
+            override fun chat(request: TurnRequest): Flow<ChatEvent> = emptyFlow()
+            override fun supervision(request: TurnRequest): Flow<String> = flow {
+                seen += request
+                emit("## 做得好的地方\n- 开放")
+            }
+            override suspend fun sessionSummary(request: TurnRequest): String {
+                seen += request
+                return "- 约好的事：散步。\n"
+            }
+        }
+        val s = session().apply { choose(SessionPlan(2, "first-id", listOf(PreviousSession(1, "一")))) }
+        val vm = SupervisionViewModel(followApi, s, history)
+        vm.start(ApiLocale.Zh)
+        withContext(Dispatchers.Default) {
+            repeat(100) {
+                val saved = history.sessions.value?.singleOrNull()
+                if (saved != null && saved.reportComplete && saved.summary.isNotEmpty()) return@withContext
+                delay(20)
+            }
+        }
+        val saved = history.sessions.value!!.single()
+        assertEquals(2, saved.sessionNumber)
+        assertEquals("first-id", saved.courseId)
+        assertEquals("- 约好的事：散步。", saved.summary)
+        assertTrue(saved.reportComplete)
+        assertEquals(listOf(2, 2), seen.map { it.session?.number })
+    }
+
+    @Test
+    fun withHistoryOffNoNoteIsAskedFor() = runTest {
+        var asked = false
+        val quiet = object : PsygymApi by api {
+            override suspend fun sessionSummary(request: TurnRequest): String {
+                asked = true
+                return "x"
+            }
+        }
+        val vm = SupervisionViewModel(quiet, session(), history = null)
+        vm.start(ApiLocale.Zh)
+        reportGate.complete(Unit)
+        assertFalse(asked)
     }
 }
