@@ -7,6 +7,47 @@
 
 版本号在 `apps/mobile/gradle/libs.versions.toml`。iOS 的 build number 由 Xcode Cloud 的 `CI_BUILD_NUMBER` 决定，只往上涨（`iosApp/ci_scripts/ci_post_clone.sh`）。
 
+## 0.5.0（versionCode 6）
+
+第二次、第三次会谈：接着练同一位来访者（[ADR 0014](../decisions/0014-follow-up-sessions.md)）。
+
+### TestFlight · What to Test
+
+```
+聆镜 PSYGYM 是给新手心理咨询师的练习工具：AI 扮演来访者，练完由 AI 督导给反馈。来访者都是虚构的，这不是心理治疗。
+
+这一版改了：
+· 可以接着练同一位来访者的第二次、第三次会谈。练完一场，再打开这个病例，选「接着上次」。
+· 来访者记得上一次：每场结束后 AI 写一份小结，存在你的手机上，下一次会谈时一起发出去。
+· 练习记录里标出第几次，详情页能看到小结和这位来访者的几次会谈。
+
+想听的：第二次会谈里，来访者接得上上次吗？督导有没有提到上次约好的事？
+
+问题和想法发到 info@novawerk.io。请不要输入或说出真实来访者的信息。
+
+聆镜 PSYGYM is a practice tool for new counselors: an AI plays the client, and an AI supervisor gives feedback afterwards. Every client is fictional. This is not therapy.
+
+What changed:
+· You can see the same client again for a second and third session. After a session, open the case again and pick "Pick up".
+· The client remembers last time: after each session the AI writes a short summary, kept on your phone and sent with the next session.
+· History shows the session number; the detail page shows the summary and your sessions with this client.
+
+Please try: in the second session, does the client pick up from last time? Does the supervisor mention what you agreed?
+
+Questions and ideas: info@novawerk.io. Please don't type or say anything about real clients.
+```
+
+### Play 发行说明
+
+```
+<en-US>
+See the same client again: second and third sessions pick up from last time. The client remembers a short summary of the last session, kept only on your phone. History shows the session number and the summary.
+</en-US>
+<zh-CN>
+可以接着练同一位来访者的第二次、第三次会谈。来访者记得上一次的小结，小结只存在你的手机上。练习记录里能看到第几次和小结。
+</zh-CN>
+```
+
 ## 0.4.0（versionCode 5）
 
 语音会谈。AI 改由美国的 Anthropic 生成，所有人要重新同意。
