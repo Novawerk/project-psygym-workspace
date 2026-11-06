@@ -6,7 +6,7 @@
 
 | 渠道 | 版本 | 状态 |
 |------|------|------|
-| Play 内部测试 | 0.4.0（versionCode 5） | 2026-11-02 已推出，替换了 0.3.0（10-17 推出）。0.3.1 没有发 Android。测试员名单「PSYGYM testers」（3 人），加入链接由发布转给用户 |
+| Play 内部测试 | 0.4.0（versionCode 5） | 2026-11-02 已推出，替换了 0.3.0（10-17 推出）。0.3.1 没有发 Android。测试员名单「PSYGYM testers」（3 人），加入链接由发布转给用户。0.5.0（versionCode 6）的签名 AAB 2026-11-06 在用户本机打好、验过签，还没上传 |
 | TestFlight 外部组「聆镜团队」 | 0.1.0（Build 5）、0.2.0（Build 10） | 都已提交 Beta App Review（Build 10 是 2026-10-11）。过审后 Apple 会给组里的测试员发邀请邮件 |
 | TestFlight 内部组「Novawerk internal」 | Xcode Cloud 打的每个 build | 组里没有人，不会推给任何人 |
 
