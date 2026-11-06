@@ -52,7 +52,9 @@ class PracticeViewModel(
     private var job: Job? = null
 
     /** Mid-session supervisor notes. Live as long as this screen: never saved. */
-    val live = LiveNotes(api, viewModelScope)
+    /** Which session of the case (docs/decisions/0014); fixed for this screen. */
+    val plan = session.plan
+    val live = LiveNotes(api, viewModelScope, plan.wire)
 
     fun openLive(locale: ApiLocale) {
         val caseId = case?.id ?: return
@@ -112,7 +114,7 @@ class PracticeViewModel(
     private fun requestReply(locale: ApiLocale) {
         val caseId = case?.id ?: return
         val before = items
-        val request = TurnRequest(caseId, locale, transcript)
+        val request = TurnRequest(caseId, locale, transcript, session = plan.wire)
         error = null
         streaming = true
         job?.cancel()

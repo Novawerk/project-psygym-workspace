@@ -111,6 +111,8 @@ const PreviewBody = z
     locale: LocaleSchema,
     messages: z.array(MessageSchema).min(1).max(MAX_MESSAGES),
     source: Source.refine((s) => Buffer.byteLength(s, "utf8") <= MAX_SOURCE_BYTES, `source is longer than ${MAX_SOURCE_BYTES / 1024} KB`).optional(),
+    /** Which session to try (docs/decisions/0014-follow-up-sessions.md); default the first. */
+    session: z.number().int().min(1).max(6).optional(),
   })
   .refine((b) => b.messages.at(-1)?.role === "counselor", { message: "the last message must be the counselor's", path: ["messages"] });
 const NewPersonBody = z.object({
@@ -725,8 +727,10 @@ export function createAdmin(deps: AdminDeps): Hono {
       c.header("Retry-After", String(retry));
       return fail(c, 429, "rate_limited");
     }
-    logger.info({ msg: "preview chat", id, adminId: admin.id, messages: b.messages.length });
-    return deps.previewTurn(c, checked.value, b.locale, b.messages);
+    const number = b.session ?? 1;
+    if (number > checked.value.sessions) return fail(c, 400, "invalid_request", {}, `This case has ${checked.value.sessions} session(s).`);
+    logger.info({ msg: "preview chat", id, adminId: admin.id, messages: b.messages.length, ...(number > 1 ? { session: number } : {}) });
+    return deps.previewTurn(c, checked.value, b.locale, b.messages, { number, previous: [] });
   });
 
   return app as unknown as Hono;

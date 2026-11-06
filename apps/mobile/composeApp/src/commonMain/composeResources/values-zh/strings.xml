@@ -357,4 +357,21 @@
     <string name="privacy_a_voice_session">发给 ElevenLabs，实时转成文字；来访者的话也由它读出来。声音发到美国，不经过我们的服务器。转出的文字和打字一样，经我们的服务器交给美国的 %1$s。</string>
     <string name="privacy_q_voice_store">语音会谈的声音存吗？</string>
     <string name="privacy_a_voice_store">我们不存，手机上也不存。我们设置了 ElevenLabs 不录音。通话结束后它删除文字，实测一小时内删完。它的调试和审核日志里可能还留有内容，留多久我们还不清楚。备份最长留 30 天。</string>
+    <!-- Follow-up sessions (docs/decisions/0014) -->
+    <string name="brief_session_n">第 %1$d 次会谈</string>
+    <string name="brief_session_choice">这次练</string>
+    <string name="brief_session_choice_first">重新开始 · 初次会谈</string>
+    <string name="brief_session_choice_next">接着上次 · 第 %1$d 次</string>
+    <string name="brief_session_followup_note">后续会谈：先回顾上次和约好的作业，再和来访者一起定这次谈什么。</string>
+    <string name="brief_setup_body_followup">第 %1$d 次会谈 · 建议 15–30 轮 · 约 15 分钟 · 你随时可以结束。</string>
+    <string name="brief_last_time">上次的小结</string>
+    <string name="brief_last_time_none">上次没有留下小结。来访者只记得个大概。</string>
+    <string name="brief_history_off">在「我的」里打开「在本机保存练习记录」，练完以后就能接着练下一次。</string>
+    <string name="practice_empty_followup">你是咨询师。这是你和这位来访者的第 %1$d 次会谈，准备好了就先开口。</string>
+    <string name="history_session_n">第 %1$d 次</string>
+    <string name="history_detail_summary">小结</string>
+    <string name="history_course">和这位来访者的会谈</string>
+    <string name="history_continue">接着练第 %1$d 次</string>
+    <string name="history_summary_none">这场没有小结。</string>
+    <string name="history_summary_note">小结由 AI 根据对话写成，下一次会谈时 AI 来访者和督导会读到它。</string>
 </resources>

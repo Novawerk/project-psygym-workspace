@@ -4,11 +4,29 @@
 // Stateless like /chat: ElevenLabs sends the whole conversation each turn and nothing is stored.
 import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
 import { z } from "zod";
-import { LocaleSchema, MAX_MESSAGE_CHARS, MAX_MESSAGES, type Locale, type Message } from "./schema.js";
+import { FIRST_SESSION, LocaleSchema, MAX_MESSAGE_CHARS, MAX_MESSAGES, SessionInfo, type Locale, type Message } from "./schema.js";
 
 /** Where the app's case and language travel when the SDK can't send `extra_body`: the agent's
- * system prompt holds `{{psygym}}`, a dynamic variable the app sets to `case=<id> locale=<zh|en>`. */
-const MARKER = /\bcase=([A-Za-z0-9_-]{1,100})\s+locale=(zh|en)\b/;
+ * system prompt holds `{{psygym}}`, a dynamic variable the app sets to `case=<id> locale=<zh|en>`,
+ * and for a follow-up session ` session=<base64url of the session JSON>` after it. */
+const MARKER = /\bcase=([A-Za-z0-9_-]{1,100})\s+locale=(zh|en)\b(?:\s+session=([A-Za-z0-9_-]{1,20000}))?/;
+
+/** The `{{psygym}}` value for this case, language and session (POST /voice/session sends it to the app). */
+export function psygymVariable(caseId: string, locale: Locale, session: SessionInfo = FIRST_SESSION): string {
+  const head = `case=${caseId} locale=${locale}`;
+  return session.number <= 1 ? head : `${head} session=${Buffer.from(JSON.stringify(session), "utf8").toString("base64url")}`;
+}
+
+/** The session in a marker; the first session when there is none or it doesn't read. */
+function sessionFromMarker(encoded: string | undefined): SessionInfo {
+  if (!encoded) return FIRST_SESSION;
+  try {
+    const parsed = SessionInfo.safeParse(JSON.parse(Buffer.from(encoded, "base64url").toString("utf8")));
+    return parsed.success ? parsed.data : FIRST_SESSION;
+  } catch {
+    return FIRST_SESSION;
+  }
+}
 
 const ContentPart = z.object({ type: z.string(), text: z.string().optional() }).passthrough();
 const OpenAiMessage = z
@@ -24,7 +42,7 @@ export const VoiceLlmBody = z
     messages: z.array(OpenAiMessage).max(1000),
     tools: z.array(OpenAiTool).optional(),
     elevenlabs_extra_body: z
-      .object({ caseId: z.string().min(1).max(100), locale: LocaleSchema })
+      .object({ caseId: z.string().min(1).max(100), locale: LocaleSchema, session: SessionInfo })
       .partial()
       .passthrough()
       .optional(),
@@ -35,6 +53,8 @@ export type VoiceLlmBody = z.infer<typeof VoiceLlmBody>;
 export interface VoiceTurn {
   caseId: string;
   locale: Locale;
+  /** Which session; the first when the app sent none. */
+  session: SessionInfo;
   /** In our shape: counselor = what ElevenLabs heard the trainee say, client = what it spoke for us. */
   messages: Message[];
   /** The agent offers ElevenLabs' end_call system tool: our end_session becomes a call to it. */
@@ -52,6 +72,7 @@ export function voiceTurn(body: VoiceLlmBody): VoiceTurn | null {
   const caseId = extra?.caseId ?? marked?.[1];
   const locale = extra?.locale ?? (marked?.[2] as Locale | undefined);
   if (!caseId || !locale) return null;
+  const session = extra?.session ?? sessionFromMarker(marked?.[3]);
 
   const messages: Message[] = [];
   for (const m of body.messages) {
@@ -65,7 +86,7 @@ export function voiceTurn(body: VoiceLlmBody): VoiceTurn | null {
     else messages.push({ role, text });
   }
   const canEndCall = (body.tools ?? []).some((t) => t.function?.name === END_CALL);
-  return { caseId, locale, messages: messages.slice(-MAX_MESSAGES), canEndCall };
+  return { caseId, locale, session, messages: messages.slice(-MAX_MESSAGES), canEndCall };
 }
 
 /** ElevenLabs' system tool that hangs up. */
@@ -209,4 +230,4 @@ export async function conversationToken(
 }
 
 /** POST /voice/session: which case, in which language. */
-export const VoiceSessionBody = z.object({ caseId: z.string().min(1).max(100), locale: LocaleSchema });
+export const VoiceSessionBody = z.object({ caseId: z.string().min(1).max(100), locale: LocaleSchema, session: SessionInfo.optional() });

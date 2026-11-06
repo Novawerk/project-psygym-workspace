@@ -77,6 +77,7 @@ import io.novawerk.psygym.resources.back
 import io.novawerk.psygym.resources.practice_chars_left
 import io.novawerk.psygym.resources.practice_client_ended
 import io.novawerk.psygym.resources.practice_empty
+import io.novawerk.psygym.resources.practice_empty_followup
 import io.novawerk.psygym.resources.practice_end
 import io.novawerk.psygym.resources.practice_end_body
 import io.novawerk.psygym.resources.practice_end_body_short
@@ -267,7 +268,11 @@ fun PracticeScreen(
                 item {
                     BorderedCard(Modifier.fillMaxWidth()) {
                         Text(
-                            stringResource(Res.string.practice_empty),
+                            if (viewModel.plan.isFollowUp) {
+                                stringResource(Res.string.practice_empty_followup, viewModel.plan.number)
+                            } else {
+                                stringResource(Res.string.practice_empty)
+                            },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(16.dp),

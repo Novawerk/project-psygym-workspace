@@ -135,8 +135,20 @@ function RubricPreview({ body }: { body: string }) {
   )
 }
 
+/** How many sessions a case source offers: its `sessions:` (1–6), else 3 (docs/decisions/0014). */
+function sessionsIn(source: string | undefined): number {
+  const fm = source ? /^\uFEFF?---\r?\n([\s\S]*?)\r?\n---/.exec(source)?.[1] : undefined
+  const n = Number(fm ? /^sessions:\s*["']?(\d+)["']?\s*$/m.exec(fm)?.[1] : NaN)
+  return Number.isInteger(n) && n >= 1 && n <= 6 ? n : 3
+}
+
+const sessionLabel = (n: number) => (n === 1 ? "初次会谈" : `第 ${n} 次会谈`)
+
 function ChatPreview({ id, lang, source }: { id: string; lang: Lang; source: string | undefined }) {
   const [messages, setMessages] = React.useState<ChatMessage[]>([])
+  const count = sessionsIn(source)
+  const [session, setSession] = React.useState(1)
+  const current = Math.min(session, count)
   const [draft, setDraft] = React.useState("")
   const [streaming, setStreaming] = React.useState(false)
   const [ended, setEnded] = React.useState(false)
@@ -178,7 +190,8 @@ function ChatPreview({ id, lang, source }: { id: string; lang: Lang; source: str
     const ctrl = new AbortController()
     abort.current = ctrl
     try {
-      for await (const frame of dataSource.previewChat(id, { locale: lang, messages: history, source }, ctrl.signal)) {
+      const input = { locale: lang, messages: history, source, ...(current > 1 ? { session: current } : {}) }
+      for await (const frame of dataSource.previewChat(id, input, ctrl.signal)) {
         if (frame.type === "text_delta")
           setMessages((m) => [...m.slice(0, -1), { role: "client", text: m[m.length - 1].text + frame.text }])
         else if (frame.type === "session_end") setEnded(true)
@@ -198,7 +211,34 @@ function ChatPreview({ id, lang, source }: { id: string; lang: Lang; source: str
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <p className="border-b px-4 py-2 text-xs text-muted-foreground">试聊用的是草稿，不保存，不计入统计。</p>
+      <div className="flex flex-col gap-2 border-b px-4 py-2">
+        <p className="text-xs text-muted-foreground">试聊用的是草稿，不保存，不计入统计。</p>
+        {count > 1 && (
+          <label className="flex items-center gap-2 text-xs">
+            <span className="text-muted-foreground">试第几次</span>
+            <select
+              aria-label="试第几次会谈"
+              className="h-7 rounded-md border bg-background px-2 text-xs"
+              value={current}
+              onChange={(e) => {
+                setSession(Number(e.target.value))
+                restart()
+              }}
+            >
+              {Array.from({ length: count }, (_, i) => i + 1).map((n) => (
+                <option key={n} value={n}>
+                  {sessionLabel(n)}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {current > 1 && (
+          <p className="text-xs text-muted-foreground">
+            试聊{sessionLabel(current)}没有前几次的记录：来访者只按病例和「第 {current} 次会谈」的设定来，记不清之前聊过什么。
+          </p>
+        )}
+      </div>
       <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto p-4">
         {messages.map((m, i) => (
           <div

@@ -1,6 +1,7 @@
 package io.novawerk.psygym.data.api
 
 import io.novawerk.psygym.domain.model.ApiLocale
+import io.novawerk.psygym.domain.model.SessionInfo
 import io.novawerk.psygym.domain.model.TurnRequest
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emitAll
@@ -20,7 +21,9 @@ class SwitchingPsygymApi(
 
     override suspend fun voiceAvailable() = pick().voiceAvailable()
 
-    override suspend fun voiceSession(caseId: String, locale: ApiLocale) = pick().voiceSession(caseId, locale)
+    override suspend fun voiceSession(caseId: String, locale: ApiLocale, session: SessionInfo?) = pick().voiceSession(caseId, locale, session)
+
+    override suspend fun sessionSummary(request: TurnRequest) = pick().sessionSummary(request)
 
     override suspend fun startSignIn(email: String, locale: ApiLocale) = pick().startSignIn(email, locale)
 

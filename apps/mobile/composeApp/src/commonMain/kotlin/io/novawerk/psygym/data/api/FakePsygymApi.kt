@@ -3,6 +3,7 @@ package io.novawerk.psygym.data.api
 import io.novawerk.psygym.domain.model.ApiLocale
 import io.novawerk.psygym.domain.model.CaseSummary
 import io.novawerk.psygym.domain.model.Difficulty
+import io.novawerk.psygym.domain.model.FollowUp
 import io.novawerk.psygym.domain.model.LocalizedText
 import io.novawerk.psygym.domain.model.Role
 import io.novawerk.psygym.domain.model.TurnRequest
@@ -41,7 +42,13 @@ class FakePsygymApi(
         val zh = request.locale == ApiLocale.Zh
         // Like the mock backend: a counselor message containing #end makes the client leave.
         val ending = request.messages.lastOrNull()?.text?.contains("#end") == true
-        val replies = if (zh) CLIENT_ZH else CLIENT_EN
+        val followUp = (request.session?.number ?: 1) > 1
+        val replies = when {
+            followUp && zh -> FOLLOW_UP_ZH
+            followUp -> FOLLOW_UP_EN
+            zh -> CLIENT_ZH
+            else -> CLIENT_EN
+        }
         val turn = request.messages.count { it.role == Role.Counselor } - 1
         val text = if (ending) (if (zh) ENDING_ZH else ENDING_EN) else replies[turn.coerceAtLeast(0) % replies.size]
         typeOut(text).collect { emit(ChatEvent.Delta(it)) }
@@ -70,6 +77,11 @@ class FakePsygymApi(
             .replace("{last}", last)
             .replace("{client}", client)
         return typeOut(report, chunk = 4)
+    }
+
+    override suspend fun sessionSummary(request: TurnRequest): String {
+        delay(600)
+        return if (request.locale == ApiLocale.Zh) SUMMARY_ZH else SUMMARY_EN
     }
 
     private fun typeOut(text: String, chunk: Int = 1): Flow<String> = flow {
@@ -103,6 +115,20 @@ class FakePsygymApi(
                     LocalizedText(zh = "建立关系", en = "Building rapport"),
                     LocalizedText(zh = "识别自动思维", en = "Spotting automatic thoughts"),
                 ),
+                sessions = 3,
+                followUps = listOf(
+                    FollowUp(
+                        session = 2,
+                        clientIntro = LocalizedText(
+                            zh = "演示数据。两周后，小林又来了。睡得好一点了，上次约好的事只做了一部分。",
+                            en = "Demo data. Two weeks later, Lin is back. Sleeping a little better; did part of what you agreed last time.",
+                        ),
+                        practiceFocus = listOf(
+                            LocalizedText(zh = "回顾上次的作业", en = "Reviewing last time's homework"),
+                            LocalizedText(zh = "一起定议程", en = "Setting the agenda together"),
+                        ),
+                    ),
+                ),
             ),
             CaseSummary(
                 id = "demo-depression-anxiety",
@@ -125,6 +151,23 @@ class FakePsygymApi(
         )
         const val ENDING_ZH = "我想今天先到这里。"
         const val ENDING_EN = "I think I'd like to stop here today."
+
+        val FOLLOW_UP_ZH = listOf(
+            "嗯，还行吧。这两周……比上次好一点点。",
+            "上次说的那个，我试了两天，后面就忘了。",
+            "其实还是会想，是不是我自己不够努力。",
+            "这样说下来，好像也没那么糟。",
+        )
+
+        val FOLLOW_UP_EN = listOf(
+            "Okay, I guess. These two weeks were… a little better than last time.",
+            "The thing we talked about, I tried it for two days, then forgot.",
+            "I still wonder if I'm just not trying hard enough.",
+            "Saying it like this, it doesn't sound so bad.",
+        )
+
+        const val SUMMARY_ZH = "- 谈了什么：（演示数据）来访者说起最近提不起劲，觉得别人都比自己好。\n- 安全：这次没有谈到安全问题。\n- 约好的事：每天出门走十分钟。\n- 关系：来访者愿意接着说。"
+        const val SUMMARY_EN = "- What was discussed: (demo data) the client talked about low energy and feeling everyone does better.\n- Safety: safety did not come up this time.\n- Agreed: a ten-minute walk every day.\n- Relationship: the client was willing to keep talking."
 
         val CLIENT_EN = listOf(
             "Um… I don't really know where to start. Nothing feels worth it lately.",

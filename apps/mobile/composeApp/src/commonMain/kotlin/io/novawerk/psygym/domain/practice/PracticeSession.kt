@@ -21,6 +21,10 @@ import kotlin.time.TimeSource
 class PracticeSession {
     var case: CaseSummary? = null
         private set
+
+    /** Which session of the case this is (docs/decisions/0014). Chosen on the brief. */
+    var plan: SessionPlan = SessionPlan.FIRST
+        private set
     var transcript: List<Message> = emptyList()
         private set
 
@@ -51,7 +55,13 @@ class PracticeSession {
     /** Pick a case. The clock starts when the session opens, not here. */
     fun select(case: CaseSummary) {
         this.case = case
+        plan = SessionPlan.FIRST
         reset()
+    }
+
+    /** The brief's choice: a first session, or the next one of a course. */
+    fun choose(plan: SessionPlan) {
+        this.plan = plan
     }
 
     /** The session screen opened: start a fresh session for the selected case. */
@@ -86,6 +96,7 @@ class PracticeSession {
 
     fun clear() {
         case = null
+        plan = SessionPlan.FIRST
         reset()
     }
 

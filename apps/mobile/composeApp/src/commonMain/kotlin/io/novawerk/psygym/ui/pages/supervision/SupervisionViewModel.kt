@@ -14,6 +14,7 @@ import io.novawerk.psygym.domain.model.ApiLocale
 import io.novawerk.psygym.domain.model.CaseSummary
 import io.novawerk.psygym.domain.history.HistoryRepository
 import io.novawerk.psygym.domain.history.SavedSession
+import io.novawerk.psygym.domain.model.SessionInfo
 import io.novawerk.psygym.domain.model.TurnRequest
 import io.novawerk.psygym.domain.model.durationSec
 import io.novawerk.psygym.domain.practice.PracticeSession
@@ -40,6 +41,8 @@ class SupervisionViewModel(
     val turns: Int = session.turns
     private val sessionId = session.id
     val voice: Boolean = session.voice
+    /** Which session of the case (docs/decisions/0014). */
+    val plan = session.plan
 
     // Whose practice this is, fixed now: if someone else signs in before the report is saved,
     // it still goes to the person who practised (login.md H6).
@@ -51,6 +54,10 @@ class SupervisionViewModel(
     var streaming by mutableStateOf(false)
         private set
     var error by mutableStateOf<ApiError?>(null)
+        private set
+
+    /** The note for the next session (`POST /session-summary`). Only asked for when history is kept. */
+    var summary by mutableStateOf("")
         private set
 
     /** False after a restart: the in-memory practice is gone. */
@@ -74,12 +81,34 @@ class SupervisionViewModel(
         // Saved now, marked "report unfinished"; updated when the report is in.
         save(complete = false)
         load(locale)
+        summarize(locale)
+    }
+
+    /**
+     * Asks for the note the next session carries, beside the report. Only when the practice is
+     * kept: without history there is no next session to carry it. A failure leaves it empty;
+     * the next session then goes on without this one's note.
+     */
+    private fun summarize(locale: ApiLocale) {
+        if (history == null) return
+        val caseId = case?.id ?: return
+        if (transcript.isEmpty()) return
+        // Outlives this screen, like the save: leaving early must not lose the note.
+        GlobalScope.launch {
+            val note = try {
+                api.sessionSummary(TurnRequest(caseId, locale, transcript, session = plan.wire))
+            } catch (e: ApiException) {
+                return@launch
+            }
+            summary = note.trim().take(SessionInfo.MAX_SUMMARY_CHARS)
+            save(complete = report.isNotEmpty() && !streaming && error == null)
+        }
     }
 
     fun load(locale: ApiLocale) {
         val caseId = case?.id ?: return
         // The clock stopped when the client ended the session (PracticeSession.elapsed).
-        val request = TurnRequest(caseId, locale, transcript, durationSec = durationSec(duration))
+        val request = TurnRequest(caseId, locale, transcript, durationSec = durationSec(duration), session = plan.wire)
         report = ""
         error = null
         streaming = true
@@ -111,10 +140,20 @@ class SupervisionViewModel(
             reportComplete = complete,
             owner = owner,
             voice = voice,
+            sessionNumber = plan.number,
+            courseId = plan.courseId,
+            summary = summary,
         )
-        // Outlives this screen: leaving mid-report must not lose the save.
-        GlobalScope.launch { repo.save(record) }
+        // Outlives this screen: leaving mid-report must not lose the save. One after another, so
+        // the last state written is the last one asked for (the report and the note finish apart).
+        val before = lastSave
+        lastSave = GlobalScope.launch {
+            before?.join()
+            repo.save(record)
+        }
     }
+
+    private var lastSave: Job? = null
 
     /** The practice is over. The case stays selected for "Practise this case again". */
     fun finish() {

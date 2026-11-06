@@ -90,6 +90,15 @@ const demoStep: MockStep = (req) => {
       .map((m) => Number(m[1]));
     return { text: JSON.stringify({ harmful }), toolCalls: [] };
   }
+  // POST /session-summary: a short note on the session for the next one.
+  if (req.system.includes("<!-- psygym:session-summary -->")) {
+    return {
+      text: en
+        ? "- What was discussed: (mock) the client talked about feeling stuck lately.\n- Safety: safety did not come up this time.\n- Agreed: no homework was agreed.\n- Relationship: the client was willing to keep talking.\n"
+        : "- 谈了什么：（mock）来访者说起最近提不起劲。\n- 安全：这次没有谈到安全问题。\n- 约好的事：没有约定作业。\n- 关系：来访者愿意接着说。\n",
+      toolCalls: [],
+    };
+  }
   if (req.system.includes("<!-- psygym:supervisor -->")) {
     const quote = lastCounselorLine(req);
     // Same shape as prompts/supervisor.md asks for: problem → quote → alternative, the

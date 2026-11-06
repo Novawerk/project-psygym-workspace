@@ -1,6 +1,8 @@
 package io.novawerk.psygym.ui.pages.history
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -30,10 +32,15 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.novawerk.psygym.domain.history.Course
 import io.novawerk.psygym.domain.history.SavedSession
+import io.novawerk.psygym.domain.model.ApiLocale
+import io.novawerk.psygym.domain.practice.SessionPlan
 import io.novawerk.psygym.resources.Res
 import io.novawerk.psygym.resources.back
 import io.novawerk.psygym.resources.history_cancel
@@ -43,9 +50,16 @@ import io.novawerk.psygym.resources.history_delete_one_confirm
 import io.novawerk.psygym.resources.history_detail_chat
 import io.novawerk.psygym.resources.history_detail_report
 import io.novawerk.psygym.resources.history_no_report
+import io.novawerk.psygym.resources.history_continue
+import io.novawerk.psygym.resources.history_course
+import io.novawerk.psygym.resources.history_detail_summary
+import io.novawerk.psygym.resources.history_session_n
+import io.novawerk.psygym.resources.history_summary_none
+import io.novawerk.psygym.resources.history_summary_note
 import io.novawerk.psygym.resources.supervision_again
 import io.novawerk.psygym.ui.components.ReportView
 import io.novawerk.psygym.ui.components.PillToggle
+import io.novawerk.psygym.ui.components.BorderedCard
 import io.novawerk.psygym.ui.components.BottomActions
 import io.novawerk.psygym.ui.components.PrimaryButton
 import io.novawerk.psygym.ui.components.displayTitle
@@ -62,6 +76,12 @@ fun HistoryDetailScreen(
     onBack: () -> Unit,
     onDelete: () -> Unit,
     onPracticeAgain: () -> Unit,
+    /** The sessions with this client (docs/decisions/0014); null or one session: no list. */
+    course: Course? = null,
+    /** The course's next session, when the case has one left. */
+    next: SessionPlan? = null,
+    onContinue: (SessionPlan) -> Unit = {},
+    onOpen: (String) -> Unit = {},
 ) {
     // Deleted elsewhere, or gone: nothing to show.
     LaunchedEffect(session) { if (session == null) onBack() }
@@ -76,7 +96,13 @@ fun HistoryDetailScreen(
                 title = {
                     Column {
                         Text(session.case.displayTitle(locale), style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(sessionMeta(session, locale), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        val numbered = session.sessionNumber > 1 || (course?.sessions?.size ?: 0) > 1
+                        val meta = sessionMeta(session, locale)
+                        Text(
+                            if (numbered) "${stringResource(Res.string.history_session_n, session.sessionNumber)} · $meta" else meta,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 },
                 navigationIcon = {
@@ -92,10 +118,20 @@ fun HistoryDetailScreen(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
             )
         },
-        bottomBar = { BottomActions { PrimaryButton(stringResource(Res.string.supervision_again), onPracticeAgain) } },
+        bottomBar = {
+            BottomActions {
+                if (next != null) {
+                    PrimaryButton(stringResource(Res.string.history_continue, next.number), { onContinue(next) })
+                } else {
+                    PrimaryButton(stringResource(Res.string.supervision_again), onPracticeAgain)
+                }
+            }
+        },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            val labels = listOf(Res.string.history_detail_report, Res.string.history_detail_chat)
+            // The summary tab only where sessions follow on: older records have none.
+            val inCourse = session.summary.isNotBlank() || session.sessionNumber > 1 || (course?.sessions?.size ?: 0) > 1
+            val labels = listOfNotNull(Res.string.history_detail_report, Res.string.history_detail_chat, Res.string.history_detail_summary.takeIf { inCourse })
             // Pill toggle: the chosen one white and bold on a light grey track (design M2, audit M).
             PillToggle(
                 options = labels.mapIndexed { i, label -> i to stringResource(label) },
@@ -112,13 +148,15 @@ fun HistoryDetailScreen(
                         ReportView(session.report, Modifier.fillMaxWidth())
                     }
                 }
-            } else {
+            } else if (tab == 1) {
                 LazyColumn(
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     items(session.messages) { Bubble(ChatItem(it)) }
                 }
+            } else {
+                SummaryTab(session, course, locale, onOpen)
             }
         }
     }
@@ -135,5 +173,56 @@ fun HistoryDetailScreen(
             },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(stringResource(Res.string.history_cancel)) } },
         )
+    }
+}
+
+/** The note kept for the next session, and the sessions with this client in order. */
+@Composable
+private fun SummaryTab(session: SavedSession, course: Course?, locale: ApiLocale, onOpen: (String) -> Unit) {
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        if (session.summary.isBlank()) {
+            Text(stringResource(Res.string.history_summary_none), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } else {
+            ReportView(session.summary, Modifier.fillMaxWidth())
+            Text(
+                stringResource(Res.string.history_summary_note),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        val sessions = course?.sessions.orEmpty()
+        if (sessions.size > 1) {
+            Text(stringResource(Res.string.history_course), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            BorderedCard(Modifier.fillMaxWidth()) {
+                Column {
+                    sessions.forEach { s ->
+                        val current = s.id == session.id
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable(enabled = !current) { onOpen(s.id) }
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                stringResource(Res.string.history_session_n, s.sessionNumber),
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = if (current) FontWeight.SemiBold else FontWeight.Normal,
+                            )
+                            Text(
+                                sessionMeta(s, locale),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }

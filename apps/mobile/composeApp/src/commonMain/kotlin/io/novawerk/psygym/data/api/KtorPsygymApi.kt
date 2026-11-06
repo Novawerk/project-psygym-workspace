@@ -27,6 +27,8 @@ import io.ktor.serialization.kotlinx.json.json
 import io.novawerk.psygym.domain.model.ApiLocale
 import io.novawerk.psygym.domain.model.CaseSummary
 import io.novawerk.psygym.domain.model.CasesResponse
+import io.novawerk.psygym.domain.model.SessionInfo
+import io.novawerk.psygym.domain.model.SummaryResponse
 import io.novawerk.psygym.domain.model.TurnRequest
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.FlowPreview
@@ -93,14 +95,24 @@ class KtorPsygymApi(
         false
     }
 
-    override suspend fun voiceSession(caseId: String, locale: ApiLocale): VoiceTicket = mapErrors {
+    override suspend fun voiceSession(caseId: String, locale: ApiLocale, session: SessionInfo?): VoiceTicket = mapErrors {
         val bearer = token()
         val response = client.post("voice/session") {
             auth(bearer)
-            jsonBody(VoiceBody.serializer(), VoiceBody(caseId, locale))
+            jsonBody(VoiceBody.serializer(), VoiceBody(caseId, locale, session?.takeIf { it.number > 1 }))
         }
         if (!response.status.isSuccess()) throw response.toApiException()
         json.decodeFromString(VoiceTicket.serializer(), response.bodyAsText())
+    }
+
+    override suspend fun sessionSummary(request: TurnRequest): String = mapErrors {
+        val bearer = token()
+        val response = client.post("session-summary") {
+            auth(bearer)
+            jsonBody(TurnRequest.serializer(), request)
+        }
+        if (!response.status.isSuccess()) throw response.toApiException()
+        json.decodeFromString(SummaryResponse.serializer(), response.bodyAsText()).summary
     }
 
     override suspend fun startSignIn(email: String, locale: ApiLocale) = mapErrors {
@@ -237,7 +249,7 @@ class KtorPsygymApi(
     )
 
     @Serializable
-    private data class VoiceBody(val caseId: String, val locale: ApiLocale)
+    private data class VoiceBody(val caseId: String, val locale: ApiLocale, val session: SessionInfo? = null)
 
     @Serializable
     private data class StartBody(val email: String, val locale: ApiLocale)

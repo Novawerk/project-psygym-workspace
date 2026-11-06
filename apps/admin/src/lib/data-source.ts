@@ -32,7 +32,8 @@ export type DraftInput = {
 /** `note` is 「改了什么」: optional, at most 200 characters, only in the publish log (not Slack). */
 export type PublishInput = { draftRevision: number; basePublishedVersion: number | null; note?: string }
 export type RollbackInput = { toVersion: number; basePublishedVersion: number; note?: string }
-export type PreviewChatInput = { locale: "zh" | "en"; messages: ChatMessage[]; source?: string }
+/** `session`: which session to try (docs/decisions/0014); left out for the first. */
+export type PreviewChatInput = { locale: "zh" | "en"; messages: ChatMessage[]; source?: string; session?: number }
 
 export interface AdminDataSource {
   readonly isSample: boolean

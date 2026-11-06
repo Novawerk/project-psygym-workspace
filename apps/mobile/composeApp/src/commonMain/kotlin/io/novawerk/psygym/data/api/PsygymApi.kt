@@ -2,6 +2,7 @@ package io.novawerk.psygym.data.api
 
 import io.novawerk.psygym.domain.model.ApiLocale
 import io.novawerk.psygym.domain.model.CaseSummary
+import io.novawerk.psygym.domain.model.SessionInfo
 import io.novawerk.psygym.domain.model.TurnRequest
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.Serializable
@@ -20,9 +21,13 @@ interface PsygymApi {
     /** `GET /voice/status`: whether to offer a voice session. Any failure reads as no. */
     suspend fun voiceAvailable(): Boolean = false
 
-    /** `POST /voice/session`: what the voice call needs to start. Throws [ApiException]. */
-    suspend fun voiceSession(caseId: String, locale: ApiLocale): VoiceTicket =
+    /** `POST /voice/session`: what the voice call needs to start. [session]: a follow-up session. Throws [ApiException]. */
+    suspend fun voiceSession(caseId: String, locale: ApiLocale, session: SessionInfo? = null): VoiceTicket =
         throw ApiException(ApiErrorCode.ModelUnavailable, "no voice here")
+
+    /** `POST /session-summary`: a short note on a session that just ended, for the next one. Throws [ApiException]. */
+    suspend fun sessionSummary(request: TurnRequest): String =
+        throw ApiException(ApiErrorCode.ModelUnavailable, "no summaries here")
 }
 
 /**

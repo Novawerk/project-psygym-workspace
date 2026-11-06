@@ -67,7 +67,13 @@ describe("voiceTurn", () => {
         { role: "assistant", content: "" },
       ],
     });
-    expect(t).toEqual({ caseId: "a-1", locale: "en", messages: [{ role: "counselor", text: "Hi. How are you?" }, { role: "client", text: "Fine." }], canEndCall: false });
+    expect(t).toEqual({
+      caseId: "a-1",
+      locale: "en",
+      session: { number: 1, previous: [] },
+      messages: [{ role: "counselor", text: "Hi. How are you?" }, { role: "client", text: "Fine." }],
+      canEndCall: false,
+    });
   });
 
   it("the trainee's silence (ElevenLabs sends '...') reaches the client as the counselor waiting", () => {

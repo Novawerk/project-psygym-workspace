@@ -30,9 +30,34 @@ import { statsRange, statsView } from "./metrics/stats.js";
 import { FixedWindowLimiter, clientIp } from "./rate-limit.js";
 import { readBody } from "./read-body.js";
 import { ReportBody, reportSlackMessage } from "./report.js";
-import { ChatBody, SupervisionBody, type ErrorCode, type Locale, type Message, type StreamEvent } from "./schema.js";
-import { FAREWELL, clientRequest, endsSession, liveSupervisorRequest, supervisorRequest } from "./session.js";
-import { VOICE_DECLINE_LINE, VOICE_ERROR_LINE, VOICE_NOTE, VoiceLlmBody, VoiceSessionBody, chunk, conversationToken, endCallDelta, isClosingLine, lengthNote, turnLength, voiceTurn } from "./voice.js";
+import {
+  ChatBody,
+  FIRST_SESSION,
+  MAX_SUMMARY_CHARS,
+  SummaryBody,
+  SupervisionBody,
+  type ErrorCode,
+  type Locale,
+  type Message,
+  type SessionInfo,
+  type StreamEvent,
+} from "./schema.js";
+import { FAREWELL, clientRequest, endsSession, liveSupervisorRequest, summaryRequest, supervisorRequest } from "./session.js";
+import {
+  VOICE_DECLINE_LINE,
+  VOICE_ERROR_LINE,
+  VOICE_NOTE,
+  VoiceLlmBody,
+  VoiceSessionBody,
+  chunk,
+  conversationToken,
+  endCallDelta,
+  isClosingLine,
+  lengthNote,
+  psygymVariable,
+  turnLength,
+  voiceTurn,
+} from "./voice.js";
 
 /** Keeps proxies from closing the stream while the model thinks. */
 export const PING_MS = 15_000;
@@ -223,13 +248,13 @@ export function createApp(deps: AppDeps) {
   }
 
   /** The admin's preview chat: one /chat turn for a case that isn't published. Never counted. */
-  function previewTurn(c: Context, theCase: Case, locale: Locale, messages: Message[]) {
+  function previewTurn(c: Context, theCase: Case, locale: Locale, messages: Message[], session: SessionInfo = FIRST_SESSION) {
     const provider = providerFor("client");
     if (typeof provider === "string") {
       logger.error({ msg: "model unavailable", route: "preview-chat", reason: provider });
       return fail(c, 503, "model_unavailable");
     }
-    const request = clientRequest(prompts, theCase, locale, messages);
+    const request = clientRequest(prompts, theCase, locale, messages, session);
     const judge = config.endSessionJudge ? { messages } : undefined;
     return streamTurn(c, { path: "/admin/preview-chat", caseId: theCase.id, locale, count: messages.length, provider, request, judge });
   }
@@ -258,7 +283,8 @@ export function createApp(deps: AppDeps) {
     const { locale } = turn;
     // The agent may ask for a reply before anyone spoke; the client then waits to be greeted.
     const messages: Message[] = turn.messages.length ? turn.messages : [{ role: "counselor", text: locale === "zh" ? "（会谈开始）" : "(The session begins.)" }];
-    const base = clientRequest({ ...prompts, rubrics: snap.rubrics }, theCase, locale, messages);
+    if (turn.session.number > theCase.sessions) return failCounted(c, 400, "invalid_request", `This case has ${theCase.sessions} session(s).`);
+    const base = clientRequest({ ...prompts, rubrics: snap.rubrics }, theCase, locale, messages, turn.session);
     const at = { caseId: theCase.id, locale };
     const counselorLines = messages.filter((m) => m.role === "counselor").length;
     const target = turnLength(counselorLines, (deps.random ?? Math.random)());
@@ -266,7 +292,7 @@ export function createApp(deps: AppDeps) {
     // At the very end: in the system prompt the model ignores it and copies its own last reply.
     const asked = base.messages.map((m, i) => (i === base.messages.length - 1 && m.role === "user" ? { ...m, text: `${m.text}\n\n${note}` } : m));
     const request = { ...base, system: `${base.system}\n\n${VOICE_NOTE[locale]}`, messages: asked };
-    const log = { route: "/voice/llm", caseId: theCase.id, locale, messages: messages.length, provider: provider.name, model: provider.model };
+    const log = { route: "/voice/llm", caseId: theCase.id, locale, ...(turn.session.number > 1 ? { session: turn.session.number } : {}), messages: messages.length, provider: provider.name, model: provider.model };
 
     c.header("Cache-Control", "no-cache, no-transform");
     c.header("X-Accel-Buffering", "no");
@@ -399,6 +425,54 @@ export function createApp(deps: AppDeps) {
     return parsed.data;
   }
 
+  /** 400 when the case doesn't offer this many sessions (GET /cases says how many). */
+  function pastLastSession(c: Context, theCase: Case, session: SessionInfo): Response | null {
+    if (session.number <= theCase.sessions) return null;
+    return failCounted(c, 400, "invalid_request", `This case has ${theCase.sessions} session(s).`);
+  }
+
+  // POST /session-summary → { summary }: a short note on a session that just ended, which the app
+  // keeps with its history and sends with the next session (docs/decisions/0014-follow-up-sessions.md).
+  // Stateless like /supervision: the transcript comes in, the note goes out, nothing is stored.
+  app.post("/session-summary", async (c) => {
+    const limited = rateLimited(c, limiter);
+    if (limited) return limited;
+    const body = await readJson(c, SummaryBody);
+    if (body instanceof Response) return body;
+    const session = body.session ?? FIRST_SESSION;
+    const snap = await content.current();
+    const theCase = snap.cases.get(body.caseId);
+    if (!theCase) return failCounted(c, 404, "case_not_found");
+    const tooFar = pastLastSession(c, theCase, session);
+    if (tooFar) return tooFar;
+    const provider = providerFor("supervisor");
+    if (typeof provider === "string") {
+      logger.error({ msg: "model unavailable", route: "/session-summary", reason: provider });
+      return failCounted(c, 503, "model_unavailable");
+    }
+    const started = Date.now();
+    const log = { route: "/session-summary", caseId: theCase.id, locale: body.locale, session: session.number, messages: body.messages.length, provider: provider.name, model: provider.model };
+    const abort = new AbortController();
+    c.req.raw.signal?.addEventListener("abort", () => abort.abort());
+    try {
+      let text = "";
+      const res = await provider.stream(
+        { ...summaryRequest(prompts, body.locale, body.messages, session), signal: abort.signal },
+        { onText: (t) => void (text += t) },
+      );
+      const summary = [...(text || res.message.text || "").trim()].slice(0, MAX_SUMMARY_CHARS).join("").trim();
+      if (!summary) {
+        logger.error({ msg: "summary empty", ...log, ms: Date.now() - started });
+        return failCounted(c, 503, "model_unavailable");
+      }
+      logger.info({ msg: "summary", ...log, chars: [...summary].length, ms: Date.now() - started });
+      return c.json({ summary });
+    } catch (err) {
+      logger.error({ msg: "summary failed", ...log, ms: Date.now() - started, ...describe(err) });
+      return failCounted(c, 503, "model_unavailable");
+    }
+  });
+
   function streamingRoute(path: string, role: Role, schema: typeof ChatBody | typeof SupervisionBody, build: typeof clientRequest) {
     app.post(
       path,
@@ -408,12 +482,15 @@ export function createApp(deps: AppDeps) {
         const body = await readJson(c, schema as z.ZodType<z.infer<typeof SupervisionBody>>);
         if (body instanceof Response) return body;
         const { caseId, locale, messages, durationSec } = body;
+        const session = body.session ?? FIRST_SESSION;
         // /supervision only: "live" is mid-session notes, a different prompt and different counts.
         const live = role === "supervisor" && (body as { mode?: string }).mode === "live";
 
         const snap = await content.current();
         const theCase = snap.cases.get(caseId);
         if (!theCase) return failCounted(c, 404, "case_not_found");
+        const tooFar = pastLastSession(c, theCase, session);
+        if (tooFar) return tooFar;
 
         const provider = providerFor(role);
         if (typeof provider === "string") {
@@ -421,7 +498,7 @@ export function createApp(deps: AppDeps) {
           return failCounted(c, 503, "model_unavailable");
         }
 
-        const request = (live ? liveSupervisorRequest : build)({ ...prompts, rubrics: snap.rubrics }, theCase, locale, messages);
+        const request = (live ? liveSupervisorRequest : build)({ ...prompts, rubrics: snap.rubrics }, theCase, locale, messages, session);
         // What we count when the stream ends (aborted streams aren't counted). /chat is stateless,
         // so a session "starts" with the turn that answers the counselor's first line.
         const at = { caseId: theCase.id, locale };
@@ -451,7 +528,7 @@ export function createApp(deps: AppDeps) {
         // END_SESSION_JUDGE (src/end-judge.ts): /chat only. Off: no judge, the stream as it always was.
         const judge = role === "client" && config.endSessionJudge ? { messages } : undefined;
         const caseVersion = snap.versions.get(`case:${caseId}`);
-        return streamTurn(c, { path, caseId, caseVersion, locale, count: messages.length, provider, request, onDone, judge });
+        return streamTurn(c, { path, caseId, caseVersion, locale, count: messages.length, session: session.number, provider, request, onDone, judge });
       },
     );
   }
@@ -463,6 +540,8 @@ export function createApp(deps: AppDeps) {
       caseId: string;
       /** CONTENT_SOURCE=db: the published version used; logged. */
       caseVersion?: number;
+      /** Which session (1 = first); logged when it isn't the first. */
+      session?: number;
       locale: Locale;
       count: number;
       provider: ModelProvider;
@@ -494,7 +573,7 @@ export function createApp(deps: AppDeps) {
         chain = chain.then(() => stream.write(": ping\n\n")).catch(() => {});
       }, pingMs);
 
-      const log = { route: t.path, caseId: t.caseId, ...(t.caseVersion !== undefined ? { caseVersion: t.caseVersion } : {}), locale: t.locale, messages: t.count, provider: t.provider.name, model: t.provider.model };
+      const log = { route: t.path, caseId: t.caseId, ...(t.caseVersion !== undefined ? { caseVersion: t.caseVersion } : {}), locale: t.locale, ...(t.session && t.session > 1 ? { session: t.session } : {}), messages: t.count, provider: t.provider.name, model: t.provider.model };
       send({ type: "turn_start" });
       try {
         let said = "";
@@ -708,12 +787,17 @@ export function createApp(deps: AppDeps) {
     const body = await readJson(c, VoiceSessionBody);
     if (body instanceof Response) return body;
     const snap = await content.current();
-    if (!snap.cases.has(body.caseId)) return failCounted(c, 404, "case_not_found");
+    const theCase = snap.cases.get(body.caseId);
+    if (!theCase) return failCounted(c, 404, "case_not_found");
+    const session = body.session ?? FIRST_SESSION;
+    const tooFar = pastLastSession(c, theCase, session);
+    if (tooFar) return tooFar;
     try {
       const token = await conversationToken(deps.fetch ?? fetch, config.voice.apiKey, config.voice.agentId);
       return c.json({
         conversationToken: token,
-        dynamicVariables: { psygym: `case=${body.caseId} locale=${body.locale}` },
+        dynamicVariables: { psygym: psygymVariable(body.caseId, body.locale, session) },
+        // Strings only: the app reads extraBody as a string map. The session rides in {{psygym}}.
         extraBody: { caseId: body.caseId, locale: body.locale },
       });
     } catch (err) {

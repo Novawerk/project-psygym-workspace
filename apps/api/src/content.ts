@@ -68,17 +68,65 @@ type OptionalKey = keyof typeof Optional;
 const LIST_LIMITS: Partial<Record<OptionalKey, number>> = { tags: 3, practiceFocus: 3 };
 export const OPTIONAL_FIELDS = Object.keys(Optional) as OptionalKey[];
 
-export type CaseSummary = z.infer<typeof Required> & { [K in OptionalKey]?: z.infer<(typeof Optional)[K]> };
+/**
+ * Sessions (docs/decisions/0014-follow-up-sessions.md): a trainee can see the same client again.
+ * `sessions` is how many a case offers (1 = first session only); default 3, at most 6.
+ */
+export const DEFAULT_SESSIONS = 3;
+export const MAX_SESSIONS = 6;
+const Sessions = z.preprocess((v) => (typeof v === "string" && /^\s*\d+\s*$/.test(v) ? Number(v) : v), z.number().int().min(1).max(MAX_SESSIONS));
+
+/** Public notes for one follow-up session (2…6): what the trainee sees before it starts. */
+const FollowUp = z.object({
+  session: z.number().int().min(2).max(MAX_SESSIONS),
+  clientIntro: Localized.optional(),
+  practiceFocus: z.array(Localized).min(1).max(3).optional(),
+});
+export type FollowUp = z.infer<typeof FollowUp>;
+
+export type CaseSummary = z.infer<typeof Required> & { [K in OptionalKey]?: z.infer<(typeof Optional)[K]> } & {
+  /** How many sessions the case offers; always set. */
+  sessions: number;
+  /** Public notes per follow-up session, ordered; only sessions that have any. */
+  followUps?: FollowUp[];
+};
 export interface Case extends CaseSummary {
-  /** The AI's role brief. Stays on the server. */
+  /** The AI's role brief for every session (the body without the follow-up sections). Stays on the server. */
   brief: string;
+  /** The body's 「## 第 N 次会谈」 sections, by N (2…sessions). Stay on the server. */
+  sessionBriefs: Record<number, string>;
 }
 
 /** Only the public fields, in a fixed order; missing optional ones are left out. */
 export function publicSummary(c: Case): CaseSummary {
-  const out: CaseSummary = { id: c.id, school: c.school, title: c.title, summary: c.summary };
+  const out = { id: c.id, school: c.school, title: c.title, summary: c.summary } as CaseSummary;
   for (const key of OPTIONAL_FIELDS) if (c[key] !== undefined) Object.assign(out, { [key]: c[key] });
+  out.sessions = c.sessions;
+  if (c.followUps?.length) out.followUps = c.followUps;
   return out;
+}
+
+const CN_DIGITS: Record<string, number> = { 二: 2, 三: 3, 四: 4, 五: 5, 六: 6 };
+/** 「## 第 2 次会谈」 or 「## 第二次会谈（两周后）」: the heading of one follow-up session's notes. */
+const SESSION_HEADING = /^## 第\s*([2-6二三四五六])\s*次会谈/;
+
+/** The body split into the brief for every session and the follow-up sections, by number. */
+export function splitSessions(body: string, warn: (m: string) => void = () => {}): { brief: string; sections: Record<number, string> } {
+  const parts = body.split(/^(?=## )/m);
+  const sections: Record<number, string> = {};
+  const rest: string[] = [];
+  for (const part of parts) {
+    const m = SESSION_HEADING.exec(part);
+    if (!m) {
+      rest.push(part);
+      continue;
+    }
+    const n = CN_DIGITS[m[1]!] ?? Number(m[1]);
+    const text = part.replace(/^## .*\n?/, "").trim();
+    if (sections[n] !== undefined) warn(`body: 第 ${n} 次会谈 appears twice; keeping the first`);
+    else if (text) sections[n] = text;
+  }
+  return { brief: rest.join("").replace(/\n{3,}/g, "\n\n").trim(), sections };
 }
 
 export const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/;
@@ -92,14 +140,28 @@ export function parseCase(file: string, raw: string, warn: Warn = consoleWarn): 
   const yaml: unknown = parseYaml(m[1]!);
   const meta = Required.safeParse(yaml);
   if (!meta.success) throw new Error(`${file}: bad frontmatter\n${z.prettifyError(meta.error)}`);
-  let brief: string;
+  let body: string;
   try {
-    brief = stripComments(m[2]!);
+    body = stripComments(m[2]!);
   } catch (e) {
     throw new Error(`${file}: ${(e as Error).message}`);
   }
-  const c: Case = { ...meta.data, brief };
   const fields = (yaml ?? {}) as Record<string, unknown>;
+  let sessions = DEFAULT_SESSIONS;
+  if (fields.sessions !== undefined && fields.sessions !== null) {
+    const parsed = Sessions.safeParse(fields.sessions);
+    if (parsed.success) sessions = parsed.data;
+    else warn(`${file}: sessions is invalid; using ${DEFAULT_SESSIONS} (a whole number 1–${MAX_SESSIONS})`);
+  }
+  const { brief, sections } = splitSessions(body, (msg) => warn(`${file}: ${msg}`));
+  const sessionBriefs: Record<number, string> = {};
+  for (const [n, text] of Object.entries(sections)) {
+    if (Number(n) <= sessions) sessionBriefs[Number(n)] = text;
+    else warn(`${file}: body: 第 ${n} 次会谈 is past sessions (${sessions}) and left out`);
+  }
+  const c: Case = { ...meta.data, brief, sessions, sessionBriefs };
+  const followUps = parseFollowUps(file, fields.followUps, sessions, warn);
+  if (followUps.length) c.followUps = followUps;
   for (const key of OPTIONAL_FIELDS) {
     let input = fields[key];
     if (input === undefined || input === null) continue;
@@ -118,6 +180,26 @@ export function parseCase(file: string, raw: string, warn: Warn = consoleWarn): 
     else warn(`${file}: ${key} is invalid and left out (${parsed.error.issues[0]?.message ?? "invalid"})`);
   }
   return c;
+}
+
+/** frontmatter followUps: a list of { session, clientIntro?, practiceFocus? }; bad entries are dropped with a warning. */
+function parseFollowUps(file: string, input: unknown, sessions: number, warn: Warn): FollowUp[] {
+  if (input === undefined || input === null) return [];
+  if (!Array.isArray(input)) {
+    warn(`${file}: followUps is invalid and left out (a list)`);
+    return [];
+  }
+  const out: FollowUp[] = [];
+  input.forEach((item, i) => {
+    const parsed = FollowUp.safeParse(item);
+    if (!parsed.success) return warn(`${file}: followUps[${i}] is invalid and left out (${parsed.error.issues[0]?.message ?? "invalid"})`);
+    const f = parsed.data;
+    if (f.session > sessions) return warn(`${file}: followUps[${i}] is for session ${f.session}, past sessions (${sessions}); left out`);
+    if (out.some((o) => o.session === f.session)) return warn(`${file}: followUps[${i}]: session ${f.session} appears twice; keeping the first`);
+    if (!f.clientIntro && !f.practiceFocus) return;
+    out.push(f);
+  });
+  return out.sort((a, b) => a.session - b.session);
 }
 
 export function loadCases(dir = path.join(contentDir(), "cases"), warn: Warn = consoleWarn): Map<string, Case> {
@@ -144,6 +226,10 @@ export interface Prompts {
   supervisorLive: string;
   /** Checks an end_session call (src/end-judge.ts, END_SESSION_JUDGE). */
   endJudge: string;
+  /** Replaces the client's first-session opening in a follow-up session ({{N}}: the number). */
+  clientFollowUp: string;
+  /** POST /session-summary. */
+  sessionSummary: string;
   /** Supervision rubric per school, without its frontmatter. */
   rubrics: Record<CaseSummary["school"], string>;
 }
@@ -258,6 +344,8 @@ export function loadPrompts(dir = promptsDir(), content = contentDir()): Prompts
     supervisor: read(path.join(dir, "supervisor.md")),
     supervisorLive: read(path.join(dir, "supervisor-live.md")),
     endJudge: read(path.join(dir, "end-judge.md")),
+    clientFollowUp: read(path.join(dir, "client-follow-up.md")),
+    sessionSummary: read(path.join(dir, "session-summary.md")),
     rubrics: loadRubrics(content),
   };
 }

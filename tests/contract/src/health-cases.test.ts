@@ -20,7 +20,7 @@ describe("GET /cases", () => {
     expect(json.cases.length).toBeGreaterThan(0);
 
     const required = ["id", "school", "summary", "title"];
-    const optional = ["tags", "difficulty", "estimatedMinutes", "clientAlias", "clientIntro", "practiceFocus", "contentNotes"];
+    const optional = ["tags", "difficulty", "estimatedMinutes", "clientAlias", "clientIntro", "practiceFocus", "contentNotes", "sessions", "followUps"];
     const localized = (v: unknown, where: string) => {
       const t = v as Record<string, unknown>;
       expect(Object.keys(t ?? {}).sort(), where).toEqual(["en", "zh"]);
@@ -55,6 +55,20 @@ describe("GET /cases", () => {
       if ("practiceFocus" in c) {
         expect(Array.isArray(c.practiceFocus) && c.practiceFocus.length >= 1 && c.practiceFocus.length <= 3, `${c.id}.practiceFocus`).toBe(true);
         c.practiceFocus.forEach((t: unknown, i: number) => localized(t, `${c.id}.practiceFocus[${i}]`));
+      }
+      // Follow-up sessions (ADR 0014). Older servers leave sessions out: one session.
+      if ("sessions" in c) {
+        expect(Number.isInteger(c.sessions) && c.sessions >= 1 && c.sessions <= 6, `${c.id}.sessions`).toBe(true);
+      }
+      if ("followUps" in c) {
+        expect(Array.isArray(c.followUps) && c.followUps.length >= 1, `${c.id}.followUps`).toBe(true);
+        c.followUps.forEach((f: Record<string, unknown>, i: number) => {
+          const where = `${c.id}.followUps[${i}]`;
+          expect(Number.isInteger(f.session) && (f.session as number) >= 2 && (f.session as number) <= (c.sessions ?? 1), `${where}.session`).toBe(true);
+          for (const k of Object.keys(f)) expect(["session", "clientIntro", "practiceFocus"], `${where} has unexpected field ${k}`).toContain(k);
+          if ("clientIntro" in f) localized(f.clientIntro, `${where}.clientIntro`);
+          if ("practiceFocus" in f) (f.practiceFocus as unknown[]).forEach((t, j) => localized(t, `${where}.practiceFocus[${j}]`));
+        });
       }
     }
     const ids = json.cases.map((c: { id: string }) => c.id);
