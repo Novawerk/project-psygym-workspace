@@ -15,6 +15,8 @@ import type {
   DashboardQuery,
   Kind,
   Me,
+  ModelSettings,
+  ModelSettingsPatch,
   NewPerson,
   Person,
   PersonPatch,
@@ -61,6 +63,10 @@ export interface AdminDataSource {
   addPerson(input: NewPerson): Promise<Person>
   updatePerson(id: string, patch: PersonPatch): Promise<Person>
 
+  /** Role admin only. Saving checks the key and model with one call first (422 with the reason). */
+  modelSettings(): Promise<ModelSettings>
+  saveModelSettings(patch: ModelSettingsPatch): Promise<ModelSettings>
+
   /** The /chat stream, with the draft (or `source`) as the role brief. Not counted, not stored. */
   previewChat(id: string, input: PreviewChatInput, signal?: AbortSignal): AsyncGenerator<ChatFrame>
 }
@@ -97,6 +103,9 @@ const apiSource: AdminDataSource = {
   people: async () => (await call<{ people: Person[] }>("/admin/people")).people,
   addPerson: (input) => call("/admin/people", { method: "POST", json: input }),
   updatePerson: (id, patch) => call(`/admin/people/${encodeURIComponent(id)}`, { method: "PATCH", json: patch }),
+
+  modelSettings: () => call("/admin/model-settings"),
+  saveModelSettings: (patch) => call("/admin/model-settings", { method: "PUT", json: patch }),
 
   async *previewChat(id, input, signal) {
     const res = await fetch(`${API_BASE}${path("case", id)}/preview-chat`, {

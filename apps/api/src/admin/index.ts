@@ -14,7 +14,7 @@ import { z } from "zod";
 
 import type { Logger } from "../app.js";
 import type { Auth } from "../auth/types.js";
-import type { AdminConfig } from "../config.js";
+import { PROVIDER_DEFAULTS, type AdminConfig, type ModelSettingsConfig, type Role as LlmRole, type RoleLlm } from "../config.js";
 import { CASE_ID, MAX_SOURCE_BYTES, SCHOOLS, check, checkCase, enMissing, split, titleOf, withFrontmatter, type Kind, type Problem } from "../content-doc.js";
 import { postToSlack, type FetchLike } from "../feedback.js";
 import { dashboardView } from "../metrics/dashboard.js";
@@ -24,7 +24,10 @@ import { FixedWindowLimiter } from "../rate-limit.js";
 import { LocaleSchema, MAX_MESSAGES, MessageSchema } from "../schema.js";
 import { rateCounters } from "../auth/schema.js";
 import { googleVerifier, type GoogleVerifier } from "./google.js";
-import { adminLogins, adminSessions, admins, contentDrafts, contentVersions } from "./schema.js";
+import { adminLogins, adminSessions, admins, contentDrafts, contentVersions, modelSettings, modelSettingsLog } from "./schema.js";
+import { checkModel as realCheckModel } from "../model-check.js";
+import { ROW_ID, loadSettings } from "../model-settings-db.js";
+import { ROLES as LLM_ROLES, SETTABLE, encrypt, fingerprint, hintOf, keyProblem, type RoleChoice, type SettableProvider, type StoredSettings } from "../model-settings.js";
 import { readBody } from "../read-body.js";
 import type { AdminHooks } from "./types.js";
 
@@ -32,7 +35,7 @@ import type { AdminHooks } from "./types.js";
 export const SESSION_COOKIE = "__Host-psygym_admin";
 export const SESSION_MS = 7 * 86_400_000;
 export const LOGIN_LOG_MS = 90 * 86_400_000;
-export const LIMITS = { signInFailures: 30, signInWindowMs: 10 * 60_000, previewPerAdminHour: 60 };
+export const LIMITS = { signInFailures: 30, signInWindowMs: 10 * 60_000, previewPerAdminHour: 60, modelSavesPerAdminHour: 20 };
 /** The one counter for failed sign-ins, in rate_counters (from 0001). Not per IP: see ADR 0009. */
 const SIGN_IN_KEY = "admin-sign-in-failures";
 
@@ -55,6 +58,10 @@ export interface AdminDeps extends AdminHooks {
   /** Tests inject a verifier; default: Google's keys. */
   verifyGoogle?: GoogleVerifier;
   keepAlive?: (p: Promise<unknown>) => void;
+  /** Model settings (docs/decisions/0015-model-settings.md); null: the page says they are off. */
+  modelSettings?: ModelSettingsConfig | null;
+  /** Tests fake the model check. */
+  checkModel?: typeof realCheckModel;
 }
 
 type Env = { Variables: { admin: Admin } };
@@ -126,6 +133,22 @@ const NewPersonBody = z.object({
 const PersonPatchBody = z
   .object({ role: z.enum(ROLES).optional(), org: z.enum(ORGS).optional(), enabled: z.boolean().optional() })
   .refine((b) => Object.keys(b).length > 0, "nothing to change");
+const ModelName = z
+  .string()
+  .trim()
+  .max(100)
+  .regex(/^[A-Za-z0-9._:/-]*$/, "the model name has characters we don't accept");
+const RoleChoiceBody = z.object({ provider: z.enum(SETTABLE), model: ModelName }).nullable();
+const ModelSettingsBody = z
+  .object({
+    client: RoleChoiceBody.optional(),
+    supervisor: RoleChoiceBody.optional(),
+    keys: z.object({ anthropic: z.string().trim().nullable().optional(), deepseek: z.string().trim().nullable().optional() }).optional(),
+  })
+  .refine((b) => b.client !== undefined || b.supervisor !== undefined || (b.keys && Object.keys(b.keys).length > 0), "nothing to change");
+const ROLE_LABEL_ZH: Record<LlmRole, string> = { client: "AI 来访者", supervisor: "AI 督导" };
+const PROVIDER_ZH: Record<SettableProvider, string> = { anthropic: "Claude", deepseek: "DeepSeek" };
+
 const DashboardQuery = z.object({
   from: z.string().optional(),
   to: z.string().optional(),
@@ -145,6 +168,7 @@ export function createAdmin(deps: AdminDeps): Hono {
   const now = () => deps.now?.() ?? Date.now();
   const verifyGoogle = deps.verifyGoogle ?? googleVerifier(config.googleClientId);
   const previewLimiter = new FixedWindowLimiter(LIMITS.previewPerAdminHour, 3_600_000, deps.now);
+  const modelSaveLimiter = new FixedWindowLimiter(LIMITS.modelSavesPerAdminHour, 3_600_000, deps.now);
   const later = (p: Promise<unknown>) => deps.keepAlive?.(p);
 
   const app = new Hono<Env>();
@@ -269,7 +293,7 @@ export function createAdmin(deps: AdminDeps): Hono {
     c.set("admin", row.admin);
     return next();
   });
-  for (const path of ["/admin/me", "/admin/dashboard", "/admin/content", "/admin/content/*", "/admin/publish-log", "/admin/people", "/admin/people/*"]) app.use(path, signedIn);
+  for (const path of ["/admin/me", "/admin/dashboard", "/admin/content", "/admin/content/*", "/admin/publish-log", "/admin/people", "/admin/people/*", "/admin/model-settings"]) app.use(path, signedIn);
 
   /** editor and admin write; viewer only reads. */
   const canWrite = (c: Context<Env>) => c.get("admin").role === "admin" || c.get("admin").role === "editor";
@@ -731,6 +755,146 @@ export function createAdmin(deps: AdminDeps): Hono {
     if (number > checked.value.sessions) return fail(c, 400, "invalid_request", {}, `This case has ${checked.value.sessions} session(s).`);
     logger.info({ msg: "preview chat", id, adminId: admin.id, messages: b.messages.length, ...(number > 1 ? { session: number } : {}) });
     return deps.previewTurn(c, checked.value, b.locale, b.messages, { number, previous: [] });
+  });
+
+  // ── Model settings (docs/decisions/0015-model-settings.md) ──
+
+  const models = deps.models && deps.modelSettings ? { hooks: deps.models, cfg: deps.modelSettings } : null;
+  const modelCheck = deps.checkModel ?? realCheckModel;
+
+  async function modelPage(s: StoredSettings) {
+    const log = await db
+      .select({ at: modelSettingsLog.at, change: modelSettingsLog.change, by: admins.email })
+      .from(modelSettingsLog)
+      .leftJoin(admins, eq(modelSettingsLog.adminId, admins.id))
+      .orderBy(desc(modelSettingsLog.at), desc(modelSettingsLog.id))
+      .limit(20);
+    return { enabled: true, ...models!.hooks.view(s), log: log.map((l) => ({ at: l.at.toISOString(), by: l.by, change: l.change })) };
+  }
+
+  app.get("/admin/model-settings", async (c) => {
+    if (c.get("admin").role !== "admin") return fail(c, 403, "forbidden");
+    if (!models) return c.json({ enabled: false });
+    return c.json(await modelPage(await loadSettings(db, models.cfg.secret, logger)));
+  });
+
+  app.put("/admin/model-settings", async (c) => {
+    const admin = c.get("admin");
+    if (admin.role !== "admin") return fail(c, 403, "forbidden");
+    if (!models) return fail(c, 404, "not_found");
+    const b = await body(c, ModelSettingsBody);
+    if (b instanceof Response) return b;
+    const allowed = (p: SettableProvider) => p === "anthropic" || models.cfg.allowDeepseek;
+    const bad = (field: string, message: string) => fail(c, 422, "invalid_request", { field }, message);
+
+    const current = await loadSettings(db, models.cfg.secret, logger);
+    const next: StoredSettings = { roles: { ...current.roles }, keys: { ...current.keys }, hints: { ...current.hints }, updatedAt: current.updatedAt };
+    const changes: string[] = [];
+    for (const role of LLM_ROLES) {
+      const given = b[role];
+      if (given === undefined) continue;
+      if (given === null) {
+        if (current.roles[role]) changes.push(`${ROLE_LABEL_ZH[role]}改回默认`);
+        delete next.roles[role];
+        continue;
+      }
+      if (!allowed(given.provider)) return bad(role, "DeepSeek 在正式环境里还不能用：要先改隐私政策和用户同意的说明。");
+      const choice: RoleChoice = { provider: given.provider, model: given.model };
+      const old = current.roles[role];
+      if (!old || old.provider !== choice.provider || old.model !== choice.model) {
+        changes.push(`${ROLE_LABEL_ZH[role]}：${PROVIDER_ZH[choice.provider]} ${choice.model || "（默认模型）"}`);
+      }
+      next.roles[role] = choice;
+    }
+    const newKeys: SettableProvider[] = [];
+    for (const p of SETTABLE) {
+      const given = b.keys?.[p];
+      if (given === undefined) continue;
+      if (given === null || given === "") {
+        if (current.keys[p]) changes.push(`删掉了后台的 ${PROVIDER_ZH[p]} key`);
+        delete next.keys[p];
+        delete next.hints[p];
+        continue;
+      }
+      const problem = keyProblem(p, given);
+      if (problem) return bad(`keys.${p}`, problem);
+      if (given !== current.keys[p]) {
+        next.keys[p] = given;
+        next.hints[p] = hintOf(given);
+        newKeys.push(p);
+        changes.push(`${PROVIDER_ZH[p]} key 换成 …${hintOf(given)}`);
+      }
+    }
+    if (!changes.length) return c.json(await modelPage(current));
+
+    // Every role whose model config changes must work before we save; and every new key, even
+    // if no role uses it yet (checked with that provider's default model).
+    const before = models.hooks.effective(current);
+    const after = models.hooks.effective(next);
+    const toCheck = new Map<string, { field: string; provider: SettableProvider; model: string; key: string; baseURL?: string }>();
+    for (const role of LLM_ROLES) {
+      const a: RoleLlm = after[role];
+      const was: RoleLlm = before[role];
+      if (!a.ok) {
+        if (was.ok || next.roles[role]) return bad(role, `${ROLE_LABEL_ZH[role]}用不了：${a.reason.startsWith("no API key") ? "还没有这家的 key。" : a.reason}`);
+        continue;
+      }
+      if (was.ok && fingerprint(was.llm) === fingerprint(a.llm)) continue;
+      if (!(SETTABLE as readonly string[]).includes(a.llm.provider)) continue;
+      const provider = a.llm.provider as SettableProvider;
+      // A failure with a key just entered is about that key; else about this role's model.
+      const field = newKeys.includes(provider) && a.llm.apiKey === next.keys[provider] ? `keys.${provider}` : role;
+      const item = { field, provider, model: a.llm.model, key: a.llm.apiKey!, baseURL: a.llm.baseURL };
+      toCheck.set(JSON.stringify([item.provider, item.model, item.key, item.baseURL]), item);
+    }
+    for (const p of newKeys) {
+      if ([...toCheck.values()].some((i) => i.provider === p && i.key === next.keys[p])) continue;
+      const model = (next.roles.client?.provider === p ? next.roles.client.model : "") || (next.roles.supervisor?.provider === p ? next.roles.supervisor.model : "") || PROVIDER_DEFAULTS[p].model;
+      toCheck.set(`key:${p}`, { field: `keys.${p}`, provider: p, model, key: next.keys[p]! });
+    }
+    if (toCheck.size) {
+      const retry = modelSaveLimiter.take(`admin:${admin.id}`);
+      if (retry) {
+        c.header("Retry-After", String(retry));
+        return fail(c, 429, "rate_limited");
+      }
+      for (const item of toCheck.values()) {
+        const problem = await modelCheck({ provider: item.provider, model: item.model, key: item.key, ...(item.baseURL ? { baseURL: item.baseURL } : {}) });
+        if (problem) {
+          logger.info({ msg: "model settings check failed", adminId: admin.id, provider: item.provider, field: item.field });
+          return bad(item.field, problem);
+        }
+      }
+    }
+
+    const sealed = (p: SettableProvider) => (next.keys[p] ? encrypt(models.cfg.secret, next.keys[p]!) : null);
+    const at = new Date(now());
+    const row = {
+      clientProvider: next.roles.client?.provider ?? null,
+      clientModel: next.roles.client?.model ?? null,
+      supervisorProvider: next.roles.supervisor?.provider ?? null,
+      supervisorModel: next.roles.supervisor?.model ?? null,
+      // Unchanged keys are sealed again too: a fresh IV each time, same plaintext.
+      anthropicKey: sealed("anthropic"),
+      anthropicKeyHint: next.hints.anthropic ?? null,
+      deepseekKey: sealed("deepseek"),
+      deepseekKeyHint: next.hints.deepseek ?? null,
+      updatedBy: admin.id,
+      updatedAt: at,
+    };
+    await db.transaction(async (tx) => {
+      await tx.insert(modelSettings).values({ id: ROW_ID, ...row }).onConflictDoUpdate({ target: modelSettings.id, set: row });
+      await tx.insert(modelSettingsLog).values({ at, adminId: admin.id, change: changes.join("；") });
+    });
+    await models.hooks.refresh();
+    logger.info({
+      msg: "model settings changed",
+      adminId: admin.id,
+      client: row.clientProvider ? `${row.clientProvider}/${row.clientModel || "default"}` : "env",
+      supervisor: row.supervisorProvider ? `${row.supervisorProvider}/${row.supervisorModel || "default"}` : "env",
+      keysChanged: SETTABLE.filter((p) => b.keys?.[p] !== undefined),
+    });
+    return c.json(await modelPage(await loadSettings(db, models.cfg.secret, logger)));
   });
 
   return app as unknown as Hono;

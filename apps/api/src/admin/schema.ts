@@ -78,3 +78,34 @@ export const contentDrafts = pgTable(
   },
   (t) => [primaryKey({ columns: [t.kind, t.itemId] })],
 );
+
+/**
+ * Model settings (docs/decisions/0015-model-settings.md): one row, id "current". Empty columns
+ * mean "the environment decides". Keys are sealed with MODEL_SETTINGS_SECRET (src/model-settings.ts);
+ * the hint is their last four characters, for the page.
+ */
+export const modelSettings = pgTable("model_settings", {
+  id: text("id").primaryKey(),
+  clientProvider: text("client_provider"),
+  clientModel: text("client_model"),
+  supervisorProvider: text("supervisor_provider"),
+  supervisorModel: text("supervisor_model"),
+  anthropicKey: text("anthropic_key"),
+  anthropicKeyHint: text("anthropic_key_hint"),
+  deepseekKey: text("deepseek_key"),
+  deepseekKeyHint: text("deepseek_key_hint"),
+  updatedBy: text("updated_by").references(() => admins.id, { onDelete: "set null" }),
+  updatedAt: at("updated_at").notNull().defaultNow(),
+});
+
+/** Who changed what, never the keys themselves. */
+export const modelSettingsLog = pgTable(
+  "model_settings_log",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    at: at("at").notNull().defaultNow(),
+    adminId: text("admin_id").references(() => admins.id, { onDelete: "set null" }),
+    change: text("change").notNull(),
+  },
+  (t) => [index("model_settings_log_at_idx").on(t.at)],
+);

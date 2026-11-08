@@ -16,6 +16,7 @@ import type {
   Kind,
   Localized,
   Me,
+  ModelSettings,
   Person,
   Problem,
   Publisher,
@@ -299,6 +300,23 @@ const people: Person[] = [
   { id: "p-old", email: "former@example.com", role: "editor", org: "lingjing", enabled: false, signedInOnce: true, createdAt: "2026-10-16T10:00:00Z", lastLoginAt: "2026-10-18T10:00:00Z" },
 ]
 
+// --- Model settings: made up; the key hints are not real keys. ---
+
+const sampleModels: Extract<ModelSettings, { enabled: true }> = {
+  enabled: true,
+  roles: {
+    client: { provider: "anthropic", model: "claude-sonnet-5-5", from: "env", available: true },
+    supervisor: { provider: "anthropic", model: "claude-sonnet-5-5", from: "env", available: true },
+  },
+  keys: { anthropic: { from: "env", hint: "x7Qa" }, deepseek: { from: null, hint: null } },
+  providers: [
+    { id: "anthropic", allowed: true, defaultModel: "claude-sonnet-5-5" },
+    { id: "deepseek", allowed: false, defaultModel: "deepseek-chat" },
+  ],
+  updatedAt: null,
+  log: [],
+}
+
 function requireAdmin() {
   if (sampleRole() !== "admin") throw new ApiError(403, "forbidden", "forbidden")
 }
@@ -471,6 +489,38 @@ export const sampleSource: AdminDataSource = {
     if (p.email === me().email) throw new ApiError(403, "forbidden", "self")
     Object.assign(p, patch)
     return delay(p)
+  },
+
+  modelSettings: async () => {
+    requireAdmin()
+    return delay(sampleModels)
+  },
+
+  saveModelSettings: async (patch) => {
+    requireAdmin()
+    if (!sampleModels.enabled) throw new ApiError(404, "not_found", "not found")
+    const m = sampleModels
+    const changes: string[] = []
+    for (const role of ["client", "supervisor"] as const) {
+      const c = patch[role]
+      if (c === undefined) continue
+      if (c && c.provider === "deepseek") throw new ApiError(422, "invalid_request", "DeepSeek 在正式环境里还不能用：要先改隐私政策和用户同意的说明。")
+      m.roles[role] = c
+        ? { provider: c.provider, model: c.model || "claude-sonnet-5-5", from: "admin", available: true }
+        : { provider: "anthropic", model: "claude-sonnet-5-5", from: "env", available: true }
+      changes.push(c ? `${role === "client" ? "AI 来访者" : "AI 督导"}：Claude ${c.model || "（默认模型）"}` : `${role === "client" ? "AI 来访者" : "AI 督导"}改回默认`)
+    }
+    const key = patch.keys?.anthropic
+    if (key) {
+      if (!key.startsWith("sk-ant-")) throw new ApiError(422, "invalid_request", "Claude 的 key 以 sk-ant- 开头。")
+      m.keys.anthropic = { from: "admin", hint: key.slice(-4) }
+      changes.push(`Claude key 换成 …${key.slice(-4)}`)
+    } else if (key === null) {
+      m.keys.anthropic = { from: "env", hint: "x7Qa" }
+      changes.push("删掉了后台的 Claude key")
+    }
+    if (changes.length) m.log.unshift({ at: new Date().toISOString(), by: me().email, change: changes.join("；") })
+    return delay(m)
   },
 
   async *previewChat(_id, input, signal) {

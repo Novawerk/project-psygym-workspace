@@ -52,6 +52,8 @@ vercel deploy --prod --yes --scope novawerk
 
 都在 Vercel 的项目设置里，名字和意思见 [apps/api/README.md](../apps/api/README.md)「Environment」和 `apps/api/.env.example`。值不进 git，不发在消息里。改了变量要重新部署才生效。
 
+模型和 Claude key 也可以在后台「模型设置」里改（[ADR 0015](./decisions/0015-model-settings.md)）：后台填的盖过环境变量，没填的照旧用环境变量。这要服务器上有 `MODEL_SETTINGS_SECRET`。这个值换了，后台存的 key 就解不开了，要在后台重新填一次。
+
 ## 发 App
 
 App Store 和 Google Play 在 Haodong Ju 的个人账号上，所以发新版要经过他：

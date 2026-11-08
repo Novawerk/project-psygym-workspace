@@ -31,7 +31,7 @@
 |------|------|--------|--------|
 | App Store Connect | Haodong Ju 的个人账号（卖家） | 先不动 | 见下面「要定的事」1 |
 | Google Play | Haodong Ju 的个人账号 | 先不动 | 同上 |
-| AI 模型（Anthropic） | Vercel 里的 `ANTHROPIC_API_KEY` 是 Haodong 自己的 key | 项目方的 key | ☐ 项目方给 key，我们换上、重新部署 |
+| AI 模型（Anthropic） | 2026-11-08 换成了用户给的新 key（Vercel 的 `ANTHROPIC_API_KEY`） | 项目方的 key | 项目方的管理员可以自己在后台「模型设置」里填 key、选模型，保存前会先试一次，一分钟内生效，不用找我们 |
 | 语音（ElevenLabs） | 已经是项目方的工作区 | 项目方 | 不用动 |
 | 服务器（Vercel：`psygym-api`、`psygym-admin`、`psygym-web`） | Novawerk 的 Vercel 团队 | Novawerk 代管 | 见「要定的事」2 |
 | 数据库（Neon，法兰克福） | Novawerk | 跟着服务器走 | 存后台账号、病例版本、发布记录、匿名计数。不存对话 |

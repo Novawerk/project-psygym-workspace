@@ -118,3 +118,21 @@ export type Person = {
 
 export type NewPerson = { email: string; role: Role; org: Org }
 export type PersonPatch = Partial<{ role: Role; org: Org; enabled: boolean }>
+
+/** Model settings (GET /admin/model-settings; role admin only; docs/decisions/0015-model-settings.md). */
+export type ModelProviderId = "anthropic" | "deepseek"
+export type LlmRole = "client" | "supervisor"
+export type ModelSettings =
+  | { enabled: false }
+  | {
+      enabled: true
+      roles: Record<LlmRole, { provider: string | null; model: string | null; from: "admin" | "env"; available: boolean; reason?: string }>
+      keys: Record<ModelProviderId, { from: "admin" | "env" | null; hint: string | null }>
+      providers: { id: ModelProviderId; allowed: boolean; defaultModel: string }[]
+      updatedAt: string | null
+      log: { at: string; by: string | null; change: string }[]
+    }
+/** null for a role: back to the server's default. A key: null or "" removes the one stored in the admin. */
+export type ModelSettingsPatch = Partial<Record<LlmRole, { provider: ModelProviderId; model: string } | null>> & {
+  keys?: Partial<Record<ModelProviderId, string | null>>
+}

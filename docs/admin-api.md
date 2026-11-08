@@ -279,6 +279,44 @@ Body `{ email, role, org }`. The email is trimmed and lower-cased. `409 conflict
 Body: any of `{ role, org, enabled }`, at least one. `enabled: false` ends their sessions at
 once. Turning someone back on keeps the Google account bound to the email.
 
+## Model settings (admin)
+
+Which model each AI uses, and whose API key ([ADR 0015](./decisions/0015-model-settings.md)).
+Role `admin` only, any org; others `403 forbidden`. Off unless `MODEL_SETTINGS_SECRET` is set.
+
+```ts
+type ModelSettings =
+  | { enabled: false }                       // MODEL_SETTINGS_SECRET unset
+  | {
+      enabled: true;
+      roles: Record<"client" | "supervisor", {
+        provider: string | null; model: string | null;
+        from: "admin" | "env";               // set here, or the environment's
+        available: boolean; reason?: string;
+      }>;
+      keys: Record<"anthropic" | "deepseek", { from: "admin" | "env" | null; hint: string | null }>; // hint: last 4 characters
+      providers: { id: "anthropic" | "deepseek"; allowed: boolean; defaultModel: string }[];
+      updatedAt: string | null;
+      log: { at: string; by: string | null; change: string }[];  // newest first, 20
+    };
+```
+
+### `GET /admin/model-settings` → `200 ModelSettings`
+
+### `PUT /admin/model-settings` → `200 ModelSettings`
+
+Body: any of `{ client, supervisor, keys }`, at least one.
+
+- `client` / `supervisor`: `{ provider: "anthropic" | "deepseek", model: string }` (`""`: the
+  provider's default), or `null`: back to the environment's.
+- `keys`: `{ anthropic?, deepseek? }`, each a key, or `null` / `""` to remove the one stored here.
+
+Before saving, every role whose config changes and every new key gets one 1-token call.
+`422 invalid_request` with `field` (`client`, `supervisor`, `keys.anthropic`…) and a Chinese
+`message` when: the key's shape is wrong, the call fails (wrong key, unknown model, no
+balance), DeepSeek is not allowed, or a role would have no key. Nothing is saved then.
+`429 rate_limited` past 20 checked saves per admin per hour. `404` when settings are off.
+
 ## Commands (the lead, with the production env)
 
 | Command | What |
@@ -298,8 +336,12 @@ once. Turning someone back on keeps the Google account bound to the email.
 | `CONTENT_SOURCE` | `db`: the app reads the published versions. Default `files`. |
 | `CONTENT_SLACK_WEBHOOK_URL` | Slack incoming webhook for `#project-psygym` (secret). Unset: log only. |
 | `DATABASE_URL` | as today |
+| `MODEL_SETTINGS_SECRET` | 32+ random characters (secret). Encrypts the keys stored on the model settings page. Unset: that page is read-only. Changing it makes stored keys unreadable. |
+| `MODEL_SETTINGS_ALLOW_DEEPSEEK` | `true`: DeepSeek can be chosen. Default `false` (see ADR 0015). |
 
 ## Changes
+
+- **model settings** — `GET/PUT /admin/model-settings` (role `admin`), ADR 0015.
 
 - **people and upload** — `GET/POST /admin/people`, `PATCH /admin/people/:id` (role `admin`).
   The admin page now also creates a case from an uploaded `.md` file, with the existing
