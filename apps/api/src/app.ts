@@ -15,10 +15,11 @@ import { cors } from "hono/cors";
 import { streamSSE } from "hono/streaming";
 import type { z } from "zod";
 
-import type { AppConfig, Role } from "./config.js";
+import type { AppConfig, Role, RoleLlm } from "./config.js";
 import { publicSummary, type Case, type Prompts } from "./content.js";
 import { staticContent, type ContentSource } from "./content-source.js";
 import type { AdminLoader } from "./admin/types.js";
+import { ROLES, effectiveLlm, fingerprint, viewOf, type SettableProvider, type SettingsSource, type StoredSettings } from "./model-settings.js";
 import { createProvider, type ModelProvider } from "./llm/index.js";
 import { addUsage, type ModelRequest, type ModelResponse, type Usage } from "./llm/types.js";
 import { FeedbackBody, postToSlack, slackMessage, type FetchLike } from "./feedback.js";
@@ -98,6 +99,8 @@ export interface AppDeps {
   content?: ContentSource;
   /** ADMIN_MODE=on: builds the admin routes on the first /admin request. Unset: they don't exist. */
   admin?: AdminLoader | null;
+  /** Model settings from the admin (docs/decisions/0015-model-settings.md). Unset: the environment alone. */
+  modelSettings?: SettingsSource | null;
 }
 
 const MESSAGES: Record<ErrorCode, string> = {
@@ -122,7 +125,7 @@ function sameToken(given: string, expected: string): boolean {
 }
 
 /** The routes of docs/admin-api.md. */
-const ADMIN_PATHS = /^\/admin\/(?:auth\/(?:google|logout)|me|dashboard|content(?:\/.*)?|publish-log|people(?:\/[^/]+)?)$/;
+const ADMIN_PATHS = /^\/admin\/(?:auth\/(?:google|logout)|me|dashboard|content(?:\/.*)?|publish-log|people(?:\/[^/]+)?|model-settings)$/;
 
 /** The model finished without any text to show. */
 class EmptyReplyError extends Error {
@@ -160,16 +163,23 @@ export function createApp(deps: AppDeps) {
   const feedbackLimiter = new FixedWindowLimiter(config.rateLimit.max, config.rateLimit.windowMs, deps.now);
   const reportLimiter = new FixedWindowLimiter(config.rateLimit.max, config.rateLimit.windowMs, deps.now);
 
-  const providers = new Map<Role, ModelProvider>();
+  const modelSettings = deps.modelSettings ?? null;
+  const allowedProvider = (p: SettableProvider) => p === "anthropic" || Boolean(config.modelSettings?.allowDeepseek);
+  /** The config each role uses with these settings: the environment's, with the admin's on top. */
+  const effectiveAll = (s: StoredSettings) =>
+    Object.fromEntries(ROLES.map((r) => [r, effectiveLlm(r, config.llm[r], config.llmEnv, s, allowedProvider)])) as Record<Role, RoleLlm>;
+  /** One provider per role and config: a changed setting builds a new one. */
+  const providers = new Map<Role, { print: string; provider: ModelProvider }>();
   function providerFor(role: Role): ModelProvider | string {
     if (deps.providerFor) return deps.providerFor(role);
-    const cached = providers.get(role);
-    if (cached) return cached;
-    const cfg = config.llm[role];
+    const cfg = modelSettings ? effectiveLlm(role, config.llm[role], config.llmEnv, modelSettings.latest(), allowedProvider) : config.llm[role];
     if (!cfg.ok) return cfg.reason;
+    const print = fingerprint(cfg.llm);
+    const cached = providers.get(role);
+    if (cached?.print === print) return cached.provider;
     try {
       const p = createProvider(cfg.llm);
-      providers.set(role, p);
+      providers.set(role, { print, provider: p });
       return p;
     } catch (err) {
       return `could not create provider: ${(err as Error).message}`;
@@ -186,6 +196,15 @@ export function createApp(deps: AppDeps) {
   }
 
   const app = new Hono();
+
+  // Model settings: every POST may reach a model, so it gets the current settings first. A warm
+  // instance doesn't wait (they reload in the background past 60 s).
+  if (modelSettings) {
+    app.use("*", async (c, next) => {
+      if (c.req.method === "POST") await modelSettings.current();
+      return next();
+    });
+  }
 
   app.use("*", cors({ origin: "*", allowHeaders: ["Content-Type", "X-Invite-Code", "Authorization"], exposeHeaders: ["Retry-After"] }));
 
@@ -239,7 +258,17 @@ export function createApp(deps: AppDeps) {
     app.all("/admin/*", (c, next) => {
       // Only the admin's own paths; any other /admin path goes on as before (the gate, then 404).
       if (!ADMIN_PATHS.test(c.req.path)) return next();
-      routes ??= load({ content, previewTurn }).catch((err) => {
+      routes ??= load({
+        content,
+        previewTurn,
+        models: modelSettings
+          ? {
+              effective: effectiveAll,
+              view: (s) => viewOf(config.llm, config.llmEnv, s, Boolean(config.modelSettings?.allowDeepseek)),
+              refresh: () => modelSettings.refresh(),
+            }
+          : null,
+      }).catch((err) => {
         routes = null;
         throw err;
       });

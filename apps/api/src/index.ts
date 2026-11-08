@@ -55,6 +55,15 @@ export async function appFromEnv(env: Record<string, string | undefined> = proce
     });
   }
 
+  // Model settings from the admin, cached 1 minute (docs/decisions/0015-model-settings.md).
+  let modelSettings = null;
+  if (config.modelSettings && dbModule) {
+    const [{ cachedSettings }, { loadSettings }] = await Promise.all([import("./model-settings.js"), import("./model-settings-db.js")]);
+    const db = dbModule.connectDb(config.modelSettings.databaseUrl);
+    const secret = config.modelSettings.secret;
+    modelSettings = cachedSettings({ load: () => loadSettings(db, secret, logger), logger, keepAlive: (p) => waitUntil(p) });
+  }
+
   // ADMIN_MODE=on: the admin module is imported on the first /admin request, not here.
   const adminConfig = config.admin;
   const admin =
@@ -69,14 +78,15 @@ export async function appFromEnv(env: Record<string, string | undefined> = proce
             auth,
             webhookUrl: config.contentWebhookUrl,
             keepAlive: (p) => waitUntil(p),
+            modelSettings: config.modelSettings,
           });
         }
       : null;
 
   logger.info({ msg: "metrics", enabled: counter.enabled });
   logger.info({ msg: "sign-in", enabled: Boolean(auth) });
-  if (config.admin || config.contentDb) logger.info({ msg: "admin", enabled: Boolean(admin), content: content ? "db" : "files" });
-  return createApp({ config, cases, prompts, logger, counter, metricsStore, auth, content, admin });
+  if (config.admin || config.contentDb) logger.info({ msg: "admin", enabled: Boolean(admin), content: content ? "db" : "files", modelSettings: Boolean(modelSettings) });
+  return createApp({ config, cases, prompts, logger, counter, metricsStore, auth, content, admin, modelSettings });
 }
 
 export default await appFromEnv();

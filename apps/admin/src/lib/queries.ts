@@ -13,6 +13,7 @@ export const queryKeys = {
   version: (kind: Kind, id: string, v: number) => ["content", "version", kind, id, v] as const,
   publishLog: ["content", "publish-log"] as const,
   people: ["people"] as const,
+  modelSettings: ["model-settings"] as const,
 }
 
 export const meQueryOptions = queryOptions({ queryKey: queryKeys.me, queryFn: () => dataSource.me(), retry: false })
@@ -42,3 +43,5 @@ export const publishLogQueryOptions = queryOptions({
 })
 
 export const peopleQueryOptions = queryOptions({ queryKey: queryKeys.people, queryFn: () => dataSource.people() })
+
+export const modelSettingsQueryOptions = queryOptions({ queryKey: queryKeys.modelSettings, queryFn: () => dataSource.modelSettings() })

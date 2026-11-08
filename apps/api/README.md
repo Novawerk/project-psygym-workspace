@@ -51,6 +51,8 @@ Blank values count as unset. `apps/api/.env` is read on start; shell variables w
 | `ANTHROPIC_EFFORT` | `medium` | Anthropic only: `low` … `max`. |
 | `CLIENT_LLM_PROVIDER` / `_MODEL` / `_BASE_URL` | — | Override for the AI client. |
 | `SUPERVISOR_LLM_PROVIDER` / `_MODEL` / `_BASE_URL` | — | Override for the AI supervisor. |
+| `MODEL_SETTINGS_SECRET` | — | 32+ characters. Turns on the admin's model settings page (needs the admin on): keys and models set there sit on top of the variables above, encrypted with this. See ADR 0015. |
+| `MODEL_SETTINGS_ALLOW_DEEPSEEK` | `false` | `true`: the admin may choose DeepSeek. Keep off in production. |
 | `INVITE_CODES` | — | Comma-separated, each `code` or `code:batch`. Codes of 12+ characters also let a new account sign up (sign-in on). When set, every request but `/health` needs `X-Invite-Code` with one of them. |
 | `RATE_LIMIT_MAX` | `30` | `/chat` + `/supervision` requests per key per window; `/feedback` and `/report` each have their own bucket of the same size. Key: the invite code, else the IP. |
 | `RATE_LIMIT_WINDOW_SEC` | `60` | Window length. Over the limit → 429 `rate_limited` with `Retry-After`. |

@@ -87,6 +87,12 @@ const EnvSchema = z.object({
   /** Slack incoming webhook for #project-psygym: one line per publish or rollback. Unset: log only. */
   CONTENT_SLACK_WEBHOOK_URL: optionalString.pipe(z.url({ protocol: /^https$/ }).optional()),
 
+  // ── Model settings in the admin (docs/decisions/0015-model-settings.md) ──
+  /** Encrypts the API keys the admin stores. At least 32 characters. Unset: the page is read-only, env only. */
+  MODEL_SETTINGS_SECRET: optionalString.pipe(z.string().min(32).optional()),
+  /** "true": the admin may pick DeepSeek. Default false: the consent text and privacy policy name Anthropic. */
+  MODEL_SETTINGS_ALLOW_DEEPSEEK: z.enum(["true", "false"]).default("false"),
+
   // ── AI client ──
   /** "on": an end_session call ends the session only if an independent check agrees (src/end-judge.ts). Default off. */
   END_SESSION_JUDGE: z.enum(["off", "on"]).default("off"),
@@ -115,6 +121,23 @@ export interface LlmConfig {
   anthropicThinking?: "adaptive" | "off";
 }
 
+/** What the environment says about models, kept so admin settings can be laid on top (src/model-settings.ts). */
+export interface LlmEnv {
+  /** The API key the environment has for each provider. */
+  keys: Partial<Record<ProviderName, string>>;
+  maxOutputTokens: number | undefined;
+  anthropicEffort: LlmConfig["anthropicEffort"];
+  clientEffort: LlmConfig["anthropicEffort"] | undefined;
+  clientThinking: "adaptive" | "off";
+}
+
+/** Model settings in the admin: on with ADMIN_MODE and MODEL_SETTINGS_SECRET. */
+export interface ModelSettingsConfig {
+  databaseUrl: string;
+  secret: string;
+  allowDeepseek: boolean;
+}
+
 /** A role either has a usable model config, or a reason why not (→ 503 model_unavailable). */
 export type RoleLlm = { ok: true; llm: LlmConfig } | { ok: false; reason: string };
 
@@ -137,6 +160,9 @@ export interface AuthConfig {
 
 export interface AppConfig {
   llm: Record<Role, RoleLlm>;
+  llmEnv: LlmEnv;
+  /** Null: the environment alone decides the models. */
+  modelSettings: ModelSettingsConfig | null;
   /** Variables we ignored because their value was invalid. Names only, never values. */
   errors: string[];
   inviteCodes: Set<string> | null;
@@ -175,7 +201,7 @@ export interface AdminConfig {
   origin: string;
 }
 
-const PROVIDER_DEFAULTS: Record<ProviderName, { model: string; baseURL?: string; maxOutputTokens: number }> = {
+export const PROVIDER_DEFAULTS: Record<ProviderName, { model: string; baseURL?: string; maxOutputTokens: number }> = {
   deepseek: { model: "deepseek-chat", baseURL: "https://api.deepseek.com", maxOutputTokens: 8192 },
   openai: { model: "", maxOutputTokens: 16_000 },
   "openai-compatible": { model: "", maxOutputTokens: 8192 },
@@ -309,9 +335,24 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
   } else if (voiceVars.some(Boolean)) {
     errors.push("ELEVENLABS_API_KEY, ELEVENLABS_AGENT_ID and VOICE_LLM_SECRET are needed together; voice stays off");
   }
+  let modelSettings: ModelSettingsConfig | null = null;
+  if (e.MODEL_SETTINGS_SECRET) {
+    if (!admin) errors.push("MODEL_SETTINGS_SECRET is set but the admin is off; model settings stay off");
+    else modelSettings = { databaseUrl: admin.databaseUrl, secret: e.MODEL_SETTINGS_SECRET, allowDeepseek: e.MODEL_SETTINGS_ALLOW_DEEPSEEK === "true" };
+  }
+  const providers = ProviderEnum.options;
+  const llmEnv: LlmEnv = {
+    keys: Object.fromEntries(providers.map((p) => [p, keyFor(p, e)]).filter(([, k]) => k)),
+    maxOutputTokens: e.LLM_MAX_OUTPUT_TOKENS,
+    anthropicEffort: e.ANTHROPIC_EFFORT,
+    clientEffort: e.CLIENT_LLM_EFFORT,
+    clientThinking: e.CLIENT_LLM_THINKING,
+  };
   if (e.CONTENT_SOURCE === "db" && !e.DATABASE_URL) errors.push("CONTENT_SOURCE is db but DATABASE_URL is missing; using the bundled content");
   return {
     llm: { client: roleLlm("client", e, invalid), supervisor: roleLlm("supervisor", e, invalid) },
+    llmEnv,
+    modelSettings,
     errors,
     inviteCodes: codes.length ? new Set(codes) : null,
     rateLimit: { max: e.RATE_LIMIT_MAX, windowMs: e.RATE_LIMIT_WINDOW_SEC * 1000 },

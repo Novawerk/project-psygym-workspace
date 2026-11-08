@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as AppModelsRouteImport } from './routes/_app/models'
 import { Route as AppPeopleRouteImport } from './routes/_app/people'
 import { Route as AppReleasesRouteImport } from './routes/_app/releases'
 import { Route as AppCasesIndexRouteImport } from './routes/_app/cases/index'
@@ -31,6 +32,11 @@ const LoginRoute = LoginRouteImport.update({
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppModelsRoute = AppModelsRouteImport.update({
+  id: '/models',
+  path: '/models',
   getParentRoute: () => AppRoute,
 } as any)
 const AppPeopleRoute = AppPeopleRouteImport.update({
@@ -67,6 +73,7 @@ const AppRubricsRubricIdRoute = AppRubricsRubricIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
+  '/models': typeof AppModelsRoute
   '/people': typeof AppPeopleRoute
   '/releases': typeof AppReleasesRoute
   '/cases/$caseId': typeof AppCasesCaseIdRoute
@@ -76,6 +83,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
+  '/models': typeof AppModelsRoute
   '/people': typeof AppPeopleRoute
   '/releases': typeof AppReleasesRoute
   '/': typeof AppIndexRoute
@@ -88,6 +96,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/_app/models': typeof AppModelsRoute
   '/_app/people': typeof AppPeopleRoute
   '/_app/releases': typeof AppReleasesRoute
   '/_app/': typeof AppIndexRoute
@@ -101,6 +110,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/models'
     | '/people'
     | '/releases'
     | '/cases/$caseId'
@@ -110,6 +120,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
+    | '/models'
     | '/people'
     | '/releases'
     | '/'
@@ -121,6 +132,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_app'
     | '/login'
+    | '/_app/models'
     | '/_app/people'
     | '/_app/releases'
     | '/_app/'
@@ -156,6 +168,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/models': {
+      id: '/_app/models'
+      path: '/models'
+      fullPath: '/models'
+      preLoaderRoute: typeof AppModelsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/people': {
@@ -204,6 +223,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
+  AppModelsRoute: typeof AppModelsRoute
   AppPeopleRoute: typeof AppPeopleRoute
   AppReleasesRoute: typeof AppReleasesRoute
   AppIndexRoute: typeof AppIndexRoute
@@ -214,6 +234,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppModelsRoute: AppModelsRoute,
   AppPeopleRoute: AppPeopleRoute,
   AppReleasesRoute: AppReleasesRoute,
   AppIndexRoute: AppIndexRoute,
