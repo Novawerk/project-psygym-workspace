@@ -7,7 +7,7 @@
 | 渠道 | 版本 | 状态 |
 |------|------|------|
 | Play 内部测试 | 0.5.0（versionCode 6） | 2026-11-06 已推出，替换了 0.4.0（11-02 推出）。0.3.1 没有发 Android。测试员名单「PSYGYM testers」（3 人），加入链接由发布转给用户 |
-| TestFlight 外部组「聆镜团队」 | 0.5.0（Build 25） | 2026-11-08 加进组里（6 人），送 Beta App Review，开了自动通知测试员。之前的版本也都走过这一步。App Store 那边 0.4.0（Build 22）还在 Waiting for Review，0.5.0 等它有结果再送 |
+| TestFlight 外部组「聆镜团队」 | 0.5.0（Build 25） | 2026-11-08 加进组里（当时 5 人），送 Beta App Review，开了自动通知测试员。之前的版本也都走过这一步。App Store 那边 0.4.0（Build 22）还在 Waiting for Review，0.5.0 等它有结果再送 |
 | TestFlight 内部组「Novawerk internal」 | Xcode Cloud 打的每个 build | 组里没有人，不会推给任何人 |
 
 ## 发 0.3.0（按住说话）的顺序
@@ -43,6 +43,7 @@
 
 - **内部组「Novawerk internal」**：只能加 App Store Connect 里的用户，最多 100 人，不用审核。要加的人必须先成为 ASC 用户，这算改团队成员，要用户同意。Xcode Cloud 打的每个 build 都会自动进这个组。
 - **外部组「聆镜团队」**：按邮箱邀请，也可以开公开链接，最多 10,000 人。**每个版本的第一个 build 要过 Beta App Review。** 聆镜团队用这个组。
+- **公开链接**：2026-11-10 给「聆镜团队」开了公开链接，谁都能加入，上限 30 人。项目方自己把链接转给要测试的人，不用再报邮箱给我们，也不用 ASC 账号。链接只交给用户和项目方，**不写进仓库**（仓库是公开的）。满了或者要停，在组页面 Public Link → Manage 里改上限或关掉。只有过了 Beta App Review 的 build 能通过链接装。
 
 **Test Information 是整个 App 共用的，不按 build 分。** 旧版还在审核时改登录信息，会影响旧版的审核。所以新旧两版同时在审的时候，Review Notes 里两种都写：0.1.x 用邀请码，0.2.x 用邮箱和验证码；Sign-in 栏填 0.2.x 的邮箱和码。旧版有结果后，再删掉 0.1.x 那段。
 
@@ -69,7 +70,7 @@
 
 ## 每次要用户给或点头的
 
-1. 测试员邮箱。iPhone 用 Apple ID 邮箱，Android 用 Google 账号邮箱。
+1. 测试员邮箱。iPhone 用 Apple ID 邮箱，Android 用 Google 账号邮箱。iPhone 测试员现在可以直接用公开链接，不用报邮箱。
 2. 审核联系人的电话，审核员的邮箱和验证码：只填在后台。
 3. 在用户本机打 Android 包并上传。
 4. Play 推出新版本；iOS 送 Beta 审核；邀请测试员。
