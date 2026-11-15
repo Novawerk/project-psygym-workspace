@@ -54,6 +54,8 @@ TestFlight 的 Beta App Review、App Store 审核、Play 的 App access 都可�
 >
 > **Voice session (new in 0.4.0, available to the review account).** On the case brief, "Voice session" starts a live call with the AI client. Before the first one, a separate notice says the trainee's voice is sent live to ElevenLabs, a US company, to be transcribed, and asks for consent; the trainee can decline and keep typing. The app holds no ElevenLabs key: it gets a one-time token from our server. Calls are not recorded. The client's words come from the same server-side prompt and safety rules as typed sessions. Afterwards the transcript goes to the supervision report as usual. Leaving the app ends the call.
 >
+> **Follow-up sessions (new in 0.5.0).** After a session, open the same case and pick "Pick up" for a second or third session with the same client. When a session ends, our server writes a short summary through the same AI vendor as the supervision report. The summary is kept only on the phone and is sent with the next session. Our server stores no conversation.
+>
 > **Contact.** info@novawerk.io
 
 ### 登录前的 build（现在 TestFlight 和 Play 内部测试里的 0.1.0）
