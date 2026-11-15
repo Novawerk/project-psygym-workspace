@@ -13,7 +13,7 @@
 | 官网 | https://psygym.novawerk.io |
 | API | https://psygym-api.novawerk.io |
 | 后台 | https://admin.psygym.novawerk.io |
-| iOS | App Store 上是 0.4.0（Build 22），2026-11-15 发布。0.5.0（Build 25）在 TestFlight 外部组「聆镜团队」，还没送 App Store 审核 |
+| iOS | App Store 上是 0.4.0（Build 22），2026-11-15 发布。0.5.0（Build 25）在 TestFlight 外部组「聆镜团队」，2026-11-15 送了 App Store 审核，发布方式是手动 |
 | Android | Play 内部测试，0.5.0（versionCode 6） |
 | 代码 | GitHub `Novawerk/project-psygym-workspace`，公开，MIT |
 
@@ -68,5 +68,5 @@
 ## 交接之后
 
 - **还没做的功能归项目方。** 完整版里剩下的（精神分析、家庭治疗，更多病例和共病，英文病例，专项训练，更细的督导，导出练习记录）由项目方的开发者接着做，见 [product/roadmap.md](./product/roadmap.md)「完整版」。
-- **App Store 的下一版。** 0.5.0（接着练同一位来访者）要进商店，得送一次 App Store 审核，由上架账号的持有人提交。0.4.0 不升级也能照常用。
+- **App Store 的下一版。** 0.5.0（接着练同一位来访者）2026-11-15 送了 App Store 审核，状态 Waiting for Review。发布方式是手动：过审后要上架账号的持有人点「发布」。0.4.0 不升级也能照常用。
 - **Play 正式版。** 现在只有内部测试。上正式版要先过上面清单里的封闭测试。
