@@ -11,11 +11,13 @@ skill already installed in this repo. Do not invent Novawerk facts — read the 
 AI practice partners for new counselors: an AI client to practise with, and an
 AI supervisor that points out mistakes and suggests what to work on.
 
-Status: **Planning** · Category: **App** · Built with its founding team.
+Status: **Launched** · Category: **App** · Built with its founding team, and
+handed over to them in November 2026 ([docs/handoff.md](./docs/handoff.md)).
 
 Work is tracked on the Jira board `PSY` (site `novawerk-teams.atlassian.net`,
-board 67). Epic PSY-1 is the MVP (by 17–18 October 2026, the first demo); PSY-2 is
-everything else, by Christmas 2026.
+board 67). Epic PSY-1 is the MVP, shown at the first demo on 17 October 2026.
+PSY-2 is everything else. What is left of it is with the founding team's own
+developers ([docs/product/roadmap.md](./docs/product/roadmap.md)).
 
 See [README.md](./README.md) and [docs/](./docs/).
 
@@ -25,12 +27,14 @@ pnpm monorepo, in the style of Novawerk's own repo:
 
 - `apps/*` — things people run.
 - `packages/*` — shared code.
-- `content/` — cases and rubrics. Psychologists own this text; don't rewrite
-  clinical content without them.
+- `content/` — a copy of the published cases and rubrics. The live ones are
+  edited in the admin. Psychologists own this text; don't rewrite clinical
+  content without them.
 - `docs/` — problem statement and decisions.
 
-No stack is chosen yet. Don't add a framework until the problem statement is
-honest and the team agrees.
+The stack is chosen: see [docs/decisions/0001-stack.md](./docs/decisions/0001-stack.md).
+Merging does not deploy. Deploys and app releases go through the account
+holders: see [docs/deploy.md](./docs/deploy.md), and ask first.
 
 ## House rules
 

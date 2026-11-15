@@ -2,6 +2,8 @@
 
 聆镜 PSYGYM 从 Novawerk 交给项目方。这一页列出每样东西现在在谁手里、交接后归谁、要做什么。打了 ☐ 的是还没做的。
 
+**2026-11-15：交接完成。** 下面清单里还开着的两条，是项目方之后要接着做的。
+
 密钥、密码、验证码不写在这里，也不发在消息里。交接时当面或用密码管理器的共享功能给。
 
 ## 现在能用的
@@ -11,8 +13,8 @@
 | 官网 | https://psygym.novawerk.io |
 | API | https://psygym-api.novawerk.io |
 | 后台 | https://admin.psygym.novawerk.io |
-| iOS | 0.4.0（Build 22），2026-11-03 提交审核，发布方式是手动：过审后要有人点「发布」 |
-| Android | Play 内部测试，0.4.0（versionCode 5） |
+| iOS | App Store 上是 0.4.0（Build 22），2026-11-15 发布。0.5.0（Build 25）在 TestFlight 外部组「聆镜团队」，还没送 App Store 审核 |
+| Android | Play 内部测试，0.5.0（versionCode 6） |
 | 代码 | GitHub `Novawerk/project-psygym-workspace`，公开，MIT |
 
 ## 你们自己在后台就能做的
@@ -23,7 +25,7 @@
 - **新建病例。** 「病例」→「新建病例」，从模板开始，或上传 `.md` 文件（格式见 [`content/README.md`](../content/README.md)）。
 - **改、试聊、发布、回滚。** 见 [for-psygym-team.md](./for-psygym-team.md)「怎么交」。App 一分钟内用上新发布的版本。
 
-☐ 给项目方负责人开一个「管理员」账号（机构选「聆镜」）。之后聆镜内部的人由他们自己加。
+☑ 项目方负责人有「管理员」账号（机构选「聆镜」）。聆镜内部的人由他们自己加。
 
 ## 账号和服务
 
@@ -31,7 +33,7 @@
 |------|------|--------|--------|
 | App Store Connect | Haodong Ju 的个人账号（卖家） | 先不动 | 见下面「要定的事」1 |
 | Google Play | Haodong Ju 的个人账号 | 先不动 | 同上 |
-| AI 模型（Anthropic） | 2026-11-08 换成了用户给的新 key（Vercel 的 `ANTHROPIC_API_KEY`） | 项目方的 key | 项目方的管理员可以自己在后台「模型设置」里填 key、选模型，保存前会先试一次，一分钟内生效，不用找我们 |
+| AI 模型（Anthropic） | 项目方的 key（已换，2026-11-15 确认） | 项目方的 key | 以后要换 key 或换模型，项目方的管理员自己在后台「模型设置」里改，保存前会先试一次，一分钟内生效，不用找我们 |
 | 语音（ElevenLabs） | 已经是项目方的工作区 | 项目方 | 不用动 |
 | 服务器（Vercel：`psygym-api`、`psygym-admin`、`psygym-web`） | Novawerk 的 Vercel 团队 | Novawerk 代管 | 见「要定的事」2 |
 | 数据库（Neon，法兰克福） | Novawerk | 跟着服务器走 | 存后台账号、病例版本、发布记录、匿名计数。不存对话 |
@@ -56,9 +58,15 @@
 ☑ 第 1 件定了：上架账号先不动。
 ☑ 第 2 件定了：服务器和数据库由 Novawerk 继续代管。
 ☑ 第 3 件定了：项目方自己找开发者。
-☐ 项目方负责人有后台「管理员」账号，登录过一次。
-☐ 换上项目方的 Anthropic key。
-☐ iOS 0.4.0 过审后点发布（谁点：___）。
+☑ 项目方负责人有后台「管理员」账号，登录过一次。
+☑ 换上项目方的 Anthropic key。
+☑ iOS 0.4.0 过审，2026-11-15 发布。
 ☐ Play 正式版之前的封闭测试：至少 12 个测试员连续 14 天，最晚 12 月初开始（见 [release/README.md](./release/README.md)）。
 ☐ 项目方的开发者定了以后：加 GitHub 仓库权限、加 Novawerk Vercel 团队权限。
-☐ 把这一页、[for-psygym-team.md](./for-psygym-team.md) 和 [deploy.md](./deploy.md) 发给项目方。
+☑ 把这一页、[for-psygym-team.md](./for-psygym-team.md) 和 [deploy.md](./deploy.md) 发给项目方。
+
+## 交接之后
+
+- **还没做的功能归项目方。** 完整版里剩下的（精神分析、家庭治疗，更多病例和共病，英文病例，专项训练，更细的督导，导出练习记录）由项目方的开发者接着做，见 [product/roadmap.md](./product/roadmap.md)「完整版」。
+- **App Store 的下一版。** 0.5.0（接着练同一位来访者）要进商店，得送一次 App Store 审核，由上架账号的持有人提交。0.4.0 不升级也能照常用。
+- **Play 正式版。** 现在只有内部测试。上正式版要先过上面清单里的封闭测试。

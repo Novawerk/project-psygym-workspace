@@ -65,6 +65,8 @@ D2、D3、D6、D7 已定（2026-10-10），见 [open-decisions.md](./open-decisi
 
 ## ⚪ 完整版 · 2026 圣诞
 
+2026-11 交接后，这一节由项目方的开发者接着做（见 [`../handoff.md`](../handoff.md)）。会谈中的督导提示已经以「督导怎么看」上线，见 [live-supervision.md](./live-supervision.md)；其余还没做。
+
 | 功能 | 页面 |
 |------|------|
 | 精神分析、家庭治疗；病例库按流派筛选 | C1 |
