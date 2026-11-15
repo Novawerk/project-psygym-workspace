@@ -13,6 +13,8 @@
 
 **2026-11-03：iOS 0.4.0（Build 22）提交了 App Store 审核**，状态 Waiting for Review。语音会谈开着；隐私标签加了 Audio Data；不上中国大陆；发布方式是手动，过审后要有人点发布。卖家是 Haodong Ju 的个人账号。
 
+**2026-11-15：iOS 0.4.0 过审，在 App Store 发布。** 0.5.0（Build 25）还在 TestFlight，没送 App Store 审核。
+
 ## 文件
 
 - [testing.md](./testing.md)：TestFlight 和 Play 内部测试怎么配，测试说明，demo 前的时间线。
